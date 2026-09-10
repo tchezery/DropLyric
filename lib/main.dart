@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'src/core/database/app_database.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa o banco de dados SQLite antes de rodar o app.
+  // O try/catch garante que um erro de DB não impeça o app de iniciar.
+  try {
+    await AppDatabase().database;
+  } catch (e) {
+    debugPrint('AppDatabase init error (non-fatal): $e');
+  }
+
   runApp(const MyApp());
 }

@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../src/widgets/dock/dock.dart';
 import 'routes.dart';
@@ -12,38 +12,71 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Droplyric',
-      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      // Apenas tema escuro — estilo Spotify
+      theme: AppTheme.notesTheme,
+      darkTheme: AppTheme.notesTheme,
+      themeMode: ThemeMode.light,
       navigatorKey: AppRoutes.navigatorKey,
       navigatorObservers: [AppRoutes.routeObserver],
       initialRoute: AppRoutes.home,
       onGenerateRoute: AppRoutes.generateRoute,
       builder: (context, child) {
-        return Scaffold(
-          body: Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              ValueListenableBuilder<String>(
-                valueListenable: AppRoutes.currentRoute,
-                builder: (context, route, _) {
-                  final selectedIndex = _getRouteIndex(route);
-
-                  return Dock(
-                    selectedIndex: selectedIndex,
-                    onItemSelected: (index) {
-                      final targetRoute = _getRouteByIndex(index);
-                      AppRoutes.navigateTo(targetRoute);
-                    },
-                    items: const [
-                      DockItem(icon: CupertinoIcons.home, label: 'Home'),
-                      DockItem(icon: CupertinoIcons.search, label: 'Search'),
-                      DockItem(icon: CupertinoIcons.music_albums, label: 'Library'),
-                      DockItem(icon: CupertinoIcons.person, label: 'Profile'),
-                    ],
-                  );
-                },
-              ),
-            ],
+        // Define a cor da status bar para o tema dark
+        SystemChrome.setSystemUIOverlayStyle(
+          const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
           ),
+        );
+
+        return Stack(
+          children: [
+            // O Navigator ocupa toda a tela
+            Positioned.fill(child: child ?? const SizedBox.shrink()),
+            // O Dock flutua sobre o conteúdo (oculto no modo player)
+            ValueListenableBuilder<String>(
+              valueListenable: AppRoutes.currentRoute,
+              builder: (context, route, _) {
+                if (!AppRoutes.shouldShowDock(route)) {
+                  return const SizedBox.shrink();
+                }
+
+                final selectedIndex = _getRouteIndex(route);
+
+                return Dock(
+                  selectedIndex: selectedIndex,
+                  onItemSelected: (index) {
+                    final targetRoute = _getRouteByIndex(index);
+                    AppRoutes.navigateTo(targetRoute);
+                  },
+                  items: const [
+                    DockItem(
+                      icon: Icons.folder_outlined,
+                      activeIcon: Icons.folder_outlined,
+                      label: 'Início',
+                    ),
+                    DockItem(
+                      icon: Icons.search_rounded,
+                      activeIcon: Icons.search_rounded,
+                      label: 'Buscar',
+                    ),
+                    DockItem(
+                      icon: Icons.menu_book_outlined,
+                      activeIcon: Icons.menu_book_outlined,
+                      label: 'Dictionary',
+                    ),
+                    DockItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Perfil',
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         );
       },
     );

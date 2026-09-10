@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../src/pages/home_page.dart';
 import '../src/pages/library_page.dart';
+
 import '../src/pages/profile_page.dart';
 import '../src/pages/search_page.dart';
 
@@ -10,16 +11,16 @@ class AppRoutes {
       GlobalKey<NavigatorState>();
   static final RouteObserver<PageRoute> routeObserver =
       RouteObserver<PageRoute>();
-  static final ValueNotifier<String> currentRoute =
-      ValueNotifier<String>(home);
+  static final ValueNotifier<String> currentRoute = ValueNotifier<String>(home);
 
   static const home = '/';
   static const search = '/search';
   static const library = '/library';
   static const profile = '/profile';
+  static const player = '/player';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    // Keep track of the active route for the global Dock
+    // Mantém rastreamento da rota ativa para o Dock global
     if (settings.name != null) {
       currentRoute.value = settings.name!;
     }
@@ -65,5 +66,10 @@ class AppRoutes {
   static void navigateTo(String route) {
     if (currentRoute.value == route) return;
     navigatorKey.currentState?.pushReplacementNamed(route);
+  }
+
+  /// Rotas onde o Dock NÃO deve ser exibido (modo imersivo).
+  static bool shouldShowDock(String route) {
+    return route != player;
   }
 }
