@@ -50,7 +50,7 @@ String spotifyState() {
   final auth = SpotifyMobileAuth.instance;
   return jsonEncode({
     'authenticated': auth.isAuthenticated,
-    'ready': true,
+    'ready': false,
     'error': auth.error,
     'uri': '',
     'paused': true,

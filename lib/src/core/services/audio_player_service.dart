@@ -26,7 +26,10 @@ class AudioPlayerService {
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
-  bool get _isSpotify => currentUrl.value?.startsWith('spotify:track:') == true;
+  bool get _isSpotify =>
+      SpotifySession.instance.connected &&
+      SpotifySession.instance.state['ready'] == true &&
+      currentUrl.value?.startsWith('spotify:track:') == true;
   final ValueNotifier<String?> error = ValueNotifier(null);
   bool _disposed = false;
   void _spotifyChanged() {
