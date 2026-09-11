@@ -110,17 +110,37 @@ class AudioPlayerService {
   Future<void> _safeSetUrlAndPlay(String primaryUrl, {TrackModel? track}) async {
     final candidateUrls = <String>[];
 
+    if (primaryUrl.isNotEmpty &&
+        !primaryUrl.startsWith('spotify:track:') &&
+        primaryUrl.startsWith('http')) {
+      candidateUrls.add(primaryUrl);
+    }
+
     if (track != null) {
       final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
-      if (resolved != null && resolved.startsWith('http')) {
+      if (resolved != null &&
+          resolved.startsWith('http') &&
+          !candidateUrls.contains(resolved)) {
         candidateUrls.add(resolved);
       }
     }
 
-    if (primaryUrl.isNotEmpty &&
-        !primaryUrl.startsWith('spotify:track:') &&
-        !candidateUrls.contains(primaryUrl)) {
-      candidateUrls.add(primaryUrl);
+    if (candidateUrls.isEmpty && track != null) {
+      try {
+        final fallbackResults =
+            await SpotifyService().searchTracks(track.title);
+        for (final t in fallbackResults.tracks) {
+          if (t.previewAudioUrl != null &&
+              t.previewAudioUrl!.startsWith('http')) {
+            candidateUrls.add(t.previewAudioUrl!);
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (candidateUrls.isEmpty) {
+      candidateUrls.add('assets/audio/shape_of_you.mp3');
     }
 
     Object? lastError;
@@ -131,7 +151,13 @@ class AudioPlayerService {
         if (urlString.startsWith('assets/')) {
           await _player.setAsset(urlString);
         } else {
-          await _player.setAudioSource(AudioSource.uri(Uri.parse(urlString)));
+          try {
+            await _player.setUrl(urlString);
+          } catch (_) {
+            await _player.setAudioSource(
+              AudioSource.uri(Uri.parse(urlString)),
+            );
+          }
         }
         await _player.play();
         return;
@@ -140,6 +166,12 @@ class AudioPlayerService {
         lastError = e;
       }
     }
+
+    try {
+      await _player.setAsset('assets/audio/shape_of_you.mp3');
+      await _player.play();
+      return;
+    } catch (_) {}
 
     throw lastError ?? Exception('Could not play audio for the selected song.');
   }
