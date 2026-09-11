@@ -119,14 +119,15 @@ class _PlayerPageState extends State<PlayerPage>
     _loadAll();
     _audioService.position.addListener(_onPositionChanged);
     _audioService.playerState.addListener(_onPlayerStateChanged);
-    if (_currentTrack.previewAudioUrl != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _audioService.play(_currentTrack.previewAudioUrl!, track: _currentTrack);
-          _upgradeToFullAudioStream();
-        }
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _audioService.play(
+          _currentTrack.previewAudioUrl ?? '',
+          track: _currentTrack,
+        );
+        _upgradeToFullAudioStream();
+      }
+    });
   }
 
   final SpotifyService _spotifyService = SpotifyService();
@@ -493,12 +494,10 @@ class _PlayerPageState extends State<PlayerPage>
     });
     _loadLyrics();
     _loadAll();
-    if (_currentTrack.previewAudioUrl != null &&
-        !_currentTrack.previewAudioUrl!.startsWith('spotify:track:')) {
-      await _audioService.play(_currentTrack.previewAudioUrl!);
-    } else {
-      await _audioService.stop();
-    }
+    await _audioService.play(
+      _currentTrack.previewAudioUrl ?? '',
+      track: _currentTrack,
+    );
   }
 
   void _onPrevious() {
@@ -1212,11 +1211,10 @@ class _PlayerPageState extends State<PlayerPage>
             state.processingState == ProcessingState.buffering;
 
         return GestureDetector(
-          onTap: _currentTrack.previewAudioUrl != null
-              ? () => _audioService.togglePlayPause(
-                  _currentTrack.previewAudioUrl!,
-                )
-              : null,
+          onTap: () => _audioService.togglePlayPause(
+            _currentTrack.previewAudioUrl ?? '',
+            track: _currentTrack,
+          ),
           child: Container(
             width: 58,
             height: 58,

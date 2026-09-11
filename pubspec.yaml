@@ -46,6 +46,8 @@ dependencies:
   dart_des: ^1.0.2
   app_links: ^6.3.2
   crypto: ^3.0.6
+  audio_session: ^0.1.25
+
 
 
 

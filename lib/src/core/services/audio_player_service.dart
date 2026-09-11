@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -7,13 +7,24 @@ import '../models/track_model.dart';
 import 'spotify_service.dart';
 import 'spotify_session.dart';
 
-
 /// Serviço de reprodução de áudio com ValueNotifiers reativos.
 ///
 /// Usa `just_audio` que funciona corretamente em todas as plataformas
 /// (iOS, Android, macOS, Web) sem exibir elementos HTML visíveis.
 class AudioPlayerService {
   final AudioPlayer _player = AudioPlayer();
+  bool _audioSessionInitialized = false;
+
+  Future<void> _initAudioSession() async {
+    if (_audioSessionInitialized) return;
+    _audioSessionInitialized = true;
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+    } catch (e) {
+      debugPrint('AudioSession configuration error: $e');
+    }
+  }
 
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> duration = ValueNotifier(Duration.zero);
@@ -92,6 +103,7 @@ class AudioPlayerService {
   Future<void> play(String url, {TrackModel? track}) async {
     try {
       error.value = null;
+      await _initAudioSession();
       if (currentUrl.value == url && _player.playing) return;
 
       currentUrl.value = url;
@@ -112,32 +124,22 @@ class AudioPlayerService {
     final candidateUrls = <String>[];
 
     if (primaryUrl.isNotEmpty &&
-        !primaryUrl.startsWith('spotify:track:') &&
-        primaryUrl.startsWith('http')) {
-      candidateUrls.add(primaryUrl);
+        !primaryUrl.startsWith('spotify:track:')) {
+      var p = primaryUrl.trim();
+      if (p.startsWith('http://')) {
+        p = p.replaceFirst('http://', 'https://');
+      }
+      candidateUrls.add(p);
     }
 
     if (track != null) {
-      final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
-      if (resolved != null &&
-          resolved.startsWith('http') &&
-          !candidateUrls.contains(resolved)) {
-        candidateUrls.add(resolved);
-      }
-    }
-
-    if (candidateUrls.isEmpty && track != null) {
-      try {
-        final fallbackResults =
-            await SpotifyService().searchTracks(track.title);
-        for (final t in fallbackResults.tracks) {
-          if (t.previewAudioUrl != null &&
-              t.previewAudioUrl!.startsWith('http')) {
-            candidateUrls.add(t.previewAudioUrl!);
-            break;
-          }
+      final resolvedCandidates =
+          await SpotifyService().resolvePlayableAudioUrls(track);
+      for (final u in resolvedCandidates) {
+        if (!candidateUrls.contains(u)) {
+          candidateUrls.add(u);
         }
-      } catch (_) {}
+      }
     }
 
     Object? lastError;
@@ -181,11 +183,11 @@ class AudioPlayerService {
   }
 
   /// Alterna entre play e pause.
-  Future<void> togglePlayPause(String url) async {
+  Future<void> togglePlayPause(String url, {TrackModel? track}) async {
     if (isPlaying) {
       await pause();
     } else {
-      await play(url);
+      await play(url, track: track);
     }
   }
 

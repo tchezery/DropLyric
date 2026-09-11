@@ -211,37 +211,60 @@ class SpotifyService {
     }
   }
 
-  /// Resolve uma faixa do Spotify para uma URL de áudio nativa (iTunes / JioSaavn).
-  Future<String?> resolveToPlayableAudioUrl(TrackModel track) async {
+  /// Resolve uma faixa do Spotify para uma lista de URLs de áudio candidatas (iTunes / JioSaavn).
+  Future<List<String>> resolvePlayableAudioUrls(TrackModel track) async {
+    final urls = <String>[];
     if (track.previewAudioUrl != null &&
         !track.previewAudioUrl!.startsWith('spotify:track:') &&
         track.previewAudioUrl!.startsWith('http')) {
-      return track.previewAudioUrl;
+      var primary = track.previewAudioUrl!.trim();
+      if (primary.startsWith('http://')) {
+        primary = primary.replaceFirst('http://', 'https://');
+      }
+      urls.add(primary);
+    } else if (track.previewAudioUrl != null &&
+        track.previewAudioUrl!.startsWith('assets/')) {
+      urls.add(track.previewAudioUrl!);
     }
 
     try {
       final cleanTitle = _cleanSearchTerm(track.title);
       final cleanArtist = _cleanSearchTerm(track.artist);
       final query = '$cleanArtist $cleanTitle'.trim();
+      final q = query.isNotEmpty ? query : track.title;
 
-      // 1. Busca via iTunes (Garante URL HTTP/HTTPS direta de áudio M4A)
-      final itunesTracks = await _searchItunes(query.isNotEmpty ? query : track.title);
-      if (itunesTracks.isNotEmpty &&
-          itunesTracks.first.previewAudioUrl != null &&
-          itunesTracks.first.previewAudioUrl!.startsWith('http')) {
-        return itunesTracks.first.previewAudioUrl;
+      final itunesTracks = await _searchItunes(q);
+      for (final t in itunesTracks) {
+        if (t.previewAudioUrl != null &&
+            t.previewAudioUrl!.startsWith('http')) {
+          var u = t.previewAudioUrl!.trim();
+          if (u.startsWith('http://')) {
+            u = u.replaceFirst('http://', 'https://');
+          }
+          if (!urls.contains(u)) urls.add(u);
+        }
       }
 
-      // 2. Fallback via JioSaavn (Stream de áudio MP4 320kbps completo)
-      final saavnTracks = await _searchSaavn(query.isNotEmpty ? query : track.title);
-      if (saavnTracks.isNotEmpty &&
-          saavnTracks.first.previewAudioUrl != null &&
-          saavnTracks.first.previewAudioUrl!.startsWith('http')) {
-        return saavnTracks.first.previewAudioUrl;
+      final saavnTracks = await _searchSaavn(q);
+      for (final t in saavnTracks) {
+        if (t.previewAudioUrl != null &&
+            t.previewAudioUrl!.startsWith('http')) {
+          var u = t.previewAudioUrl!.trim();
+          if (u.startsWith('http://')) {
+            u = u.replaceFirst('http://', 'https://');
+          }
+          if (!urls.contains(u)) urls.add(u);
+        }
       }
     } catch (_) {}
 
-    return null;
+    return urls;
+  }
+
+  /// Resolve uma faixa do Spotify para uma URL de áudio nativa (iTunes / JioSaavn).
+  Future<String?> resolveToPlayableAudioUrl(TrackModel track) async {
+    final list = await resolvePlayableAudioUrls(track);
+    return list.isNotEmpty ? list.first : null;
   }
 
   String _cleanSearchTerm(String str) {
