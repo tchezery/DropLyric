@@ -268,7 +268,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       applicationName: 'Droplyric',
                       applicationVersion: '1.0.0',
                       applicationIcon: const Icon(
-                        CupertinoCupertinoIcons.music_note,
+                        CupertinoIcons.music_note,
                         size: 48,
                         color: AppTheme.spotifyGreen,
                       ),
@@ -365,7 +365,7 @@ class _SettingsTile extends StatelessWidget {
         style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
       ),
       trailing: const Icon(
-        CupertinoCupertinoIcons.chevron_right,
+        CupertinoIcons.chevron_right,
         color: AppTheme.spotifyLightGray,
       ),
     );

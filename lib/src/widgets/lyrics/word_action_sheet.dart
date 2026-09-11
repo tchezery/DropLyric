@@ -402,7 +402,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               const SizedBox(height: 12),
               TextButton.icon(
                 onPressed: _lookup,
-                icon: const Icon(CupertinoCupertinoIcons.refresh, size: 16),
+                icon: const Icon(CupertinoIcons.refresh, size: 16),
                 label: const Text('Tentar novamente'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFDE68A),
@@ -422,11 +422,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                CupertinoIcons.book,
-                size: 44,
-                color: AppTheme.muted,
-              ),
+              const Icon(CupertinoIcons.book, size: 44, color: AppTheme.muted),
               const SizedBox(height: 12),
               Text(
                 'Nenhum significado detalhado encontrado\npara "${widget.rawWord}".',

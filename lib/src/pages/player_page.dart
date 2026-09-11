@@ -934,7 +934,7 @@ class _PlayerPageState extends State<PlayerPage>
                           isActiveLine: isActive,
                           isLightMode: _isLightStyle,
                           isManualMode: isManual,
-                          customColor: isActive ? AppTheme.ink : Colors.white,
+                          customColor: isActive ? AppTheme.ink : null,
                         );
                       }
                       return InteractiveWord(
@@ -943,7 +943,7 @@ class _PlayerPageState extends State<PlayerPage>
                         isActiveLine: isActive,
                         isLightMode: _isLightStyle,
                         isManualMode: isManual,
-                        customColor: isActive ? AppTheme.ink : Colors.white,
+                        customColor: isActive ? AppTheme.ink : null,
 
                         onToggle: () => _toggleWord(
                           token.displayText,

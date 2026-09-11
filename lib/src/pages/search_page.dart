@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
 
@@ -35,7 +36,7 @@ class _SearchPageState extends State<SearchPage> {
     ('Français', CupertinoIcons.globe, Color(0xFFE0E7EB)),
     ('Português', CupertinoIcons.globe, Color(0xFFE2E8D7)),
     ('Rock', CupertinoIcons.music_albums, Color(0xFFE9DFF0)),
-    ('Jazz', CupertinoCupertinoIcons.music_note, Color(0xFFEDE2D1)),
+    ('Jazz', CupertinoIcons.music_note, Color(0xFFEDE2D1)),
     ('Pop', CupertinoIcons.headphones, Color(0xFFDFE9E6)),
     ('Hip-Hop', CupertinoIcons.music_note_list, Color(0xFFF0DDE0)),
   ];
@@ -161,7 +162,7 @@ class _SearchPageState extends State<SearchPage> {
                     border: InputBorder.none,
                     filled: false,
                     prefixIcon: const Icon(
-                      CupertinoCupertinoIcons.search,
+                      CupertinoIcons.search,
                       color: AppTheme.ink,
                       size: 22,
                     ),
@@ -222,7 +223,7 @@ class _SearchPageState extends State<SearchPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              CupertinoCupertinoIcons.search,
+              CupertinoIcons.search,
               size: 52,
               color: AppTheme.spotifyMediumGray,
             ),

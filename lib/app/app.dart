@@ -54,13 +54,13 @@ class MyApp extends StatelessWidget {
                   },
                   items: const [
                     DockItem(
-                      icon: CupertinoIcons.folder,
-                      activeIcon: CupertinoIcons.folder,
+                      icon: CupertinoIcons.music_note_list,
+                      activeIcon: CupertinoIcons.music_note_list,
                       label: 'Home',
                     ),
                     DockItem(
-                      icon: CupertinoCupertinoIcons.search,
-                      activeIcon: CupertinoCupertinoIcons.search,
+                      icon: CupertinoIcons.search,
+                      activeIcon: CupertinoIcons.search,
                       label: 'Buscar',
                     ),
                     DockItem(

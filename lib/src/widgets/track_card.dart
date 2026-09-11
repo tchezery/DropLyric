@@ -9,11 +9,7 @@ class TrackCard extends StatelessWidget {
   final TrackModel track;
   final VoidCallback onTap;
 
-  const TrackCard({
-    super.key,
-    required this.track,
-    required this.onTap,
-  });
+  const TrackCard({super.key, required this.track, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -30,11 +26,10 @@ class TrackCard extends StatelessWidget {
           children: [
             // Capa do álbum
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              child: _AlbumArt(
-                url: track.albumArtUrl,
-                size: 152,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
               ),
+              child: _AlbumArt(url: track.albumArtUrl, size: 152),
             ),
 
             // Info
@@ -78,11 +73,7 @@ class TrackListTile extends StatelessWidget {
   final TrackModel track;
   final VoidCallback onTap;
 
-  const TrackListTile({
-    super.key,
-    required this.track,
-    required this.onTap,
-  });
+  const TrackListTile({super.key, required this.track, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -105,16 +96,16 @@ class TrackListTile extends StatelessWidget {
       ),
       subtitle: Text(
         track.artist,
-        style: const TextStyle(
-          color: AppTheme.spotifyLightGray,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: IconButton(
-        icon: const Icon(CupertinoIcons.ellipsis_vertical,
-            color: AppTheme.spotifyLightGray, size: 20),
+        icon: const Icon(
+          CupertinoIcons.ellipsis_vertical,
+          color: AppTheme.spotifyLightGray,
+          size: 20,
+        ),
         onPressed: () {},
       ),
     );
@@ -146,8 +137,11 @@ class _AlbumArt extends StatelessWidget {
     height: size,
     color: AppTheme.spotifyMediumGray,
     child: const Center(
-      child: Icon(CupertinoCupertinoIcons.music_note,
-          color: AppTheme.spotifyLightGray, size: 28),
+      child: Icon(
+        CupertinoIcons.music_note,
+        color: AppTheme.spotifyLightGray,
+        size: 28,
+      ),
     ),
   );
 }

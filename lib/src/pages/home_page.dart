@@ -49,7 +49,7 @@ class HomePage extends StatelessWidget {
                 child: Row(
                   children: [
                     const Icon(
-                      CupertinoIcons.folder,
+                      CupertinoIcons.music_note_list,
                       color: AppTheme.yellow,
                       size: 22,
                     ),
