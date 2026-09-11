@@ -109,32 +109,29 @@ class AudioPlayerService {
 
   Future<void> _safeSetUrlAndPlay(String primaryUrl, {TrackModel? track}) async {
     final candidateUrls = <String>[];
-    if (primaryUrl.isNotEmpty && !primaryUrl.startsWith('spotify:track:')) {
-      candidateUrls.add(primaryUrl);
-    }
 
     if (track != null) {
       final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
-      if (resolved != null && !candidateUrls.contains(resolved)) {
+      if (resolved != null && resolved.startsWith('http')) {
         candidateUrls.add(resolved);
       }
     }
 
-    if (track?.title.toLowerCase().contains('shape of you') == true ||
-        primaryUrl.contains('shape_of_you')) {
-      candidateUrls.add(
-        'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/bf/ce/3c/bfce3c25-01e4-8692-4a0b-9304720970a2/mzaf_13337929424855907449.plus.aac.p.m4a',
-      );
+    if (primaryUrl.isNotEmpty &&
+        !primaryUrl.startsWith('spotify:track:') &&
+        !candidateUrls.contains(primaryUrl)) {
+      candidateUrls.add(primaryUrl);
     }
 
     Object? lastError;
     for (final rawUrl in candidateUrls) {
       try {
-        final cleanUrl = Uri.encodeFull(rawUrl.trim());
-        if (cleanUrl.startsWith('assets/')) {
-          await _player.setAsset(cleanUrl);
+        final urlString = rawUrl.trim();
+        debugPrint('AudioPlayerService attempting audio stream: $urlString');
+        if (urlString.startsWith('assets/')) {
+          await _player.setAsset(urlString);
         } else {
-          await _player.setUrl(cleanUrl);
+          await _player.setAudioSource(AudioSource.uri(Uri.parse(urlString)));
         }
         await _player.play();
         return;
@@ -144,17 +141,7 @@ class AudioPlayerService {
       }
     }
 
-    if (candidateUrls.isEmpty && track != null) {
-      final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
-      if (resolved != null) {
-        final cleanUrl = Uri.encodeFull(resolved.trim());
-        await _player.setUrl(cleanUrl);
-        await _player.play();
-        return;
-      }
-    }
-
-    throw lastError ?? Exception('Could not play audio from any available source.');
+    throw lastError ?? Exception('Could not play audio for the selected song.');
   }
 
   /// Pausa a reprodução.
