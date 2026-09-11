@@ -92,70 +92,69 @@ class AudioPlayerService {
   Future<void> play(String url, {TrackModel? track}) async {
     try {
       error.value = null;
-      if (url.startsWith('spotify:track:')) {
-        if (SpotifySession.instance.connected &&
-            SpotifySession.instance.state['ready'] == true) {
-          currentUrl.value = url;
-          playerState.value = PlayerState(false, ProcessingState.loading);
-          await _player.pause();
-          await SpotifySession.instance.command('play', url);
-          return;
-        }
-
-        playerState.value = PlayerState(false, ProcessingState.loading);
-        String? playableUrl;
-        if (track != null) {
-          playableUrl = await SpotifyService().resolveToPlayableAudioUrl(track);
-        } else {
-          final query = url.replaceAll('spotify:track:', '');
-          final results = await SpotifyService().searchTracks(query);
-          if (results.tracks.isNotEmpty) {
-            playableUrl = results.tracks.first.previewAudioUrl;
-          }
-        }
-
-        if (playableUrl != null && !playableUrl.startsWith('spotify:track:')) {
-          url = playableUrl;
-        } else {
-          error.value = 'Audio stream not available for this track.';
-          playerState.value = PlayerState(false, ProcessingState.idle);
-          return;
-        }
-      }
-
-      if (currentUrl.value == url) {
-        if (!_player.playing) {
-          await _player.play();
-        }
-        return;
-      }
+      if (currentUrl.value == url && _player.playing) return;
 
       currentUrl.value = url;
       playerState.value = PlayerState(false, ProcessingState.loading);
 
-      if (url.startsWith('assets/')) {
-        try {
-          await _player.setAsset(url);
-        } catch (e) {
-          debugPrint('AudioPlayerService setAsset error ($e), trying fallback');
-          if (url.contains('shape_of_you')) {
-            await _player.setUrl(
-              'https://dn710705.ca.archive.org/0/items/JhePlalist/Ed%20Sheeran%20-%20Shape%20of%20You%20%5BOfficial%20Video%5D.mp3',
-            );
-          } else {
-            await _player.setUrl(url);
-          }
-        }
-      } else {
-        await _player.setUrl(url);
-      }
-      await _player.play();
+      await _safeSetUrlAndPlay(url, track: track);
     } catch (e) {
+      debugPrint('AudioPlayerService play error ($url): $e');
       if (!_disposed) {
         error.value = 'Could not play audio. Check your connection.';
         playerState.value = PlayerState(false, ProcessingState.idle);
       }
     }
+  }
+
+  Future<void> _safeSetUrlAndPlay(String primaryUrl, {TrackModel? track}) async {
+    final candidateUrls = <String>[];
+    if (primaryUrl.isNotEmpty && !primaryUrl.startsWith('spotify:track:')) {
+      candidateUrls.add(primaryUrl);
+    }
+
+    if (track != null) {
+      final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
+      if (resolved != null && !candidateUrls.contains(resolved)) {
+        candidateUrls.add(resolved);
+      }
+    }
+
+    if (track?.title.toLowerCase().contains('shape of you') == true ||
+        primaryUrl.contains('shape_of_you')) {
+      candidateUrls.add(
+        'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/bf/ce/3c/bfce3c25-01e4-8692-4a0b-9304720970a2/mzaf_13337929424855907449.plus.aac.p.m4a',
+      );
+    }
+
+    Object? lastError;
+    for (final rawUrl in candidateUrls) {
+      try {
+        final cleanUrl = Uri.encodeFull(rawUrl.trim());
+        if (cleanUrl.startsWith('assets/')) {
+          await _player.setAsset(cleanUrl);
+        } else {
+          await _player.setUrl(cleanUrl);
+        }
+        await _player.play();
+        return;
+      } catch (e) {
+        debugPrint('AudioPlayerService safeSetUrl error for ($rawUrl): $e');
+        lastError = e;
+      }
+    }
+
+    if (candidateUrls.isEmpty && track != null) {
+      final resolved = await SpotifyService().resolveToPlayableAudioUrl(track);
+      if (resolved != null) {
+        final cleanUrl = Uri.encodeFull(resolved.trim());
+        await _player.setUrl(cleanUrl);
+        await _player.play();
+        return;
+      }
+    }
+
+    throw lastError ?? Exception('Could not play audio from any available source.');
   }
 
   /// Pausa a reprodução.
