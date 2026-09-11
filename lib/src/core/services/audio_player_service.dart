@@ -108,6 +108,7 @@ class AudioPlayerService {
   }
 
   Future<void> _safeSetUrlAndPlay(String primaryUrl, {TrackModel? track}) async {
+    error.value = null;
     final candidateUrls = <String>[];
 
     if (primaryUrl.isNotEmpty &&
@@ -139,14 +140,13 @@ class AudioPlayerService {
       } catch (_) {}
     }
 
-    if (candidateUrls.isEmpty) {
-      candidateUrls.add('assets/audio/shape_of_you.mp3');
-    }
-
     Object? lastError;
     for (final rawUrl in candidateUrls) {
       try {
-        final urlString = rawUrl.trim();
+        var urlString = rawUrl.trim();
+        if (urlString.startsWith('http://')) {
+          urlString = urlString.replaceFirst('http://', 'https://');
+        }
         debugPrint('AudioPlayerService attempting audio stream: $urlString');
         if (urlString.startsWith('assets/')) {
           await _player.setAsset(urlString);
@@ -160,18 +160,13 @@ class AudioPlayerService {
           }
         }
         await _player.play();
+        error.value = null;
         return;
       } catch (e) {
         debugPrint('AudioPlayerService safeSetUrl error for ($rawUrl): $e');
         lastError = e;
       }
     }
-
-    try {
-      await _player.setAsset('assets/audio/shape_of_you.mp3');
-      await _player.play();
-      return;
-    } catch (_) {}
 
     throw lastError ?? Exception('Could not play audio for the selected song.');
   }

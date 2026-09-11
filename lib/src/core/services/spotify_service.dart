@@ -127,7 +127,11 @@ class SpotifyService {
       final encBytes = base64.decode(encUrl);
       final decrypted = des.decrypt(encBytes);
       final url = utf8.decode(decrypted).trim();
-      return url.replaceAll('_96.mp4', '_320.mp4');
+      final fullUrl = url.replaceAll('_96.mp4', '_320.mp4');
+      if (fullUrl.startsWith('http://')) {
+        return fullUrl.replaceFirst('http://', 'https://');
+      }
+      return fullUrl;
     } catch (_) {
       return null;
     }
