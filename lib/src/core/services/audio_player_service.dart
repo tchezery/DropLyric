@@ -1,9 +1,12 @@
-import 'spotify_session.dart';
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+
+import '../models/track_model.dart';
+import 'spotify_service.dart';
+import 'spotify_session.dart';
+
 
 /// Serviço de reprodução de áudio com ValueNotifiers reativos.
 ///
@@ -83,16 +86,40 @@ class AudioPlayerService {
       _isSpotify ? playerState.value.playing : _player.playing;
 
   /// Carrega e toca uma URL ou Asset. Se for a mesma faixa pausada, retoma.
-  Future<void> play(String url) async {
+  Future<void> play(String url, {TrackModel? track}) async {
     try {
       error.value = null;
       if (url.startsWith('spotify:track:')) {
-        currentUrl.value = url;
+        if (SpotifySession.instance.connected &&
+            SpotifySession.instance.state['ready'] == true) {
+          currentUrl.value = url;
+          playerState.value = PlayerState(false, ProcessingState.loading);
+          await _player.pause();
+          await SpotifySession.instance.command('play', url);
+          return;
+        }
+
         playerState.value = PlayerState(false, ProcessingState.loading);
-        await _player.pause();
-        await SpotifySession.instance.command('play', url);
-        return;
+        String? playableUrl;
+        if (track != null) {
+          playableUrl = await SpotifyService().resolveToPlayableAudioUrl(track);
+        } else {
+          final query = url.replaceAll('spotify:track:', '');
+          final results = await SpotifyService().searchTracks(query);
+          if (results.tracks.isNotEmpty) {
+            playableUrl = results.tracks.first.previewAudioUrl;
+          }
+        }
+
+        if (playableUrl != null && !playableUrl.startsWith('spotify:track:')) {
+          url = playableUrl;
+        } else {
+          error.value = 'Audio stream not available for this track.';
+          playerState.value = PlayerState(false, ProcessingState.idle);
+          return;
+        }
       }
+
       if (currentUrl.value == url) {
         if (!_player.playing) {
           await _player.play();
@@ -101,6 +128,8 @@ class AudioPlayerService {
       }
 
       currentUrl.value = url;
+      playerState.value = PlayerState(false, ProcessingState.loading);
+
       if (url.startsWith('assets/')) {
         try {
           await _player.setAsset(url);
@@ -120,7 +149,7 @@ class AudioPlayerService {
       await _player.play();
     } catch (e) {
       if (!_disposed) {
-        error.value = 'Could not play. Check your Spotify connection and try again.';
+        error.value = 'Could not play audio. Check your connection.';
         playerState.value = PlayerState(false, ProcessingState.idle);
       }
     }

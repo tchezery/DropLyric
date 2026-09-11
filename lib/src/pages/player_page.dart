@@ -119,11 +119,10 @@ class _PlayerPageState extends State<PlayerPage>
     _loadAll();
     _audioService.position.addListener(_onPositionChanged);
     _audioService.playerState.addListener(_onPlayerStateChanged);
-    if (_currentTrack.previewAudioUrl != null &&
-        !_currentTrack.previewAudioUrl!.startsWith('spotify:track:')) {
+    if (_currentTrack.previewAudioUrl != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _audioService.play(_currentTrack.previewAudioUrl!);
+          _audioService.play(_currentTrack.previewAudioUrl!, track: _currentTrack);
           _upgradeToFullAudioStream();
         }
       });

@@ -207,6 +207,27 @@ class SpotifyService {
     }
   }
 
+  /// Resolve uma faixa do Spotify para uma URL de áudio nativa (JioSaavn / iTunes).
+  Future<String?> resolveToPlayableAudioUrl(TrackModel track) async {
+    if (track.previewAudioUrl != null &&
+        !track.previewAudioUrl!.startsWith('spotify:track:')) {
+      return track.previewAudioUrl;
+    }
+
+    try {
+      final query = '${track.artist} ${track.title}';
+      final results = await searchTracks(query);
+      for (final t in results.tracks) {
+        if (t.previewAudioUrl != null &&
+            !t.previewAudioUrl!.startsWith('spotify:track:')) {
+          return t.previewAudioUrl;
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
   /// Tenta buscar a versão de áudio COMPLETO no catálogo para faixas que têm prévia de 30s.
   Future<TrackModel> fetchFullAudioStream(TrackModel track) async {
     if (track.id.startsWith('saavn:') ||
