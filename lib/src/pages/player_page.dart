@@ -122,8 +122,26 @@ class _PlayerPageState extends State<PlayerPage>
     if (_currentTrack.previewAudioUrl != null &&
         !_currentTrack.previewAudioUrl!.startsWith('spotify:track:')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _audioService.play(_currentTrack.previewAudioUrl!);
+        if (mounted) {
+          _audioService.play(_currentTrack.previewAudioUrl!);
+          _upgradeToFullAudioStream();
+        }
       });
+    }
+  }
+
+  final SpotifyService _spotifyService = SpotifyService();
+
+  Future<void> _upgradeToFullAudioStream() async {
+    final fullTrack =
+        await _spotifyService.fetchFullAudioStream(_currentTrack);
+    if (fullTrack.previewAudioUrl != null &&
+        fullTrack.previewAudioUrl != _currentTrack.previewAudioUrl) {
+      final pos = _audioService.position.value;
+      _currentTrack = fullTrack;
+      await _audioService.play(_currentTrack.previewAudioUrl!);
+      await _audioService.seekTo(pos);
+      if (mounted) setState(() {});
     }
   }
 

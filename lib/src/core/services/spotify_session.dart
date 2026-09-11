@@ -75,12 +75,15 @@ class SpotifySession extends ChangeNotifier {
               url.pathSegments.first == 'track'
         ? url.pathSegments.last
         : null;
-    if (id == null) {
-      throw StateError('Search for this track again after connecting Spotify.');
-    }
-    final data =
-        jsonDecode(await spotifyCall('track', id)) as Map<String, dynamic>;
-    return fromJson(data).copyWith(language: track.language);
+    if (id == null) return track;
+    try {
+      final jsonStr = await spotifyCall('track', id);
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+      if (data.containsKey('name') && data.containsKey('uri')) {
+        return fromJson(data).copyWith(language: track.language);
+      }
+    } catch (_) {}
+    return track;
   }
 
   static TrackModel fromJson(Map<String, dynamic> data) {

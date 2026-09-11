@@ -44,6 +44,10 @@ dependencies:
   just_audio: ^0.10.6
   encrypt: ^5.0.3
   dart_des: ^1.0.2
+  app_links: ^6.3.2
+  crypto: ^3.0.6
+
+
 
 dev_dependencies:
   flutter_test:

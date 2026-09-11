@@ -137,7 +137,12 @@ class SpotifyService {
   Future<SearchResult> searchTracks(String query) async {
     if (query.trim().isEmpty) return const SearchResult(tracks: []);
     if (SpotifySession.instance.connected) {
-      return SearchResult(tracks: await SpotifySession.instance.search(query));
+      try {
+        final spotifyResults = await SpotifySession.instance.search(query);
+        if (spotifyResults.isNotEmpty) {
+          return SearchResult(tracks: spotifyResults);
+        }
+      } catch (_) {}
     }
 
     final cacheKey = query.toLowerCase().trim();
@@ -146,20 +151,93 @@ class SpotifyService {
     }
 
     try {
-      // 1. Tenta buscar no catálogo completo (JioSaavn)
+      // 1. Busca no catálogo global do iTunes (metadata e artwork perfeitos)
+      final itunesTracks = await _searchItunes(query);
+      // 2. Busca no catálogo de áudio completo (JioSaavn 320kbps full track)
       final saavnTracks = await _searchSaavn(query);
-      if (saavnTracks.isNotEmpty) {
-        _searchCache[cacheKey] = saavnTracks;
-        return SearchResult(tracks: saavnTracks);
+
+      final saavnMap = <String, TrackModel>{};
+      for (final t in saavnTracks) {
+        if (t.previewAudioUrl != null && t.previewAudioUrl!.startsWith('http')) {
+          final key = _normalizeKey(t.artist, t.title);
+          saavnMap[key] = t;
+        }
       }
 
-      // 2. Fallback: busca via iTunes Search API
-      final itunesTracks = await _searchItunes(query);
-      _searchCache[cacheKey] = itunesTracks;
-      return SearchResult(tracks: itunesTracks);
+      final List<TrackModel> resultList = [];
+      for (final t in itunesTracks) {
+        final key = _normalizeKey(t.artist, t.title);
+        TrackModel? fullMatch = saavnMap[key];
+
+        if (fullMatch == null) {
+          final titleKey = _normalizeString(t.title);
+          for (final entry in saavnMap.entries) {
+            if (entry.key.contains(titleKey)) {
+              fullMatch = entry.value;
+              break;
+            }
+          }
+        }
+
+        if (fullMatch != null && fullMatch.previewAudioUrl != null) {
+          resultList.add(t.copyWith(
+            previewAudioUrl: fullMatch.previewAudioUrl,
+            duration: fullMatch.duration ?? t.duration,
+          ));
+        } else {
+          resultList.add(t);
+        }
+      }
+
+      for (final t in saavnTracks) {
+        final key = _normalizeKey(t.artist, t.title);
+        if (!resultList.any((it) => _normalizeKey(it.artist, it.title) == key)) {
+          resultList.add(t);
+        }
+      }
+
+      if (resultList.isNotEmpty) {
+        _searchCache[cacheKey] = resultList;
+        return SearchResult(tracks: resultList);
+      }
+
+      return const SearchResult(tracks: []);
     } catch (_) {
       return const SearchResult(tracks: []);
     }
+  }
+
+  /// Tenta buscar a versão de áudio COMPLETO no catálogo para faixas que têm prévia de 30s.
+  Future<TrackModel> fetchFullAudioStream(TrackModel track) async {
+    if (track.id.startsWith('saavn:') ||
+        track.previewAudioUrl == null ||
+        track.previewAudioUrl!.startsWith('assets/')) {
+      return track;
+    }
+
+    try {
+      final query = '${track.artist} ${track.title}';
+      final saavnTracks = await _searchSaavn(query);
+      if (saavnTracks.isNotEmpty) {
+        final fullAudioUrl = saavnTracks.first.previewAudioUrl;
+        if (fullAudioUrl != null && fullAudioUrl.startsWith('http')) {
+          return track.copyWith(
+            previewAudioUrl: fullAudioUrl,
+            duration: saavnTracks.first.duration ?? track.duration,
+          );
+        }
+      }
+    } catch (_) {}
+
+    return track;
+  }
+
+  String _normalizeKey(String artist, String title) {
+    return '${_normalizeString(artist)}_${_normalizeString(title)}';
+  }
+
+  String _normalizeString(String s) {
+    return s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Future<List<TrackModel>> _searchSaavn(String query) async {
