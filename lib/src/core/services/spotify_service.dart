@@ -210,30 +210,42 @@ class SpotifyService {
   /// Resolve uma faixa do Spotify para uma URL de áudio nativa (iTunes / JioSaavn).
   Future<String?> resolveToPlayableAudioUrl(TrackModel track) async {
     if (track.previewAudioUrl != null &&
-        !track.previewAudioUrl!.startsWith('spotify:track:')) {
+        !track.previewAudioUrl!.startsWith('spotify:track:') &&
+        track.previewAudioUrl!.startsWith('http')) {
       return track.previewAudioUrl;
     }
 
     try {
-      final query = '${track.artist} ${track.title}';
+      final cleanTitle = _cleanSearchTerm(track.title);
+      final cleanArtist = _cleanSearchTerm(track.artist);
+      final query = '$cleanArtist $cleanTitle'.trim();
+
       // 1. Busca via iTunes (Garante URL HTTP/HTTPS direta de áudio M4A)
-      final itunesTracks = await _searchItunes(query);
+      final itunesTracks = await _searchItunes(query.isNotEmpty ? query : track.title);
       if (itunesTracks.isNotEmpty &&
           itunesTracks.first.previewAudioUrl != null &&
-          !itunesTracks.first.previewAudioUrl!.startsWith('spotify:track:')) {
+          itunesTracks.first.previewAudioUrl!.startsWith('http')) {
         return itunesTracks.first.previewAudioUrl;
       }
 
       // 2. Fallback via JioSaavn (Stream de áudio MP4 320kbps completo)
-      final saavnTracks = await _searchSaavn(query);
+      final saavnTracks = await _searchSaavn(query.isNotEmpty ? query : track.title);
       if (saavnTracks.isNotEmpty &&
           saavnTracks.first.previewAudioUrl != null &&
-          !saavnTracks.first.previewAudioUrl!.startsWith('spotify:track:')) {
+          saavnTracks.first.previewAudioUrl!.startsWith('http')) {
         return saavnTracks.first.previewAudioUrl;
       }
     } catch (_) {}
 
     return null;
+  }
+
+  String _cleanSearchTerm(String str) {
+    return str
+        .replaceAll(RegExp(r'\(.*?\)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\[.*?\]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'-.*$', caseSensitive: false), '')
+        .trim();
   }
 
   /// Tenta buscar a versão de áudio COMPLETO no catálogo para faixas que têm prévia de 30s.

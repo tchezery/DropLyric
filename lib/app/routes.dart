@@ -25,6 +25,21 @@ class AppRoutes {
       currentRoute.value = settings.name!;
     }
 
+    final name = settings.name ?? '';
+
+    // Trata retornos do Safari / Spotify Deep Links (ex: droplyric://callback?code=...)
+    if (name.contains('callback') ||
+        name.startsWith('droplyric:') ||
+        name.startsWith('/callback')) {
+      currentRoute.value = AppRoutes.search;
+      return PageRouteBuilder(
+        settings: const RouteSettings(name: AppRoutes.search),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const SearchPage(),
+        transitionDuration: Duration.zero,
+      );
+    }
+
     switch (settings.name) {
       case home:
         return PageRouteBuilder(
@@ -55,10 +70,12 @@ class AppRoutes {
           transitionDuration: Duration.zero,
         );
       default:
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) =>
-              const Scaffold(body: Center(child: Text('Route not found'))),
+        currentRoute.value = AppRoutes.home;
+        return PageRouteBuilder(
+          settings: const RouteSettings(name: AppRoutes.home),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const HomePage(),
+          transitionDuration: Duration.zero,
         );
     }
   }
