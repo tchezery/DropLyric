@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -340,7 +341,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Calibrar Sincronização',
+                    'Calibrate Sync',
                     style: TextStyle(
                       color: textColor,
                       fontSize: 16,
@@ -349,7 +350,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Ajuste para avançar (+) ou atrasar (-) o tempo em que a letra aparece.',
+                    'Adjust to advance (+) or delay (-) the lyrics timing.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: subColor, fontSize: 12),
                   ),
@@ -580,7 +581,7 @@ class _PlayerPageState extends State<PlayerPage>
                 }
                 Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.chevron_left_rounded, size: 28),
+              icon: const Icon(CupertinoIcons.chevron_left, size: 28),
               color: _primaryInk,
               tooltip: 'Voltar',
             ),
@@ -630,7 +631,7 @@ class _PlayerPageState extends State<PlayerPage>
                     (_lyricsResult?.isSynced ?? false))
                   IconButton(
                     onPressed: () => _showSyncSheet(context),
-                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    icon: const Icon(CupertinoIcons.slider_horizontal_3, size: 18),
                     color: _primaryInk,
                     tooltip: 'Calibrar Sincronia',
                   ),
@@ -639,8 +640,8 @@ class _PlayerPageState extends State<PlayerPage>
                       setState(() => _isLightStyle = !_isLightStyle),
                   icon: Icon(
                     _isLightStyle
-                        ? Icons.dark_mode_outlined
-                        : Icons.light_mode_outlined,
+                        ? CupertinoIcons.moon
+                        : CupertinoIcons.sun_max,
                     size: 18,
                     color: _primaryInk,
                   ),
@@ -667,7 +668,7 @@ class _PlayerPageState extends State<PlayerPage>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.translate_rounded,
+                          CupertinoIcons.globe,
                           size: 13,
                           color: _primaryInk,
                         ),
@@ -710,7 +711,7 @@ class _PlayerPageState extends State<PlayerPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.lyrics_outlined,
+                CupertinoIcons.doc_text,
                 size: 52,
                 color: _isLightStyle
                     ? const Color(0xFFC7C7CC)
@@ -718,7 +719,7 @@ class _PlayerPageState extends State<PlayerPage>
               ),
               const SizedBox(height: 16),
               Text(
-                'Letra não disponível\npara esta música.',
+                'Lyrics not available\nfor this track.',
                 style: TextStyle(
                   color: _isLightStyle
                       ? const Color(0xFF8E8E93)
@@ -810,7 +811,7 @@ class _PlayerPageState extends State<PlayerPage>
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Esta música possui apenas letra em texto livre.',
+                          'This track only has plain text lyrics.',
                         ),
                         duration: Duration(seconds: 2),
                       ),
@@ -1089,7 +1090,7 @@ class _PlayerPageState extends State<PlayerPage>
               // 2. Voltar (Previous)
               IconButton(
                 onPressed: _onPrevious,
-                icon: const Icon(Icons.skip_previous_rounded, size: 34),
+                icon: const Icon(CupertinoIcons.backward_end_fill, size: 34),
                 color: _primaryInk,
                 tooltip: 'Voltar',
               ),
@@ -1100,7 +1101,7 @@ class _PlayerPageState extends State<PlayerPage>
               // 4. Pular (Next)
               IconButton(
                 onPressed: _onNext,
-                icon: const Icon(Icons.skip_next_rounded, size: 34),
+                icon: const Icon(CupertinoIcons.forward_end_fill, size: 34),
                 color: _primaryInk,
                 tooltip: 'Pular',
               ),
@@ -1124,7 +1125,7 @@ class _PlayerPageState extends State<PlayerPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.shuffle_rounded,
+                CupertinoIcons.shuffle,
                 size: 22,
                 color: isShuffle
                     ? _spotifyGreen
@@ -1141,7 +1142,7 @@ class _PlayerPageState extends State<PlayerPage>
               ),
             ],
           ),
-          tooltip: isShuffle ? 'Aleatório: Ativado' : 'Aleatório: Desativado',
+          tooltip: isShuffle ? 'Shuffle: On' : 'Shuffle: Off',
         );
       },
     );
@@ -1159,7 +1160,7 @@ class _PlayerPageState extends State<PlayerPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isOne ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                isOne ? CupertinoIcons.repeat_1 : CupertinoIcons.repeat,
                 size: 22,
                 color: isActive
                     ? _spotifyGreen
@@ -1177,8 +1178,8 @@ class _PlayerPageState extends State<PlayerPage>
             ],
           ),
           tooltip: isOne
-              ? 'Repetir: Uma música'
-              : (isActive ? 'Repetir: Todas' : 'Repetir: Desativado'),
+              ? 'Repeat: One track'
+              : (isActive ? 'Repeat: All' : 'Repeat: Off'),
         );
       },
     );
@@ -1222,7 +1223,7 @@ class _PlayerPageState extends State<PlayerPage>
                     ),
                   )
                 : Icon(
-                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    playing ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill,
                     color: _canvasColor,
                     size: 34,
                   ),

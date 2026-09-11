@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
@@ -51,7 +52,7 @@ class _LibraryPageState extends State<LibraryPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Não foi possível carregar suas palavras.';
+          _error = 'Could not load your words.';
         });
       }
     }
@@ -72,7 +73,7 @@ class _LibraryPageState extends State<LibraryPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível remover a palavra.')),
+          const SnackBar(content: Text('Could not remove the word.')),
         );
       }
     }
@@ -116,8 +117,8 @@ class _LibraryPageState extends State<LibraryPage> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    tooltip: 'Atualizar palavras',
-                    icon: const Icon(Icons.refresh_rounded),
+                    tooltip: 'Refresh words',
+                    icon: const Icon(CupertinoCupertinoIcons.refresh),
                   ),
                 ],
               ),
@@ -125,7 +126,7 @@ class _LibraryPageState extends State<LibraryPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                '${_words.length} palavras conhecidas · ${languages.length} idiomas',
+                '${_words.length} known words · ${languages.length} languages',
                 style: const TextStyle(color: AppTheme.muted, fontSize: 14),
               ),
             ),
@@ -135,13 +136,13 @@ class _LibraryPageState extends State<LibraryPage> {
                 controller: _search,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Buscar palavra ou música',
-                  prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+                  hintText: 'Search word or track',
+                  prefixIcon: const Icon(CupertinoIcons.search, color: AppTheme.muted),
                   suffixIcon: query.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'Limpar busca',
-                          icon: const Icon(Icons.close, size: 18),
+                          tooltip: 'Clear search',
+                          icon: const Icon(CupertinoIcons.clear, size: 18),
                           onPressed: () {
                             _search.clear();
                             setState(() {});
@@ -162,7 +163,7 @@ class _LibraryPageState extends State<LibraryPage> {
                         items: [
                           const DropdownMenuItem(
                             value: '',
-                            child: Text('Todos os idiomas'),
+                            child: Text('All languages'),
                           ),
                           for (final code in languages)
                             DropdownMenuItem(
@@ -185,8 +186,8 @@ class _LibraryPageState extends State<LibraryPage> {
                   TextButton.icon(
                     onPressed: () =>
                         setState(() => _alphabetical = !_alphabetical),
-                    icon: const Icon(Icons.sort, size: 18),
-                    label: Text(_alphabetical ? 'A–Z' : 'Recentes'),
+                    icon: const Icon(CupertinoIcons.sort_down, size: 18),
+                    label: Text(_alphabetical ? 'A–Z' : 'Recent'),
                   ),
                 ],
               ),
@@ -198,7 +199,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   ? Center(
                       child: TextButton(
                         onPressed: _load,
-                        child: Text('$_error Tentar novamente'),
+                        child: Text('$_error Try again'),
                       ),
                     )
                   : visible.isEmpty
@@ -209,15 +210,15 @@ class _LibraryPageState extends State<LibraryPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.menu_book_outlined,
+                              CupertinoIcons.book,
                               size: 46,
                               color: AppTheme.yellow,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               _words.isEmpty
-                                  ? 'Seu dicionário começa com uma palavra'
-                                  : 'Nenhuma palavra encontrada',
+                                  ? 'Your dictionary starts with a word'
+                                  : 'No words found',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 19,
@@ -227,8 +228,8 @@ class _LibraryPageState extends State<LibraryPage> {
                             const SizedBox(height: 8),
                             Text(
                               _words.isEmpty
-                                  ? 'Toque em uma palavra na letra e marque como conhecida para guardar aqui.'
-                                  : 'Tente outra busca ou outro idioma.',
+                                  ? 'Tap a word in the lyrics and mark it as known to save it here.'
+                                  : 'Try another search or another language.',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: AppTheme.muted,
@@ -323,7 +324,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${widget.languageName} · Conhecida',
+                '${widget.languageName} · Known',
                 style: const TextStyle(color: AppTheme.yellow, fontSize: 12),
               ),
               if (word.trackName?.isNotEmpty == true)
@@ -344,7 +345,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Salva em $date',
+              'Saved on $date',
               style: const TextStyle(color: AppTheme.muted, fontSize: 12),
             ),
           ),
@@ -365,9 +366,9 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                     (data.meanings.isEmpty && data.translation == null)) {
                   return TextButton.icon(
                     onPressed: _lookup,
-                    icon: const Icon(Icons.refresh, size: 16),
+                    icon: const Icon(CupertinoIcons.refresh, size: 16),
                     label: const Text(
-                      'Definição indisponível. Tentar novamente',
+                      'Definition unavailable. Try again',
                     ),
                   );
                 }
@@ -436,8 +437,8 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               onPressed: widget.onRemove,
-              icon: const Icon(Icons.bookmark_remove_outlined, size: 17),
-              label: const Text('Remover das conhecidas'),
+              icon: const Icon(CupertinoIcons.bookmark_solid, size: 17),
+              label: const Text('Remove from known'),
             ),
           ),
         ],

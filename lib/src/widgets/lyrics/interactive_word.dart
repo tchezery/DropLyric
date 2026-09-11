@@ -38,7 +38,7 @@ class InteractiveWord extends StatelessWidget {
     if (isActiveLine) {
       textColor = const Color(0xFF141F17);
     } else {
-      textColor = customColor ?? Colors.white;
+      textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
     final double opacity;
@@ -110,7 +110,7 @@ class PunctuationSpan extends StatelessWidget {
     if (isActiveLine) {
       textColor = const Color(0xFF141F17);
     } else {
-      textColor = customColor ?? Colors.white;
+      textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
     final fontSize = isActiveLine ? 16.5 : 15.0;

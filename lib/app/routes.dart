@@ -58,7 +58,7 @@ class AppRoutes {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) =>
-              const Scaffold(body: Center(child: Text('Rota não encontrada'))),
+              const Scaffold(body: Center(child: Text('Route not found'))),
         );
     }
   }

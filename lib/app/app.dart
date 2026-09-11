@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -53,24 +54,24 @@ class MyApp extends StatelessWidget {
                   },
                   items: const [
                     DockItem(
-                      icon: Icons.folder_outlined,
-                      activeIcon: Icons.folder_outlined,
-                      label: 'Início',
+                      icon: CupertinoIcons.folder,
+                      activeIcon: CupertinoIcons.folder,
+                      label: 'Home',
                     ),
                     DockItem(
-                      icon: Icons.search_rounded,
-                      activeIcon: Icons.search_rounded,
+                      icon: CupertinoCupertinoIcons.search,
+                      activeIcon: CupertinoCupertinoIcons.search,
                       label: 'Buscar',
                     ),
                     DockItem(
-                      icon: Icons.menu_book_outlined,
-                      activeIcon: Icons.menu_book_outlined,
+                      icon: CupertinoIcons.book,
+                      activeIcon: CupertinoIcons.book,
                       label: 'Dictionary',
                     ),
                     DockItem(
                       icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'Perfil',
+                      activeIcon: CupertinoIcons.person,
+                      label: 'Profile',
                     ),
                   ],
                 );

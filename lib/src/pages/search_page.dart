@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
 
@@ -29,14 +30,14 @@ class _SearchPageState extends State<SearchPage> {
 
   // Categorias de gênero/idioma para o estado inicial (estilo Spotify)
   static const _categories = [
-    ('English', Icons.language_rounded, Color(0xFFF4E9C5)),
-    ('Español', Icons.language_rounded, Color(0xFFF2DECF)),
-    ('Français', Icons.language_rounded, Color(0xFFE0E7EB)),
-    ('Português', Icons.language_rounded, Color(0xFFE2E8D7)),
-    ('Rock', Icons.album_rounded, Color(0xFFE9DFF0)),
-    ('Jazz', Icons.music_note_rounded, Color(0xFFEDE2D1)),
-    ('Pop', Icons.headphones_rounded, Color(0xFFDFE9E6)),
-    ('Hip-Hop', Icons.audiotrack_rounded, Color(0xFFF0DDE0)),
+    ('English', CupertinoIcons.globe, Color(0xFFF4E9C5)),
+    ('Español', CupertinoIcons.globe, Color(0xFFF2DECF)),
+    ('Français', CupertinoIcons.globe, Color(0xFFE0E7EB)),
+    ('Português', CupertinoIcons.globe, Color(0xFFE2E8D7)),
+    ('Rock', CupertinoIcons.music_albums, Color(0xFFE9DFF0)),
+    ('Jazz', CupertinoCupertinoIcons.music_note, Color(0xFFEDE2D1)),
+    ('Pop', CupertinoIcons.headphones, Color(0xFFDFE9E6)),
+    ('Hip-Hop', CupertinoIcons.music_note_list, Color(0xFFF0DDE0)),
   ];
 
   @override
@@ -61,7 +62,7 @@ class _SearchPageState extends State<SearchPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Falha na busca Spotify. Confira a conexão e tente novamente.',
+            'Spotify search failed. Check your connection and try again.',
           ),
         ),
       );
@@ -85,7 +86,7 @@ class _SearchPageState extends State<SearchPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Não foi possível abrir a faixa no Spotify. Tente pela busca.',
+                'Could not open the track on Spotify. Try searching.',
               ),
             ),
           );
@@ -155,19 +156,19 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                   cursorColor: AppTheme.yellow,
                   decoration: InputDecoration(
-                    hintText: 'Que música você quer aprender?',
+                    hintText: 'What track do you want to learn?',
                     hintStyle: TextStyle(color: AppTheme.muted, fontSize: 14),
                     border: InputBorder.none,
                     filled: false,
                     prefixIcon: const Icon(
-                      Icons.search_rounded,
+                      CupertinoCupertinoIcons.search,
                       color: AppTheme.ink,
                       size: 22,
                     ),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(
-                              Icons.clear_rounded,
+                              CupertinoIcons.clear,
                               color: AppTheme.ink,
                               size: 18,
                             ),
@@ -221,13 +222,13 @@ class _SearchPageState extends State<SearchPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.search_off_rounded,
+              CupertinoCupertinoIcons.search,
               size: 52,
               color: AppTheme.spotifyMediumGray,
             ),
             SizedBox(height: 16),
             Text(
-              'Nenhuma música encontrada.',
+              'No tracks found.',
               style: TextStyle(color: AppTheme.spotifyLightGray),
             ),
           ],

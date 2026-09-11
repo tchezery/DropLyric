@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../core/services/spotify_session.dart';
@@ -17,7 +18,7 @@ class SpotifyConnectButton extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               icon: Icon(
-                session.connected ? Icons.check_circle : Icons.music_note,
+                session.connected ? CupertinoIcons.checkmark_alt_circle : CupertinoIcons.music_note,
               ),
               label: Text(
                 session.connected

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
 
@@ -23,7 +24,7 @@ class HomePage extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(24, 24, 24, 6),
                 child: Text(
-                  'Cadernos',
+                  'DropLyric',
                   style: TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
@@ -36,7 +37,7 @@ class HomePage extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  'Suas músicas, palavras e descobertas.',
+                  'Learn new languages.',
                   style: TextStyle(color: AppTheme.muted, fontSize: 15),
                 ),
               ),
@@ -48,14 +49,14 @@ class HomePage extends StatelessWidget {
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.folder_outlined,
+                      CupertinoIcons.folder,
                       color: AppTheme.yellow,
                       size: 22,
                     ),
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Todas as músicas',
+                        'All songs',
                         style: TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.w700,
@@ -86,7 +87,7 @@ class HomePage extends StatelessWidget {
                               vertical: 8,
                             ),
                             leading: const Icon(
-                              Icons.description_outlined,
+                              CupertinoIcons.music_note,
                               color: AppTheme.yellow,
                             ),
                             title: Text(
@@ -108,7 +109,7 @@ class HomePage extends StatelessWidget {
                               ),
                             ),
                             trailing: const Icon(
-                              Icons.chevron_right,
+                              CupertinoIcons.chevron_right,
                               color: AppTheme.muted,
                               size: 18,
                             ),
@@ -139,7 +140,7 @@ class HomePage extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Não foi possível abrir a faixa. Tente pela busca.',
+                'It was not possible to open the track. Try searching for it.',
               ),
             ),
           );

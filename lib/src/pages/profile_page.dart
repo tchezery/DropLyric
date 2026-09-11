@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
@@ -73,7 +74,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Perfil',
+                        'Profile',
                         style: TextStyle(
                           color: AppTheme.spotifyWhite,
                           fontSize: 24,
@@ -92,7 +93,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.person_rounded,
+                              CupertinoIcons.person,
                               color: AppTheme.spotifyLightGray,
                               size: 44,
                             ),
@@ -147,12 +148,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _StatCard(
                         value: '${_stats?.total ?? 0}',
-                        label: 'Palavras\nConhecidas',
+                        label: 'Known\nWords',
                       ),
                       const SizedBox(width: 12),
                       _StatCard(
                         value: '${_stats?.perLanguage.length ?? 0}',
-                        label: 'Idiomas\nPraticados',
+                        label: 'Practiced\nLanguages',
                       ),
                     ],
                   ),
@@ -170,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Por idioma',
+                      'By language',
                       style: TextStyle(
                         color: AppTheme.spotifyWhite,
                         fontSize: 18,
@@ -198,7 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 Text(
-                                  '${e.value} palavras',
+                                  '${e.value} words',
                                   style: const TextStyle(
                                     color: AppTheme.spotifyGreen,
                                     fontWeight: FontWeight.w700,
@@ -236,7 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Configurações',
+                    'Settings',
                     style: TextStyle(
                       color: AppTheme.spotifyWhite,
                       fontSize: 18,
@@ -245,8 +246,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 12),
                   _SettingsTile(
-                    icon: Icons.language_rounded,
-                    title: 'Idiomas de estudo',
+                    icon: CupertinoIcons.globe,
+                    title: 'Study languages',
                     subtitle:
                         '${nativeLang?.name ?? _nativeLanguage} (${_nativeLanguage.toUpperCase()}) → '
                         '${targetLang?.name ?? _targetLanguage} (${_targetLanguage.toUpperCase()})',
@@ -259,21 +260,21 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   _SettingsTile(
-                    icon: Icons.info_outline_rounded,
-                    title: 'Sobre o Droplyric',
-                    subtitle: 'Aprenda idiomas com músicas — v1.0.0',
+                    icon: CupertinoIcons.info,
+                    title: 'About Droplyric',
+                    subtitle: 'Learn languages with music — v1.0.0',
                     onTap: () => showAboutDialog(
                       context: context,
                       applicationName: 'Droplyric',
                       applicationVersion: '1.0.0',
                       applicationIcon: const Icon(
-                        Icons.music_note_rounded,
+                        CupertinoCupertinoIcons.music_note,
                         size: 48,
                         color: AppTheme.spotifyGreen,
                       ),
                       children: [
                         const Text(
-                          'Ouça músicas, leia as letras e marque as palavras que você já conhece para construir seu vocabulário.',
+                          'Listen to music, read the lyrics, and mark the words you already know to build your vocabulary.',
                         ),
                       ],
                     ),
@@ -364,7 +365,7 @@ class _SettingsTile extends StatelessWidget {
         style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
       ),
       trailing: const Icon(
-        Icons.chevron_right_rounded,
+        CupertinoCupertinoIcons.chevron_right,
         color: AppTheme.spotifyLightGray,
       ),
     );

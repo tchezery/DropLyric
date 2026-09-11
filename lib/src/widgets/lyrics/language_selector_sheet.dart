@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/services/language_service.dart';
@@ -87,13 +88,13 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
           Row(
             children: [
               Icon(
-                Icons.language_rounded,
+                CupertinoIcons.globe,
                 color: theme.colorScheme.primary,
                 size: 24,
               ),
               const SizedBox(width: 8),
               Text(
-                'Idiomas de estudo',
+                'Study languages',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -102,15 +103,15 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Configure seu idioma nativo e o idioma da música para personalizar o aprendizado.',
+            "Configure your native language and the track's language to personalize your learning.",
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
 
-          // Idioma nativo
-          _SectionLabel(label: 'Meu idioma nativo'),
+          // Idioma nativow
+          _SectionLabel(label: 'My native language'),
           const SizedBox(height: 8),
           _LanguageGrid(
             selectedCode: _selectedNative,
@@ -119,7 +120,7 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
           const SizedBox(height: 20),
 
           // Idioma da música
-          _SectionLabel(label: 'Idioma da música / que quero aprender'),
+          _SectionLabel(label: 'Track language / I want to learn'),
           const SizedBox(height: 8),
           _LanguageGrid(
             selectedCode: _selectedTarget,
@@ -137,7 +138,7 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
                       Navigator.of(context).pop();
                     }
                   : null,
-              icon: const Icon(Icons.check_rounded),
+              icon: const Icon(CupertinoIcons.checkmark),
               label: const Text('Confirmar'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -152,7 +153,7 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                'Os idiomas nativo e de estudo devem ser diferentes.',
+                'The native and study languages must be different.',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),

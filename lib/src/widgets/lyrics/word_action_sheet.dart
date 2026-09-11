@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -95,7 +96,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _errorMessage = 'Não foi possível carregar a definição no momento.';
+          _errorMessage = 'Could not load the definition at this time.';
         });
       }
     }
@@ -115,7 +116,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
     Clipboard.setData(ClipboardData(text: widget.rawWord));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Palavra "${widget.rawWord}" copiada!'),
+        content: Text('Word "${widget.rawWord}" copied!'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
       ),
@@ -220,7 +221,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(
-                      Icons.close_rounded,
+                      CupertinoIcons.clear,
                       color: AppTheme.muted,
                     ),
                   ),
@@ -251,13 +252,13 @@ class _WordActionSheetState extends State<WordActionSheet> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.menu_book_rounded, // Livrinho solicitado!
+                            CupertinoIcons.book, // Livrinho solicitado!
                             size: 19,
                             color: Color(0xFF141F17),
                           ),
                           const SizedBox(width: 6),
                           const Text(
-                            'Dicionário',
+                            'Dictionary',
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,
@@ -296,8 +297,8 @@ class _WordActionSheetState extends State<WordActionSheet> {
                           children: [
                             Icon(
                               _isKnown
-                                  ? Icons.bookmark_remove_rounded
-                                  : Icons.bookmark_add_rounded,
+                                  ? CupertinoIcons.bookmark_solid
+                                  : CupertinoIcons.bookmark,
                               size: 18,
                               color: _isKnown
                                   ? AppTheme.spotifyGreen
@@ -336,7 +337,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                         border: Border.all(color: AppTheme.separator),
                       ),
                       child: const Icon(
-                        Icons.copy_rounded,
+                        CupertinoIcons.doc_on_clipboard,
                         size: 18,
                         color: AppTheme.muted,
                       ),
@@ -371,7 +372,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               ),
               SizedBox(height: 14),
               Text(
-                'Buscando significado no dicionário...',
+                'Searching for meaning in dictionary...',
                 style: TextStyle(fontSize: 12, color: Color(0xFF74716A)),
               ),
             ],
@@ -388,7 +389,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.wifi_off_rounded,
+                CupertinoIcons.wifi_slash,
                 size: 40,
                 color: AppTheme.muted,
               ),
@@ -401,7 +402,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               const SizedBox(height: 12),
               TextButton.icon(
                 onPressed: _lookup,
-                icon: const Icon(Icons.refresh_rounded, size: 16),
+                icon: const Icon(CupertinoCupertinoIcons.refresh, size: 16),
                 label: const Text('Tentar novamente'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFDE68A),
@@ -422,7 +423,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.menu_book_rounded,
+                CupertinoIcons.book,
                 size: 44,
                 color: AppTheme.muted,
               ),
@@ -448,7 +449,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
             child: Row(
               children: [
                 const Icon(
-                  Icons.volume_up_rounded,
+                  CupertinoIcons.volume_up,
                   size: 16,
                   color: Color(0xFF74716A),
                 ),
@@ -483,7 +484,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                 Row(
                   children: [
                     const Icon(
-                      Icons.translate_rounded,
+                      CupertinoIcons.globe,
                       size: 15,
                       color: Color(0xFFFDE68A),
                     ),

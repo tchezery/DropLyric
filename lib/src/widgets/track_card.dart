@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
@@ -112,7 +113,7 @@ class TrackListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.more_vert_rounded,
+        icon: const Icon(CupertinoIcons.ellipsis_vertical,
             color: AppTheme.spotifyLightGray, size: 20),
         onPressed: () {},
       ),
@@ -145,7 +146,7 @@ class _AlbumArt extends StatelessWidget {
     height: size,
     color: AppTheme.spotifyMediumGray,
     child: const Center(
-      child: Icon(Icons.music_note_rounded,
+      child: Icon(CupertinoCupertinoIcons.music_note,
           color: AppTheme.spotifyLightGray, size: 28),
     ),
   );

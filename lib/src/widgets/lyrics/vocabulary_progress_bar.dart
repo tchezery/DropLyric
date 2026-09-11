@@ -35,7 +35,7 @@ class VocabularyProgressBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Vocabulário',
+                'Vocabulary',
                 style: TextStyle(
                   color: labelColor,
                   fontSize: 12,

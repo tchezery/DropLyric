@@ -76,7 +76,7 @@ class SpotifySession extends ChangeNotifier {
         ? url.pathSegments.last
         : null;
     if (id == null) {
-      throw StateError('Busque esta música novamente após conectar o Spotify.');
+      throw StateError('Search for this track again after connecting Spotify.');
     }
     final data =
         jsonDecode(await spotifyCall('track', id)) as Map<String, dynamic>;

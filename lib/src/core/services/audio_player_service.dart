@@ -120,7 +120,7 @@ class AudioPlayerService {
       await _player.play();
     } catch (e) {
       if (!_disposed) {
-        error.value = 'Não foi possível tocar. Confira a conexão Spotify e tente novamente.';
+        error.value = 'Could not play. Check your Spotify connection and try again.';
         playerState.value = PlayerState(false, ProcessingState.idle);
       }
     }
