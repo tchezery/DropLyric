@@ -15,8 +15,7 @@ class WordActionSheet extends StatefulWidget {
   final bool isInitiallyKnown;
   final String sourceLanguage;
   final String nativeLanguage;
-  final VoidCallback onToggleWord;
-  final ValueChanged<bool> onWordToggled;
+  final Future<void> Function() onToggleWord;
 
   const WordActionSheet({
     super.key,
@@ -26,7 +25,6 @@ class WordActionSheet extends StatefulWidget {
     required this.sourceLanguage,
     required this.nativeLanguage,
     required this.onToggleWord,
-    required this.onWordToggled,
   });
 
   static Future<void> show(
@@ -36,8 +34,7 @@ class WordActionSheet extends StatefulWidget {
     required bool isInitiallyKnown,
     required String sourceLanguage,
     required String nativeLanguage,
-    required VoidCallback onToggleWord,
-    required ValueChanged<bool> onWordToggled,
+    required Future<void> Function() onToggleWord,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -50,7 +47,6 @@ class WordActionSheet extends StatefulWidget {
         sourceLanguage: sourceLanguage,
         nativeLanguage: nativeLanguage,
         onToggleWord: onToggleWord,
-        onWordToggled: onWordToggled,
       ),
     );
   }
@@ -102,13 +98,32 @@ class _WordActionSheetState extends State<WordActionSheet> {
     }
   }
 
-  void _handleToggle() {
+  int _saveVersion = 0;
+  bool? _savedKnown;
+
+  Future<void> _handleToggle() async {
+    _savedKnown ??= _isKnown;
+    final version = ++_saveVersion;
+    final desired = !_isKnown;
     HapticFeedback.mediumImpact();
-    widget.onToggleWord();
-    setState(() {
-      _isKnown = !_isKnown;
-    });
-    widget.onWordToggled(_isKnown);
+    setState(() => _isKnown = desired);
+    try {
+      await widget.onToggleWord();
+      _savedKnown = desired;
+    } catch (_) {
+      if (mounted) {
+        if (version == _saveVersion) {
+          setState(() => _isKnown = _savedKnown!);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível salvar a palavra. Tente novamente.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _copyToClipboard() {

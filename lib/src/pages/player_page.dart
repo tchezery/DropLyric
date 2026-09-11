@@ -266,21 +266,43 @@ class _PlayerPageState extends State<PlayerPage>
     });
   }
 
+  Future<void> _wordWrites = Future<void>.value();
+  final Map<String, int> _wordVersions = {};
+  final Map<String, bool> _savedWordStates = {};
+
   Future<void> _toggleWord(String word, String normalized) async {
-    final wasKnown = _knownWords.contains(normalized);
+    final language = _targetLanguage;
+    final key = '$language:$normalized';
+    final previous = _knownWords.contains(normalized);
+    final desired = !previous;
+    final version = (_wordVersions[key] ?? 0) + 1;
+    _wordVersions[key] = version;
+    _savedWordStates.putIfAbsent(key, () => previous);
+    final trackName = _currentTrack.title;
     setState(() {
-      if (wasKnown) {
-        _knownWords.remove(normalized);
-      } else {
-        _knownWords.add(normalized);
-      }
+      desired ? _knownWords.add(normalized) : _knownWords.remove(normalized);
       _updateStats();
     });
-    await _wordsRepo.toggleWord(
-      word,
-      _targetLanguage,
-      trackName: widget.track.title,
-    );
+
+    // Preserve tap order without delaying visual feedback or later taps.
+    final write = _wordWrites.then((_) async {
+      await _wordsRepo.setWordKnown(word, language, desired, trackName: trackName);
+      _savedWordStates[key] = desired;
+    });
+    _wordWrites = write.catchError((Object _) {});
+    try {
+      await write;
+    } catch (_) {
+      if (mounted && language == _targetLanguage && _wordVersions[key] == version) {
+        setState(() {
+          _savedWordStates[key] == true
+              ? _knownWords.add(normalized)
+              : _knownWords.remove(normalized);
+          _updateStats();
+        });
+      }
+      rethrow;
+    }
   }
 
   void _openWordActionSheet(String rawWord, String normalized) {
@@ -293,16 +315,7 @@ class _PlayerPageState extends State<PlayerPage>
       sourceLanguage: _targetLanguage,
       nativeLanguage: _nativeLanguage,
       onToggleWord: () => _toggleWord(rawWord, normalized),
-      onWordToggled: (newStatus) {
-        setState(() {
-          if (newStatus) {
-            _knownWords.add(normalized);
-          } else {
-            _knownWords.remove(normalized);
-          }
-          _updateStats();
-        });
-      },
+
     );
   }
 
@@ -961,10 +974,16 @@ class _PlayerPageState extends State<PlayerPage>
                         isManualMode: isManual,
                         customColor: isActive ? AppTheme.ink : null,
 
-                        onToggle: () => _toggleWord(
-                          token.displayText,
-                          token.normalizedWord,
-                        ),
+                        onToggle: () async {
+                          try {
+                            await _toggleWord(token.displayText, token.normalizedWord);
+                          } catch (_) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Não foi possível salvar a palavra. Tente novamente.')),
+                            );
+                          }
+                        },
                         onWordPressed: (w, details) => _openWordActionSheet(
                           token.displayText,
                           token.normalizedWord,

@@ -9,14 +9,28 @@
   const write = (key, value) => sessionStorage.setItem(prefix + key, value);
   const clear = () => ['access', 'refresh', 'expires', 'verifier', 'state'].forEach(k => sessionStorage.removeItem(prefix + k));
   const random = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), n => n.toString(16).padStart(2, '0')).join('');
+  const temporaryFailure = status => [500, 502, 503, 504].includes(status);
+  const serverError = status => `Spotify temporariamente indisponível (HTTP ${status}). Aguarde um pouco e tente novamente.`;
+  async function fetchQuery(url, options) {
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(url, options);
+      // Only retry reads: playback commands and OAuth codes must not be replayed.
+      if (options.method !== 'GET' || !temporaryFailure(response.status) || attempt === 2) return response;
+      await new Promise(resolve => setTimeout(resolve, 500 * 2 ** attempt));
+    }
+  }
   async function tokens(params) {
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: new URLSearchParams({client_id: clientId, ...params}),
     });
     if (!response.ok) {
+      if (temporaryFailure(response.status)) throw Error(serverError(response.status));
+      if (response.status === 429) throw Error('Limite do Spotify atingido. Aguarde antes de tentar novamente.');
       if (response.status === 400 || response.status === 401) clear();
-      throw Error('Sessão Spotify expirada. Conecte sua conta novamente.');
+      throw Error(response.status === 400 || response.status === 401
+        ? 'Sessão Spotify expirada. Conecte sua conta novamente.'
+        : `Falha na autenticação Spotify (HTTP ${response.status}). Tente novamente.`);
     }
     const data = await response.json();
     write('access', data.access_token);
@@ -44,12 +58,13 @@
     finally { sessionStorage.removeItem(prefix + 'state'); sessionStorage.removeItem(prefix + 'verifier'); }
   })();
   async function api(path, method = 'GET', body, retry = true) {
-    const response = await fetch('https://api.spotify.com/v1/' + path, {
+    const response = await fetchQuery('https://api.spotify.com/v1/' + path, {
       method, headers: {Authorization: 'Bearer ' + await token(), 'Content-Type': 'application/json'},
       ...(body === undefined ? {} : {body: JSON.stringify(body)}),
     });
     if (response.status === 401 && retry) { write('expires', 0); return api(path, method, body, false); }
     if (!response.ok) {
+      if (temporaryFailure(response.status)) throw Error(serverError(response.status));
       const messages = {403: 'Spotify recusou o acesso. Confira Premium e Users Management no painel do aplicativo.',
         404: 'Player Spotify indisponível. Reconecte e tente novamente.',
         429: 'Limite do Spotify atingido. Aguarde antes de tentar novamente.'};

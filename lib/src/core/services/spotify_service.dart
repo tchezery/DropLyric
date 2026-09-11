@@ -126,7 +126,7 @@ class SpotifyService {
       final des = DES(key: key, mode: DESMode.ECB);
       final encBytes = base64.decode(encUrl);
       final decrypted = des.decrypt(encBytes);
-      final url = utf8.decode(decrypted).trim();
+      final url = utf8.decode(decrypted).replaceAll(RegExp(r'[\x00-\x1F]'), '').trim();
       final fullUrl = url.replaceAll('_96.mp4', '_320.mp4');
       if (fullUrl.startsWith('http://')) {
         return fullUrl.replaceFirst('http://', 'https://');
@@ -141,12 +141,7 @@ class SpotifyService {
   Future<SearchResult> searchTracks(String query) async {
     if (query.trim().isEmpty) return const SearchResult(tracks: []);
     if (SpotifySession.instance.connected) {
-      try {
-        final spotifyResults = await SpotifySession.instance.search(query);
-        if (spotifyResults.isNotEmpty) {
-          return SearchResult(tracks: spotifyResults);
-        }
-      } catch (_) {}
+      return SearchResult(tracks: await SpotifySession.instance.search(query));
     }
 
     final cacheKey = query.toLowerCase().trim();
@@ -277,7 +272,9 @@ class SpotifyService {
 
   /// Tenta buscar a versão de áudio COMPLETO no catálogo para faixas que têm prévia de 30s.
   Future<TrackModel> fetchFullAudioStream(TrackModel track) async {
-    if (track.id.startsWith('saavn:') ||
+    if (track.id.startsWith('spotify:track:') ||
+        track.previewAudioUrl?.startsWith('spotify:track:') == true ||
+        track.id.startsWith('saavn:') ||
         track.previewAudioUrl == null ||
         track.previewAudioUrl!.startsWith('assets/')) {
       return track;

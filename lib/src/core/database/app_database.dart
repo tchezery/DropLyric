@@ -24,15 +24,42 @@ class AppDatabase {
   factory AppDatabase() => _instance;
   AppDatabase._internal();
 
+  /// Conexão isolada para testes de persistência com o mesmo esquema do app.
+  AppDatabase.forTesting(
+    Future<sqflite_native.Database> Function(
+      sqflite_native.OpenDatabaseOptions options,
+    )
+    opener,
+  ) : _opener = opener;
+
+  Future<sqflite_native.Database> Function(
+    sqflite_native.OpenDatabaseOptions options,
+  )?
+  _opener;
+  Future<sqflite_native.Database>? _opening;
   sqflite_native.Database? _db;
 
   /// Retorna o banco de dados, inicializando se necessário.
   Future<sqflite_native.Database> get database async {
-    _db ??= await _initDatabase();
-    return _db!;
+    if (_db != null) return _db!;
+    _opening ??= _initDatabase();
+    try {
+      return _db = await _opening!;
+    } finally {
+      _opening = null;
+    }
   }
 
   Future<sqflite_native.Database> _initDatabase() async {
+    if (_opener != null) {
+      return _opener!(
+        sqflite_native.OpenDatabaseOptions(
+          version: _dbVersion,
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
     if (kIsWeb) {
       // Web: IndexedDB via sqflite_common_ffi_web
       databaseFactory = databaseFactoryFfiWeb;

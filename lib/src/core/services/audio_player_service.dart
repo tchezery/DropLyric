@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -37,10 +38,7 @@ class AudioPlayerService {
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
-  bool get _isSpotify =>
-      SpotifySession.instance.connected &&
-      SpotifySession.instance.state['ready'] == true &&
-      currentUrl.value?.startsWith('spotify:track:') == true;
+  bool get _isSpotify => currentUrl.value?.startsWith('spotify:track:') == true;
   final ValueNotifier<String?> error = ValueNotifier(null);
   bool _disposed = false;
   void _spotifyChanged() {
@@ -104,6 +102,27 @@ class AudioPlayerService {
     try {
       error.value = null;
       await _initAudioSession();
+      final spotifyUri = url.startsWith('spotify:track:')
+          ? url
+          : track?.id.startsWith('spotify:track:') == true
+          ? track!.id
+          : null;
+      if (spotifyUri != null) {
+        await _player.stop();
+        currentUrl.value = spotifyUri;
+        position.value = Duration.zero;
+        duration.value = Duration.zero;
+        playerState.value = PlayerState(false, ProcessingState.loading);
+        if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
+          throw StateError(
+            'A reprodução completa do Spotify está disponível no Chrome e no Android.',
+          );
+        }
+        await SpotifySession.instance.command('play', spotifyUri);
+        _spotifyChanged();
+        return;
+      }
+      if (_isSpotify) await SpotifySession.instance.command('pause');
       if (currentUrl.value == url && _player.playing) return;
 
       currentUrl.value = url;
@@ -113,18 +132,24 @@ class AudioPlayerService {
     } catch (e) {
       debugPrint('AudioPlayerService play error ($url): $e');
       if (!_disposed) {
-        error.value = 'Could not play audio. Check your connection.';
+        error.value = _isSpotify
+            ? (SpotifySession.instance.error.isNotEmpty
+                  ? SpotifySession.instance.error
+                  : e.toString())
+            : 'Could not play audio. Check your connection.';
         playerState.value = PlayerState(false, ProcessingState.idle);
       }
     }
   }
 
-  Future<void> _safeSetUrlAndPlay(String primaryUrl, {TrackModel? track}) async {
+  Future<void> _safeSetUrlAndPlay(
+    String primaryUrl, {
+    TrackModel? track,
+  }) async {
     error.value = null;
     final candidateUrls = <String>[];
 
-    if (primaryUrl.isNotEmpty &&
-        !primaryUrl.startsWith('spotify:track:')) {
+    if (primaryUrl.isNotEmpty && !primaryUrl.startsWith('spotify:track:')) {
       var p = primaryUrl.trim();
       if (p.startsWith('http://')) {
         p = p.replaceFirst('http://', 'https://');
@@ -133,8 +158,8 @@ class AudioPlayerService {
     }
 
     if (track != null) {
-      final resolvedCandidates =
-          await SpotifyService().resolvePlayableAudioUrls(track);
+      final resolvedCandidates = await SpotifyService()
+          .resolvePlayableAudioUrls(track);
       for (final u in resolvedCandidates) {
         if (!candidateUrls.contains(u)) {
           candidateUrls.add(u);
@@ -156,9 +181,7 @@ class AudioPlayerService {
           try {
             await _player.setUrl(urlString);
           } catch (_) {
-            await _player.setAudioSource(
-              AudioSource.uri(Uri.parse(urlString)),
-            );
+            await _player.setAudioSource(AudioSource.uri(Uri.parse(urlString)));
           }
         }
         await _player.play();
@@ -230,6 +253,7 @@ class AudioPlayerService {
 
   /// Para e reseta.
   Future<void> stop() async {
+    if (_isSpotify) await SpotifySession.instance.command('pause');
     await _player.stop();
     position.value = Duration.zero;
     duration.value = Duration.zero;

@@ -8,7 +8,33 @@ class KnownWordsRepository {
   final AppDatabase _appDatabase;
 
   KnownWordsRepository({AppDatabase? appDatabase})
-      : _appDatabase = appDatabase ?? AppDatabase();
+    : _appDatabase = appDatabase ?? AppDatabase();
+
+  /// Grava o estado desejado, inclusive quando há vários toques em sequência.
+  Future<void> setWordKnown(
+    String word,
+    String language,
+    bool known, {
+    String? trackName,
+  }) async {
+    final db = await _appDatabase.database;
+    final normalized = word.toLowerCase().trim();
+    if (!known) {
+      await removeWord(normalized, language);
+      return;
+    }
+    await db.insert(
+      AppDatabase.tableKnownWords,
+      KnownWordModel(
+        word: word.trim(),
+        normalizedWord: normalized,
+        language: language,
+        trackName: trackName,
+        createdAt: DateTime.now(),
+      ).toMap(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
 
   /// Alterna o estado de conhecimento de uma palavra:
   /// - Se já existir no banco, remove (desconhece).
@@ -23,35 +49,37 @@ class KnownWordsRepository {
     final db = await _appDatabase.database;
     final normalized = word.toLowerCase().trim();
 
-    final existing = await db.query(
-      AppDatabase.tableKnownWords,
-      where: 'normalized_word = ? AND language = ?',
-      whereArgs: [normalized, language],
-      limit: 1,
-    );
-
-    if (existing.isNotEmpty) {
-      await db.delete(
+    return db.transaction((txn) async {
+      final existing = await txn.query(
         AppDatabase.tableKnownWords,
         where: 'normalized_word = ? AND language = ?',
         whereArgs: [normalized, language],
+        limit: 1,
       );
-      return false;
-    } else {
-      final model = KnownWordModel(
-        word: word.trim(),
-        normalizedWord: normalized,
-        language: language,
-        trackName: trackName,
-        createdAt: DateTime.now(),
-      );
-      await db.insert(
-        AppDatabase.tableKnownWords,
-        model.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
-      return true;
-    }
+
+      if (existing.isNotEmpty) {
+        await txn.delete(
+          AppDatabase.tableKnownWords,
+          where: 'normalized_word = ? AND language = ?',
+          whereArgs: [normalized, language],
+        );
+        return false;
+      } else {
+        final model = KnownWordModel(
+          word: word.trim(),
+          normalizedWord: normalized,
+          language: language,
+          trackName: trackName,
+          createdAt: DateTime.now(),
+        );
+        await txn.insert(
+          AppDatabase.tableKnownWords,
+          model.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+        return true;
+      }
+    });
   }
 
   /// Retorna um `Set<String>` com todas as palavras normalizadas conhecidas
@@ -98,7 +126,8 @@ class KnownWordsRepository {
   }
 
   /// Retorna o total de palavras conhecidas e um mapa de contagem por idioma.
-  Future<({int total, Map<String, int> perLanguage})> getVocabularyStats() async {
+  Future<({int total, Map<String, int> perLanguage})>
+  getVocabularyStats() async {
     final db = await _appDatabase.database;
 
     final totalResult = await db.rawQuery(

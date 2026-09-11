@@ -28,8 +28,7 @@ class SpotifyMobileAuth extends ChangeNotifier {
   String? refreshToken;
   DateTime? expiresAt;
 
-  bool get isAuthenticated =>
-      accessToken != null && (expiresAt?.isAfter(DateTime.now()) ?? false);
+  bool get isAuthenticated => accessToken != null && refreshToken != null;
   String? userDisplayName;
   String? userAvatarUrl;
   String error = '';
@@ -88,8 +87,7 @@ class SpotifyMobileAuth extends ChangeNotifier {
       'client_id': clientId,
       'response_type': 'code',
       'redirect_uri': redirectUri,
-      'scope':
-          'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',
+      'scope': 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',
       'code_challenge_method': 'S256',
       'code_challenge': challenge,
       'state': _pendingState,
@@ -110,7 +108,9 @@ class SpotifyMobileAuth extends ChangeNotifier {
   }
 
   Future<void> _exchangeCodeForToken(String code, String? state) async {
-    if (_pendingState != null && state != null && state != _pendingState) {
+    if (_pendingState == null ||
+        state != _pendingState ||
+        _pendingVerifier == null) {
       error = 'Estado de login inválido.';
       notifyListeners();
       return;
@@ -169,41 +169,97 @@ class SpotifyMobileAuth extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<List<TrackModel>> searchSpotify(String query) async {
-    if (accessToken == null) return [];
-    try {
-      final uri = Uri.https('api.spotify.com', '/v1/search', {
-        'q': query,
-        'type': 'track',
-        'limit': '20',
-      });
-      final response = await http.get(
-        uri,
+  Future<Map<String, dynamic>> getTrack(String id) async {
+    if (!RegExp(r'^[a-zA-Z0-9]{22}$').hasMatch(id)) {
+      throw ArgumentError('Faixa Spotify inválida.');
+    }
+    return _getJson('/v1/tracks/$id');
+  }
+
+  Future<void>? _refreshing;
+  Future<void> _ensureToken() async {
+    if (accessToken != null &&
+        expiresAt != null &&
+        expiresAt!.isAfter(DateTime.now().add(const Duration(seconds: 60)))) {
+      return;
+    }
+    if (refreshToken == null) throw StateError('Conecte sua conta Spotify.');
+    _refreshing ??= _refresh().whenComplete(() => _refreshing = null);
+    await _refreshing;
+  }
+
+  Future<void> _refresh() async {
+    final response = await http.post(
+      Uri.https('accounts.spotify.com', '/api/token'),
+      body: {
+        'client_id': clientId,
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken!,
+      },
+    );
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Falha ao renovar sessão Spotify (${response.statusCode}).',
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    accessToken = data['access_token'] as String;
+    refreshToken = data['refresh_token'] as String? ?? refreshToken;
+    expiresAt = DateTime.now().add(
+      Duration(seconds: (data['expires_in'] as num).toInt()),
+    );
+  }
+
+  Future<Map<String, dynamic>> _getJson(
+    String path, [
+    Map<String, String>? query,
+  ]) async {
+    await _ensureToken();
+    var response = await http.get(
+      Uri.https('api.spotify.com', path, query),
+      headers: {'Authorization': 'Bearer $accessToken'},
+    );
+    if (response.statusCode == 401) {
+      expiresAt = null;
+      await _ensureToken();
+      response = await http.get(
+        Uri.https('api.spotify.com', path, query),
         headers: {'Authorization': 'Bearer $accessToken'},
       );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final items = data['tracks']?['items'] as List? ?? [];
-        return items.whereType<Map<String, dynamic>>().map((item) {
-          final album = item['album'] as Map<String, dynamic>? ?? {};
-          final images = album['images'] as List? ?? [];
-          final uriStr = item['uri'] as String;
-          return TrackModel(
-            id: uriStr,
-            title: item['name'] as String,
-            artist: (item['artists'] as List).map((a) => a['name']).join(', '),
-            album: album['name'] as String? ?? '',
-            albumArtUrl: images.isEmpty ? null : images.first['url'] as String?,
-            previewAudioUrl: item['preview_url'] as String? ?? uriStr,
-            spotifyUrl: item['external_urls']?['spotify'] as String?,
-            duration: (item['duration_ms'] as num?)?.toDouble() != null
-                ? (item['duration_ms'] as num).toDouble() / 1000
-                : null,
-          );
-        }).toList();
-      }
-    } catch (_) {}
-    return [];
+    }
+    if (response.statusCode != 200) {
+      error = 'Erro Spotify (${response.statusCode}). Tente novamente.';
+      notifyListeners();
+      throw StateError(error);
+    }
+    error = '';
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<List<TrackModel>> searchSpotify(String query) async {
+    final data = await _getJson('/v1/search', {
+      'q': query,
+      'type': 'track',
+      'limit': '10',
+    });
+    final items = data['tracks']?['items'] as List? ?? [];
+    return items.whereType<Map<String, dynamic>>().map((item) {
+      final album = item['album'] as Map<String, dynamic>? ?? {};
+      final images = album['images'] as List? ?? [];
+      final uriStr = item['uri'] as String;
+      return TrackModel(
+        id: uriStr,
+        title: item['name'] as String,
+        artist: (item['artists'] as List).map((a) => a['name']).join(', '),
+        album: album['name'] as String? ?? '',
+        albumArtUrl: images.isEmpty ? null : images.first['url'] as String?,
+        previewAudioUrl: uriStr,
+        spotifyUrl: item['external_urls']?['spotify'] as String?,
+        duration: (item['duration_ms'] as num?)?.toDouble() != null
+            ? (item['duration_ms'] as num).toDouble() / 1000
+            : null,
+      );
+    }).toList();
   }
 
   @override
