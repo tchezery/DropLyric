@@ -1,40 +1,112 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF2563EB);
-  static const Color secondaryColor = Color(0xFF7C3AED);
-  static const Color backgroundColor = Color(0xFFF8FAFC);
+  static const paper = Color(0xFFF7F5EF);
+  static const sheet = Color(0xFFFFFEFA);
+  static const ink = Color(0xFF242320);
+  static const muted = Color(0xFF74716A);
+  static const yellow = Color(0xFF936800);
+  static const marker = Color(0xFFFFE89A);
+  static const separator = Color(0xFFE4E0D6);
+  // Compatibility aliases for existing screens.
+  static const spotifyGreen = yellow;
+  static const spotifyGreenLight = marker;
+  static const spotifyBlack = paper;
+  static const spotifyDarkCard = sheet;
+  static const spotifyMediumGray = separator;
+  static const spotifyLightGray = muted;
+  static const spotifyWhite = ink;
+  static const primaryColor = yellow;
+  static const backgroundColor = paper;
+  static const cardColor = sheet;
+  static const surfaceColor = separator;
+  static const textPrimary = ink;
+  static const textSecondary = muted;
 
-  // Dock & Glassmorphism Colors
-  static const Color dockLightBackground = Color(0xB8FFFFFF); // 72% opacity white
-  static const Color dockDarkBackground = Color(0xA61E1E2E);  // 65% opacity dark surface
-  static const Color dockLightBorder = Color(0xB3FFFFFF);     // 70% opacity white border
-  static const Color dockDarkBorder = Color(0x1FFFFFFF);      // 12% opacity white border
-  static const Color dockShadowLight = Color(0x241E293B);     // 14% opacity slate shadow
-  static const Color dockShadowDark = Color(0x66000000);      // 40% opacity black shadow
-  static const Color unselectedIconLight = Color(0xFF475569);  // Slate 600
-  static const Color unselectedIconDark = Color(0xB3FFFFFF);   // 70% white
-
-  static ThemeData lightTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      primary: primaryColor,
-      secondary: secondaryColor,
+  static ThemeData get notesTheme {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: yellow,
       brightness: Brightness.light,
-    ),
-    scaffoldBackgroundColor: backgroundColor,
-    useMaterial3: true,
-  );
+      surface: sheet,
+      primary: yellow,
+      onPrimary: Colors.white,
+      onSurface: ink,
+      secondary: yellow,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: paper,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: paper,
+        foregroundColor: ink,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: ink,
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -1,
+        ),
+      ),
+      textTheme: ThemeData.light().textTheme.apply(
+        bodyColor: ink,
+        displayColor: ink,
+      ),
+      cardTheme: CardThemeData(
+        color: sheet,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dividerTheme: const DividerThemeData(color: separator, thickness: 0.5),
+      iconTheme: const IconThemeData(color: yellow),
+      listTileTheme: const ListTileThemeData(textColor: ink, iconColor: yellow),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: separator,
+        hintStyle: const TextStyle(color: muted),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: yellow,
+        thumbColor: yellow,
+        inactiveTrackColor: separator,
+        trackHeight: 3,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: yellow,
+        linearTrackColor: separator,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: marker,
+          foregroundColor: ink,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: yellow,
+          side: const BorderSide(color: separator),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: sheet,
+        showDragHandle: true,
+      ),
+    );
+  }
 
-  static ThemeData darkTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      primary: primaryColor,
-      secondary: secondaryColor,
-      brightness: Brightness.dark,
-    ),
-    scaffoldBackgroundColor: const Color(0xFF0F172A),
-    useMaterial3: true,
-  );
+  static ThemeData get darkTheme => notesTheme;
+  static LinearGradient get greenGradient =>
+      const LinearGradient(colors: [marker, paper]);
+  static LinearGradient playerBackgroundGradient(Color dominantColor) =>
+      const LinearGradient(colors: [sheet, paper]);
 }
-
