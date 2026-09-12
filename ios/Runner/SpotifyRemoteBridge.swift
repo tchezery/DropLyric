@@ -271,11 +271,7 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
       if let value = value as? SPTAppRemotePlayerState { self?.playerStateDidChange(value) }
     }
   }
-  private func complete(_ result: @escaping FlutterResult, error: Error?) {
-    if error != nil {
-      fail("O Spotify não conseguiu executar o comando. Confira sua conta Premium e tente novamente.", result: result)
-    } else { result(nil); refreshState() }
-  }
+
   func appRemote(_ appRemote: SPTAppRemote, didFailConnectionAttemptWithError error: Error?) {
     connecting = false
     connectionTimeout?.invalidate()
