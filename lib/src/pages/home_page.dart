@@ -1,6 +1,7 @@
 import '../widgets/spotify_access_gate.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
@@ -11,11 +12,38 @@ import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../core/models/track_model.dart';
 import '../core/services/spotify_service.dart';
+import '../core/services/youtube_music_service.dart';
 import 'player_page.dart';
 
 /// Music notebook with grouped, Notes-inspired rows.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _service = 'spotify';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (mounted) {
+        setState(
+          () => _service = prefs.getString('music_service') ?? 'spotify',
+        );
+      }
+    });
+  }
+
+  Future<void> _selectService(String service) async {
+    setState(() => _service = service);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('music_service', service);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tracks = SpotifyService.curatedTracks;
@@ -38,7 +66,8 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SpotifyConnectButton(compact: true),
+                    if (_service == 'spotify')
+                      const SpotifyConnectButton(compact: true),
                   ],
                 ),
               ),
@@ -52,7 +81,9 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SpotifyConnectButton()),
+            SliverToBoxAdapter(child: _buildServiceSelector()),
+            if (_service == 'spotify')
+              const SliverToBoxAdapter(child: SpotifyConnectButton()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -141,7 +172,40 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  Widget _buildServiceSelector() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+      child: SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(
+            value: 'spotify',
+            label: Text('Spotify'),
+            icon: Icon(Icons.music_note),
+          ),
+          ButtonSegment(
+            value: 'youtube',
+            label: Text('YouTube Music'),
+            icon: Icon(Icons.ondemand_video),
+          ),
+        ],
+        selected: {_service},
+        onSelectionChanged: (selection) => _selectService(selection.first),
+      ),
+    );
+  }
+
   Future<void> _openPlayer(BuildContext context, TrackModel track) async {
+    if (_service == 'youtube') {
+      final opened = await YouTubeMusicService.openTrack(track);
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o YouTube Music.'),
+          ),
+        );
+      }
+      return;
+    }
     if (SpotifySession.instance.connected) {
       try {
         track = await SpotifySession.instance.resolve(track);
