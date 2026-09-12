@@ -24,16 +24,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _service = 'spotify';
+  String? _service;
 
   @override
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((prefs) {
       if (mounted) {
-        setState(
-          () => _service = prefs.getString('music_service') ?? 'spotify',
-        );
+        setState(() => _service = prefs.getString('music_service'));
       }
     });
   }
@@ -46,6 +44,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_service == null) return _buildRequiredChoiceScreen();
     final tracks = SpotifyService.curatedTracks;
     return Scaffold(
       body: SafeArea(
@@ -172,6 +171,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildRequiredChoiceScreen() {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'DropLyric',
+                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Entre para começar a usar o DropLyric.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _selectService('spotify'),
+                    icon: const Icon(Icons.music_note),
+                    label: const Text('Entrar com Spotify'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _selectService('youtube'),
+                    icon: const Icon(Icons.ondemand_video),
+                    label: const Text('Entrar com YouTube Music'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildServiceSelector() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
@@ -188,7 +231,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.ondemand_video),
           ),
         ],
-        selected: {_service},
+        selected: {_service!},
         onSelectionChanged: (selection) => _selectService(selection.first),
       ),
     );
