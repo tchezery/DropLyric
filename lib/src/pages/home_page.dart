@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
+import '../widgets/spotify_access_gate.dart';
+
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
 
