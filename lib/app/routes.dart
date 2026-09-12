@@ -66,7 +66,7 @@ class AppRoutes {
         return PageRouteBuilder(
           settings: settings,
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const SpotifyAccessGate(child: HomePage()),
+              const HomePage(),
           transitionDuration: Duration.zero,
         );
       case search:
@@ -95,7 +95,7 @@ class AppRoutes {
         return PageRouteBuilder(
           settings: const RouteSettings(name: AppRoutes.home),
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const SpotifyAccessGate(child: HomePage()),
+              const HomePage(),
           transitionDuration: Duration.zero,
         );
     }
