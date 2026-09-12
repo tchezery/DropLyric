@@ -1,7 +1,4 @@
-import '../widgets/spotify_access_gate.dart';
-
 import 'package:flutter/cupertino.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
@@ -12,42 +9,14 @@ import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../core/models/track_model.dart';
 import '../core/services/spotify_service.dart';
-import '../core/services/youtube_music_service.dart';
 import 'player_page.dart';
 
 /// Music notebook with grouped, Notes-inspired rows.
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  String? _service;
-
-  @override
-  void initState() {
-    super.initState();
-    SharedPreferences.getInstance().then((prefs) {
-      if (mounted) {
-        setState(() => _service = prefs.getString('music_service'));
-      }
-    });
-  }
-
-  Future<void> _selectService(String service) async {
-    setState(() => _service = service);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('music_service', service);
-    if (service == 'spotify') {
-      await SpotifySession.instance.command('loginWeb');
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_service == null) return _buildRequiredChoiceScreen();
     final tracks = SpotifyService.curatedTracks;
     return Scaffold(
       body: SafeArea(
@@ -68,8 +37,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    if (_service == 'spotify')
-                      const SpotifyConnectButton(compact: true),
+                    const SpotifyConnectButton(compact: true),
                   ],
                 ),
               ),
@@ -83,9 +51,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(child: _buildServiceSelector()),
-            if (_service == 'spotify')
-              const SliverToBoxAdapter(child: SpotifyConnectButton()),
+            const SliverToBoxAdapter(child: SpotifyConnectButton()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -174,84 +140,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildRequiredChoiceScreen() {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'DropLyric',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Entre para começar a usar o DropLyric.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => _selectService('spotify'),
-                    icon: const Icon(Icons.music_note),
-                    label: const Text('Entrar com Spotify'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _selectService('youtube'),
-                    icon: const Icon(Icons.ondemand_video),
-                    label: const Text('Entrar com YouTube Music'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildServiceSelector() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(
-            value: 'spotify',
-            label: Text('Spotify'),
-            icon: Icon(Icons.music_note),
-          ),
-          ButtonSegment(
-            value: 'youtube',
-            label: Text('YouTube Music'),
-            icon: Icon(Icons.ondemand_video),
-          ),
-        ],
-        selected: {_service!},
-        onSelectionChanged: (selection) => _selectService(selection.first),
-      ),
-    );
-  }
-
   Future<void> _openPlayer(BuildContext context, TrackModel track) async {
-    if (_service == 'youtube') {
-      final opened = await YouTubeMusicService.openTrack(track);
-      if (!opened && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível abrir o YouTube Music.'),
-          ),
-        );
-      }
-      return;
-    }
     if (SpotifySession.instance.connected) {
       try {
         track = await SpotifySession.instance.resolve(track);
