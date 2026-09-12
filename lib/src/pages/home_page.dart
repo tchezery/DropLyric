@@ -1,7 +1,6 @@
 import '../widgets/spotify_access_gate.dart';
 
 import 'package:flutter/cupertino.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
@@ -29,17 +28,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    SharedPreferences.getInstance().then((prefs) {
-      if (mounted) {
-        setState(() => _service = prefs.getString('music_service'));
-      }
-    });
   }
 
-  Future<void> _selectService(String service) async {
+  void _selectService(String service) {
     setState(() => _service = service);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('music_service', service);
   }
 
   @override
