@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../app/routes.dart';
 import '../core/services/spotify_session.dart';
 
 class SpotifyConnectButton extends StatelessWidget {
@@ -57,7 +59,12 @@ class SpotifyConnectButton extends StatelessWidget {
                   label: const Text('Disconnect'),
                   onPressed: session.initializing || session.connecting
                       ? null
-                      : () => session.command('logout'),
+                      : () async {
+                          await session.command('logout');
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.remove('music_service');
+                          AppRoutes.navigateTo(AppRoutes.home);
+                        },
                 ),
               if (session.connected && !session.appRemoteAuthorized) ...[
                 OutlinedButton.icon(
