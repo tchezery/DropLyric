@@ -13,6 +13,7 @@ import '../core/services/language_service.dart';
 import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
 import '../core/services/spotify_session.dart';
+import '../core/services/youtube_music_service.dart';
 import '../widgets/lyrics/interactive_word.dart';
 import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
@@ -1214,6 +1215,20 @@ class _PlayerPageState extends State<PlayerPage>
               // 5. Loop / Repetir
               _buildLoopButton(),
             ],
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () async {
+              final opened = await YouTubeMusicService.openTrack(_currentTrack);
+              if (!opened && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Não foi possível abrir o YouTube Music.')),
+                );
+              }
+            },
+            icon: const Icon(CupertinoIcons.music_note_2, size: 18),
+            label: const Text('Abrir no YouTube Music'),
+            style: TextButton.styleFrom(foregroundColor: _primaryInk),
           ),
         ],
       ),
