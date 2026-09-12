@@ -30,8 +30,11 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   }
 
-  void _selectService(String service) {
+  Future<void> _selectService(String service) async {
     setState(() => _service = service);
+    if (service == 'spotify') {
+      await SpotifySession.instance.command('loginWeb');
+    }
   }
 
   @override
