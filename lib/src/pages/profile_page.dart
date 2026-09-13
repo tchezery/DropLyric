@@ -132,46 +132,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      // Avatar + nome
-                      Row(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.spotifyMediumGray,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.person,
-                              color: AppTheme.spotifyLightGray,
-                              size: 44,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tchezery',
-                                style: TextStyle(
-                                  color: AppTheme.spotifyWhite,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                '${nativeLang?.name ?? _nativeLanguage} (${_nativeLanguage.toUpperCase()})',
-                                style: const TextStyle(
-                                  color: AppTheme.spotifyLightGray,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),

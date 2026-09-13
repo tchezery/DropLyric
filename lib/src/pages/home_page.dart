@@ -1,6 +1,6 @@
-import '../widgets/spotify_access_gate.dart';
-
 import 'package:flutter/cupertino.dart';
+
+import '../widgets/spotify_access_gate.dart';
 
 import '../widgets/spotify_connect_button.dart';
 import '../core/services/spotify_session.dart';
@@ -16,6 +16,7 @@ import 'player_page.dart';
 /// Music notebook with grouped, Notes-inspired rows.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final tracks = SpotifyService.curatedTracks;

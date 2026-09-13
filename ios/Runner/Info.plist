@@ -41,8 +41,6 @@
 	<array>
 		<string>spotify</string>
 	</array>
-	<key>FlutterDeepLinkingEnabled</key>
-	<false/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

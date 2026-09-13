@@ -19,7 +19,8 @@ class TrackModel {
     this.previewAudioUrl,
     this.spotifyUrl,
     this.duration,
-    this.language = 'en',
+    // Empty means unknown: the player will detect the language from the lyrics.
+    this.language = '',
   });
 
   TrackModel copyWith({

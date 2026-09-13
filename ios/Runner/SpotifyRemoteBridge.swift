@@ -296,6 +296,7 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
       }
     }
   }
+  
   func appRemote(_ appRemote: SPTAppRemote, didDisconnectWithError error: Error?) {
     connecting = false
     state["ready"] = false
@@ -322,6 +323,16 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
     state["error"] = message
     emit()
     result?(FlutterError(code: "spotify_playback", message: message, details: nil))
+  }
+  private func complete(_ result: @escaping FlutterResult, error: Error?) {
+    if let error = error {
+      fail(error.localizedDescription, result: result)
+      return
+    }
+    clearPending()
+    state["error"] = ""
+    emit()
+    result(nil)
   }
   private func emit() {
     state["appRemoteAuthorized"] = appRemoteAuthorized

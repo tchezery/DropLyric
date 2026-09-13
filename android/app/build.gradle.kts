@@ -34,6 +34,12 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // The bundled Spotify AAR references optional Jackson/annotation
+            // classes that are not shipped by the app. Keep release builds
+            // compatible with the AAR until those optional dependencies are
+            // provided by the Spotify integration.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

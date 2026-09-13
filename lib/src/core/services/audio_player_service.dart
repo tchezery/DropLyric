@@ -84,7 +84,11 @@ class AudioPlayerService {
       duration.value = Duration.zero;
       playerState.value = PlayerState(false, ProcessingState.loading);
       await SpotifySession.instance.command('play', uri);
+      // O App Remote confirma o comando antes de emitir o próximo estado do
+      // player. Atualiza a UI imediatamente; os eventos do Spotify corrigem
+      // o estado caso a reprodução falhe ou seja pausada.
       _spotifyChanged();
+      playerState.value = PlayerState(true, ProcessingState.ready);
     } catch (e) {
       if (!_disposed) {
         error.value = SpotifySession.instance.error.isNotEmpty
@@ -98,6 +102,7 @@ class AudioPlayerService {
   Future<void> pause() async {
     if (_isSpotify && _playbackSupported) {
       await SpotifySession.instance.command('pause');
+      playerState.value = PlayerState(false, ProcessingState.ready);
     }
   }
 
