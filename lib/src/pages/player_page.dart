@@ -166,6 +166,7 @@ class _PlayerPageState extends State<PlayerPage>
     if (!mounted || generation != _trackLoadGeneration) return;
     setState(() {
       _currentTrack = resolved;
+      _detectedTrackLanguage = null;
       _lyricsLoading = true;
       _lyricsResult = null;
       _activeLineIndex = -1;
@@ -234,6 +235,10 @@ class _PlayerPageState extends State<PlayerPage>
         });
         if (result != null) {
           _buildUniqueWords(result.lines);
+          // The language may have changed after the lyrics were identified.
+          // Reload the dictionary for this track so words from another
+          // language are never used to calculate or display this song's state.
+          if (detected != null) await _loadKnownWords();
           _updateStats();
           _onPositionChanged();
         }
