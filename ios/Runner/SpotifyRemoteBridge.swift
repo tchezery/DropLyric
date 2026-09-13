@@ -42,6 +42,13 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
 
   private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
+    case "initialize":
+      // Opening DropLyric must observe the player that is already running.
+      // Connecting/subscribing is intentionally separate from play(), so the
+      // current Spotify track keeps playing from its existing position.
+      wantsConnection = true
+      connectIfNeeded()
+      result(nil)
     case "play":
       guard let uri = call.arguments as? String,
         uri.range(of: "^spotify:track:[a-zA-Z0-9]{22}$", options: .regularExpression) != nil

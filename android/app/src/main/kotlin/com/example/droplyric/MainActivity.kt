@@ -32,6 +32,19 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                     return@setMethodCallHandler
                 }
+                if (call.method == "initialize" || call.method == "reconnect") {
+                    // Connect on app start as well as on explicit reconnect. This
+                    // subscribes to the player that Spotify is already playing;
+                    // it must not issue play(), which would restart the track.
+                    connect { _, failure ->
+                        if (failure != null) {
+                            result.error("spotify_connection", connectionError(failure), null)
+                        } else {
+                            result.success(null)
+                        }
+                    }
+                    return@setMethodCallHandler
+                }
                 if (call.method !in listOf("play", "pause", "seek")) {
                     result.notImplemented()
                     return@setMethodCallHandler

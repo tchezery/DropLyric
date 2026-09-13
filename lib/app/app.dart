@@ -51,8 +51,6 @@ class MyApp extends StatelessWidget {
                     builder: (context, _) {
                       final spotify = SpotifySession.instance;
                       final hasCurrentTrack =
-                          spotify.state['ready'] == true &&
-                          !spotify.paused &&
                           RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$')
                               .hasMatch(spotify.uri);
                       if (!AppRoutes.shouldShowDock(route) &&

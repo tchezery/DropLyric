@@ -35,6 +35,9 @@ Future<String> spotifyCall(String action, [String argument = '']) async {
   _listen();
   if (action == 'initialize') {
     await auth.ready;
+    if (_nativePlaybackSupported) {
+      await _remote.invokeMethod<void>('initialize');
+    }
     return '{}';
   }
   if (['play', 'pause', 'seek'].contains(action)) {
