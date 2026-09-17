@@ -17,7 +17,6 @@ class DockWidget extends StatelessWidget
       selectedItemColor: Colors.indigo,
       unselectedItemColor: Colors.grey,
       items: [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
         BottomNavigationBarItem(icon: Icon(Icons.language), label: 'Vocabulary'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),

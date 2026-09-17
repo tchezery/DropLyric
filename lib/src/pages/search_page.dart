@@ -46,6 +46,7 @@ class _SearchPageState extends State<SearchPage>
   {
     return Scaffold
     (
+      appBar: AppBar(title: const Text('Search')),
       body: SafeArea
       (
         child: Padding
@@ -55,16 +56,8 @@ class _SearchPageState extends State<SearchPage>
           (
             crossAxisAlignment: CrossAxisAlignment.start,
             children: 
-            [
-              Text(
-                'Search', 
-                style: TextStyle
-                (
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              
+            [ 
+              const SizedBox(height: 60),
               TextField
               (
                 onSubmitted: _performSearch,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'home_page.dart';
 import 'search_page.dart';
+import 'vocabulary_page.dart';
 import '../widgets/dock.dart';
 
 class MainPage extends StatefulWidget {
@@ -13,11 +13,11 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage>
 {
-  int _currentIndex = 1;
+  int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    HomePage(),
-    SearchPage()
+    SearchPage(),
+    VocabularyPage(),
   ];
 
   @override
