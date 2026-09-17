@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/lyric_search.dart';
+import '../services/lyric_service.dart';
+import 'track_page.dart';
 
 class SearchPage extends StatefulWidget 
 {
@@ -98,7 +99,10 @@ class _SearchPageState extends State<SearchPage>
                             title: Text(lyric.trackName.isNotEmpty ? lyric.trackName : lyric.name),
                             subtitle: Text('${lyric.artistName} - ${lyric.albumName}'),
                             onTap: () {
-                              // Navegação para ver a letra
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(builder: (_) => TrackPage(id: lyric.id),)
+                              );
                             },
                           );
                         },
