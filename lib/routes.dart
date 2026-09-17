@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 import 'src/pages/login_page.dart';
 import 'src/pages/main_page.dart';
 
-// --- Widget section ---
-import 'src/widgets/dock.dart';
-
 abstract class AppRoutes 
 {
   static const loginPage = "/login"; 
   static const mainPage = "/";
+  static const lyricPage = "/lyric";
 }
 
 class Routes extends StatelessWidget 
@@ -22,10 +20,10 @@ class Routes extends StatelessWidget
   {
     return MaterialApp(
       title: 'DropLyric',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
-      ),
+      // theme: ThemeData(
+      //   brightness: Brightness.dark,
+      //   scaffoldBackgroundColor: Colors.black,
+      // ),
       initialRoute: AppRoutes.loginPage,
       routes: 
       {
