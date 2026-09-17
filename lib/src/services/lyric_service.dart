@@ -71,7 +71,7 @@ class LyricService {
   Future<List<Lyrics>> getTrackById(int id) async {
     if (id <= 0) return [];
 
-    final url = Uri.parse('$_baseUrl/track/$id');
+    final url = Uri.parse('$_baseUrl/get/$id');
 
     try {
       final response = await http.get(
