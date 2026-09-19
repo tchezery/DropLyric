@@ -66,7 +66,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Droplyric',
+                    'DropLyric',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: colors.onSurface,
                       fontWeight: FontWeight.w800,

@@ -34,7 +34,7 @@ const portugueseStrings = <String, String>{
   "App language": "Idioma do app",
   "Remove all word history": "Remover histórico de palavras",
   "Delete every saved word": "Excluir todas as palavras salvas",
-  "About Droplyric": "Sobre o Droplyric",
+  "About DropLyric": "Sobre o DropLyric",
   "Learn languages with music — v1.0.0": "Aprenda idiomas com música — v1.0.0",
   "Listen to music, read the lyrics, and mark the words you already know to build your vocabulary.": "Ouça músicas, leia as letras e marque as palavras que já conhece para ampliar seu vocabulário.",
   "Remove all word history?": "Remover todo o histórico de palavras?",

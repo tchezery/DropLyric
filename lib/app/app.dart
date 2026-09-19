@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
         AppThemeMode.instance,
       ]),
       builder: (context, _) => MaterialApp(
-        title: 'Droplyric',
+        title: 'DropLyric',
         locale: Locale(AppLanguage.instance.code),
         supportedLocales: const [Locale('en'), Locale('pt')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,

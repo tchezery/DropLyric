@@ -282,14 +282,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.info,
-                    title: tr(context, "About Droplyric"),
+                    title: tr(context, "About DropLyric"),
                     subtitle: tr(
                       context,
                       "Learn languages with music — v1.0.0",
                     ),
                     onTap: () => showAboutDialog(
                       context: context,
-                      applicationName: 'Droplyric',
+                      applicationName: 'DropLyric',
                       applicationVersion: '1.0.0',
                       applicationIcon: const Icon(
                         CupertinoIcons.music_note,
