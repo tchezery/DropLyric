@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../app/theme.dart';
 import '../core/models/track_model.dart';
 
 class TrackCard extends StatelessWidget {
@@ -12,26 +13,37 @@ class TrackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 152,
+        width: 156,
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Capa do álbum
+            // Album artwork with Apple squircle top corners
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(8),
-              ),
-              child: _AlbumArt(url: track.albumArtUrl, size: 152),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+              child: _AlbumArt(url: track.albumArtUrl, size: 156),
             ),
 
-            // Info
+            // Track info
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
@@ -40,9 +52,11 @@ class TrackCard extends StatelessWidget {
                   Text(
                     track.title,
                     style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
                       color: colors.onSurface,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -51,8 +65,10 @@ class TrackCard extends StatelessWidget {
                   Text(
                     track.artist,
                     style: TextStyle(
-                      color: colors.onSurface.withValues(alpha: 0.65),
-                      fontSize: 11,
+                      fontFamily: AppTheme.fontSF,
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -67,7 +83,7 @@ class TrackCard extends StatelessWidget {
   }
 }
 
-/// Card horizontal (lista) estilo Spotify para resultados de busca.
+/// Horizontal Apple Music-style list tile for track results and lists.
 class TrackListTile extends StatelessWidget {
   final TrackModel track;
   final VoidCallback onTap;
@@ -81,15 +97,17 @@ class TrackListTile extends StatelessWidget {
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: _AlbumArt(url: track.albumArtUrl, size: 48),
+        borderRadius: BorderRadius.circular(10),
+        child: _AlbumArt(url: track.albumArtUrl, size: 50),
       ),
       title: Text(
         track.title,
         style: TextStyle(
+          fontFamily: AppTheme.fontSF,
           color: colors.onSurface,
           fontWeight: FontWeight.w600,
-          fontSize: 14,
+          fontSize: 15,
+          letterSpacing: -0.2,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -97,19 +115,17 @@ class TrackListTile extends StatelessWidget {
       subtitle: Text(
         track.artist,
         style: TextStyle(
-          color: colors.onSurface.withValues(alpha: 0.65),
-          fontSize: 12,
+          fontFamily: AppTheme.fontSF,
+          color: colors.onSurfaceVariant,
+          fontSize: 13,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: IconButton(
-        icon: Icon(
-          CupertinoIcons.ellipsis_vertical,
-          color: colors.onSurface.withValues(alpha: 0.65),
-          size: 20,
-        ),
-        onPressed: () {},
+      trailing: Icon(
+        CupertinoIcons.chevron_right,
+        color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+        size: 16,
       ),
     );
   }
@@ -123,7 +139,7 @@ class _AlbumArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (url != null) {
+    if (url != null && url!.isNotEmpty) {
       return Image.network(
         url!,
         width: size,
@@ -142,8 +158,8 @@ class _AlbumArt extends StatelessWidget {
     child: Center(
       child: Icon(
         CupertinoIcons.music_note,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-        size: 28,
+        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        size: size * 0.4,
       ),
     ),
   );

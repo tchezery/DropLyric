@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Palavra interativa sem background:
+import '../../../app/theme.dart';
+
+/// Palavra interativa estilo Apple Music:
 ///
-/// **Desconhecida** → texto normal, 100% visível/nítido para aprender.
-/// **Conhecida** → apenas opaco (baixa opacidade/esmaecido), indicando domínio.
-/// **Linha ativa** → tipografia maior e destacada.
+/// **Desconhecida** → 100% nítida para aprendizado.
+/// **Conhecida** → esmaecida (baixa opacidade), indicando domínio.
+/// **Linha ativa** → tipografia Apple SF Pro destacada.
 class InteractiveWord extends StatelessWidget {
   final String word;
   final bool isKnown;
@@ -27,29 +29,27 @@ class InteractiveWord extends StatelessWidget {
     this.isLightMode = false,
     this.isManualMode = false,
     this.customColor,
-    this.fontFamily = 'monospace',
+    this.fontFamily = AppTheme.fontSF,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Quando a linha está ativa com o marca-texto amarelo, a cor do texto é tinta escura
-    // Quando inativa, o texto é branco conforme solicitado pelo usuário
     final Color textColor;
     if (isActiveLine) {
-      textColor = const Color(0xFF141F17);
+      textColor = isLightMode ? Colors.black : Colors.white;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
     final double opacity;
     if (isKnown) {
-      opacity = isActiveLine ? 0.40 : 0.30;
+      opacity = isActiveLine ? 0.40 : 0.25;
     } else {
-      opacity = 1.0;
+      opacity = isActiveLine ? 1.0 : (isLightMode ? 0.70 : 0.65);
     }
 
-    final fontSize = isActiveLine ? 16.5 : 15.0;
-    final fontWeight = isActiveLine ? FontWeight.w800 : FontWeight.w500;
+    final fontSize = isActiveLine ? 18.0 : 16.0;
+    final fontWeight = isActiveLine ? FontWeight.w700 : FontWeight.w500;
 
     TapDownDetails? tapDetails;
 
@@ -67,7 +67,7 @@ class InteractiveWord extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 1.0),
+        padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.5),
         child: Text(
           word,
           style: TextStyle(
@@ -75,7 +75,8 @@ class InteractiveWord extends StatelessWidget {
             fontSize: fontSize,
             fontWeight: fontWeight,
             color: textColor.withValues(alpha: opacity),
-            height: 1.45,
+            letterSpacing: -0.3,
+            height: 1.4,
           ),
         ),
       ),
@@ -83,7 +84,7 @@ class InteractiveWord extends StatelessWidget {
   }
 }
 
-/// Token de pontuação ou espaço, sempre exibido como conteúdo já dominado.
+/// Token de pontuação ou espaço.
 class PunctuationSpan extends StatelessWidget {
   final String text;
   final bool isActiveLine;
@@ -99,31 +100,32 @@ class PunctuationSpan extends StatelessWidget {
     this.isLightMode = false,
     this.isManualMode = false,
     this.customColor,
-    this.fontFamily = 'monospace',
+    this.fontFamily = AppTheme.fontSF,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color textColor;
     if (isActiveLine) {
-      textColor = const Color(0xFF141F17);
+      textColor = isLightMode ? Colors.black : Colors.white;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
-    final fontSize = isActiveLine ? 16.5 : 15.0;
-    final fontWeight = isActiveLine ? FontWeight.w800 : FontWeight.w500;
+    final opacity = isActiveLine ? 0.45 : (isLightMode ? 0.35 : 0.30);
+    final fontSize = isActiveLine ? 18.0 : 16.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.0),
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Text(
         text,
         style: TextStyle(
           fontFamily: fontFamily,
           fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: textColor.withValues(alpha: isActiveLine ? 0.40 : 0.30),
-          height: 1.45,
+          fontWeight: isActiveLine ? FontWeight.w600 : FontWeight.w400,
+          color: textColor.withValues(alpha: opacity),
+          letterSpacing: -0.3,
+          height: 1.4,
         ),
       ),
     );

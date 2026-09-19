@@ -126,64 +126,72 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb) return const RemoteMusicPage();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
+    final primaryTextColor = isDark ? AppTheme.labelDark : AppTheme.labelLight;
+    final secondaryTextColor = isDark ? AppTheme.secondaryLabelDark : AppTheme.secondaryLabelLight;
+    final searchBg = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA);
+
     return Scaffold(
-      backgroundColor: AppTheme.spotifyBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SpotifyConnectButton(),
-            // Header
+            // Large Title
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Text(
-                    isPortuguese ? 'Buscar' : 'Search',
-                style: const TextStyle(
-                  color: AppTheme.spotifyWhite,
+                isPortuguese ? 'Buscar' : 'Search',
+                style: TextStyle(
+                  fontFamily: '.SF Pro Display',
+                  color: primaryTextColor,
                   fontSize: 34,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.8,
                 ),
               ),
             ),
 
-            // Search bar estilo Spotify (branca, arredondada)
+            // iOS Search Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                height: 46,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.separator,
-                  borderRadius: BorderRadius.circular(6),
+                  color: searchBg,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
                   controller: _controller,
                   focusNode: _focus,
-                  style: const TextStyle(
-                    color: AppTheme.ink,
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Text',
+                    color: primaryTextColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
-                  cursorColor: AppTheme.yellow,
+                  cursorColor: AppTheme.appleBlue,
                   decoration: InputDecoration(
                     hintText: isPortuguese
-                        ? 'Que música você quer aprender?'
-                        : 'What track do you want to learn?',
-                    hintStyle: const TextStyle(color: AppTheme.muted, fontSize: 14),
+                        ? 'Artistas, músicas ou letras'
+                        : 'Artists, tracks or lyrics',
+                    hintStyle: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      color: secondaryTextColor,
+                      fontSize: 15,
+                    ),
                     border: InputBorder.none,
                     filled: false,
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       CupertinoIcons.search,
-                      color: AppTheme.ink,
-                      size: 22,
+                      color: secondaryTextColor,
+                      size: 20,
                     ),
                     suffixIcon: _controller.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(
-                              CupertinoIcons.clear,
-                              color: AppTheme.ink,
-                              size: 18,
-                            ),
+                        ? CupertinoButton(
+                            padding: EdgeInsets.zero,
                             onPressed: () {
                               _controller.clear();
                               setState(() {
@@ -191,6 +199,11 @@ class _SearchPageState extends State<SearchPage> {
                                 _searched = false;
                               });
                             },
+                            child: Icon(
+                              CupertinoIcons.clear_circled_solid,
+                              color: secondaryTextColor,
+                              size: 18,
+                            ),
                           )
                         : null,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -202,25 +215,25 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
 
-            const SizedBox(height: 24),
-            Expanded(child: _buildBody()),
+            const SizedBox(height: 18),
+            Expanded(child: _buildBody(isDark, primaryTextColor, secondaryTextColor)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isDark, Color primaryTextColor, Color secondaryTextColor) {
     final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
     if (_loading) {
       return const Center(
-        child: const CircularProgressIndicator(color: AppTheme.spotifyGreen),
+        child: CupertinoActivityIndicator(radius: 14),
       );
     }
 
     if (_searched && _results.isNotEmpty) {
       return ListView.builder(
-        padding: const EdgeInsets.only(bottom: 100),
+        padding: const EdgeInsets.only(bottom: 120, top: 4),
         itemCount: _results.length,
         itemBuilder: (ctx, i) => TrackListTile(
           track: _results[i],
@@ -234,44 +247,50 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               CupertinoIcons.search,
-              size: 52,
-              color: AppTheme.spotifyMediumGray,
+              size: 48,
+              color: secondaryTextColor,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               tr(context, "No tracks found."),
-              style: const TextStyle(color: AppTheme.spotifyLightGray),
+              style: TextStyle(
+                fontFamily: '.SF Pro Text',
+                color: secondaryTextColor,
+                fontSize: 15,
+              ),
             ),
           ],
         ),
       );
     }
 
-    // Estado inicial — grid de categorias estilo Spotify
+    // Initial State — Apple Inset Category Cards
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: Text(
-            isPortuguese ? 'Explorar categorias' : 'Explore categories',
-            style: const TextStyle(
-              color: AppTheme.spotifyWhite,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+            isPortuguese ? 'Categorias' : 'Categories',
+            style: TextStyle(
+              fontFamily: '.SF Pro Text',
+              color: primaryTextColor,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
             ),
           ),
         ),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 2.1,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
             ),
             itemCount: _categories.length,
             itemBuilder: (ctx, i) {
@@ -286,6 +305,7 @@ class _SearchPageState extends State<SearchPage> {
                 },
                 icon: icon,
                 color: color,
+                isDark: isDark,
                 onTap: () {
                   _controller.text = label;
                   _search(label);
@@ -303,42 +323,69 @@ class _CategoryCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _CategoryCard({
     required this.label,
     required this.icon,
     required this.color,
+    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          color: color,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-                  Icon(icon, color: AppTheme.spotifyWhite, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppTheme.spotifyWhite,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+    final cardBg = isDark
+        ? const Color(0xFF1C1C1E)
+        : const Color(0xFFF2F2F7);
+    final textColor = isDark
+        ? AppTheme.labelDark
+        : AppTheme.labelLight;
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+            width: 0.8,
           ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: isDark ? 0.35 : 0.8),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: isDark ? AppTheme.white : const Color(0xFF1C1C1E),
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: '.SF Pro Text',
+                  color: textColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

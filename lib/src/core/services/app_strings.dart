@@ -43,7 +43,7 @@ const portugueseStrings = <String, String>{
   "Remove all": "Remover tudo",
   "Spotify connection required": "É necessário conectar ao Spotify",
   "Reconnect Spotify": "Reconectar ao Spotify",
-  "100% connected": "100% conectado",
+  "Connected": "Conectado",
   "Disconnect": "Desconectar",
   "Continue with Spotify app": "Continuar com o app Spotify",
   "Continue with Web": "Continuar pela Web",

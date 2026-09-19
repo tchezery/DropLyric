@@ -7,6 +7,7 @@ import '../core/services/language_service.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/spotify_icon.dart';
+import '../widgets/language_flag.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({
@@ -48,75 +49,105 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final hasLanguage = _selectedLanguage != null;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Material(
       color: theme.scaffoldBackgroundColor,
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  hasLanguage
-                      ? const SpotifyIcon(size: 64)
-                      : const Icon(
-                          CupertinoIcons.music_note_2,
-                          color: AppTheme.spotifyGreen,
-                          size: 64,
-                        ),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: hasLanguage
+                          ? AppTheme.spotifyGreen.withValues(alpha: 0.15)
+                          : colors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: hasLanguage
+                          ? const SpotifyIcon(size: 40)
+                          : Icon(
+                              CupertinoIcons.music_note_2,
+                              color: colors.primary,
+                              size: 36,
+                            ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'DropLyric',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: colors.onSurface,
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 34,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: -1.2,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Text(
                     hasLanguage
-                        ? tr(
-                            context,
-                            'Connect your Spotify account to continue.',
-                          )
-                        : tr(
-                            context,
-                            'Choose the language you want to use in the app.',
-                          ),
+                        ? tr(context, 'Connect your Spotify account to continue.')
+                        : tr(context, 'Choose your preferred language.'),
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
                       color: colors.onSurfaceVariant,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 36),
                   if (!hasLanguage) ...[
                     _LanguageButton(
+                      flagCode: 'us',
                       label: 'English',
                       selected: _selectedLanguage == 'en',
                       onPressed: _saving ? null : () => _saveLanguage('en'),
                     ),
                     const SizedBox(height: 12),
                     _LanguageButton(
+                      flagCode: 'br',
                       label: 'Português',
                       selected: _selectedLanguage == 'pt',
                       onPressed: _saving ? null : () => _saveLanguage('pt'),
                     ),
                   ] else ...[
-                    SpotifyConnectButton(),
-                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0x26FFFFFF)
+                              : const Color(0x14000000),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: const SpotifyConnectButton(),
+                    ),
+                    const SizedBox(height: 20),
                     ListenableBuilder(
                       listenable: SpotifySession.instance,
                       builder: (context, _) {
                         if (!SpotifySession.instance.connected) {
                           return const SizedBox.shrink();
                         }
-                        return FilledButton.icon(
-                          onPressed: widget.onFinished,
-                          icon: const Icon(CupertinoIcons.arrow_right),
-                          label: Text(tr(context, 'Continue')),
+                        return SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: widget.onFinished,
+                            icon: const Icon(CupertinoIcons.arrow_right, size: 18),
+                            label: Text(tr(context, 'Continue')),
+                          ),
                         );
                       },
                     ),
@@ -133,31 +164,66 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
 class _LanguageButton extends StatelessWidget {
   const _LanguageButton({
+    required this.flagCode,
     required this.label,
     required this.selected,
     required this.onPressed,
   });
 
+  final String flagCode;
   final String label;
   final bool selected;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: selected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          foregroundColor: selected
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.onSurface,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Material(
+        color: selected ? colors.primary : colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: selected
+                    ? Colors.transparent
+                    : (isDark ? const Color(0x26FFFFFF) : const Color(0x14000000)),
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              children: [
+                LanguageFlag(countryCode: flagCode, width: 26),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      color: selected ? colors.onPrimary : colors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (selected)
+                  Icon(
+                    CupertinoIcons.checkmark_circle_fill,
+                    color: colors.onPrimary,
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
         ),
-        child: Text(label),
       ),
     );
   }

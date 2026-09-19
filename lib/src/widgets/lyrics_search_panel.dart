@@ -1,7 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
+import '../../../app/theme.dart';
 import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
 import '../pages/player_page.dart';
@@ -22,7 +24,8 @@ class _LyricsSearchPanelState extends State<LyricsSearchPanel> {
   bool _searched = false;
   String? _error;
   int _generation = 0;
-  String t(String pt, String en) => Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
+  String t(String pt, String en) =>
+      Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
 
   @override
   void dispose() {
@@ -50,10 +53,7 @@ class _LyricsSearchPanelState extends State<LyricsSearchPanel> {
     } catch (_) {
       if (mounted && generation == _generation) {
         setState(
-          () => _error = t(
-            'Não foi possível buscar no LRCLIB. Tente novamente.',
-            'Could not search LRCLIB. Please try again.',
-          ),
+          () => _error = t('Erro ao buscar letras', 'Error searching lyrics'),
         );
       }
     } finally {
@@ -90,84 +90,176 @@ class _LyricsSearchPanelState extends State<LyricsSearchPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      TextField(
-        controller: _query,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (_) => _search(),
-        onChanged: (_) {
-          if (_loading || _searched || _error != null) {
-            ++_generation;
-            setState(() {
-              _loading = false;
-              _searched = false;
-              _results = [];
-              _error = null;
-            });
-          }
-        },
-        decoration: InputDecoration(
-          labelText: t('Buscar música ou artista', 'Search song or artist'),
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: IconButton(
-            tooltip: t('Buscar', 'Search'),
-            onPressed: _search,
-            icon: const Icon(Icons.arrow_forward),
-          ),
-        ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        t(
-          'Procure pelaa pela letra da sua música.',
-          'Search if we have the lyrics for your song.',
-        ),
-      ),
-      if (_loading)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: LinearProgressIndicator(),
-        ),
-      if (_error != null)
-        Text(
-          _error!,
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
-        ),
-      if (_searched && _results.isEmpty)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Text(
-            t(
-              'Nenhuma música encontrada. Tente incluir o artista.',
-              'No songs found. Try including the artist.',
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _query,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _search(),
+            onChanged: (text) {
+              if (text.isEmpty && (_searched || _results.isNotEmpty)) {
+                setState(() {
+                  _results = [];
+                  _searched = false;
+                });
+              }
+            },
+            decoration: InputDecoration(
+              hintText: t('Buscar letra ou música…', 'Search lyrics or song…'),
+              prefixIcon: Icon(
+                CupertinoIcons.search,
+                color: colors.onSurfaceVariant,
+                size: 20,
+              ),
+              suffixIcon: _query.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(CupertinoIcons.clear_circled_solid, size: 18),
+                      onPressed: () {
+                        _query.clear();
+                        setState(() {
+                          _results = [];
+                          _searched = false;
+                        });
+                      },
+                    )
+                  : IconButton(
+                      icon: const Icon(CupertinoIcons.arrow_right_circle_fill, size: 28),
+                      onPressed: _search,
+                    ),
             ),
           ),
-        ),
-      for (final entry in _results)
-        ListTile(
-          title: Text(entry.track.title),
-          subtitle: Text(
-            [
-              entry.track.artist,
-              if (entry.track.album.isNotEmpty) entry.track.album,
-              if (entry.track.duration != null)
-                '${entry.track.duration!.floor() ~/ 60}:${(entry.track.duration!.floor() % 60).toString().padLeft(2, '0')}',
-              entry.instrumental
-                  ? t('Instrumental', 'Instrumental')
-                  : entry.lyrics?.isSynced == true
-                  ? t('Letra sincronizada', 'Synced lyrics')
-                  : entry.lyrics != null
-                  ? t('Letra disponível', 'Lyrics available')
-                  : t('Sem letra', 'No lyrics'),
-            ].join(' • '),
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _select(entry),
-        ),
-    ],
-  );
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CupertinoActivityIndicator()),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontSF,
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          if (_searched && _results.isEmpty && !_loading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: Text(
+                  t('Nenhum resultado encontrado', 'No results found'),
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontSF,
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          if (_results.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Material(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _results.length; i++) ...[
+                      if (i > 0) Divider(color: Theme.of(context).dividerColor, height: 1),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        title: Text(
+                          _results[i].track.title,
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          _results[i].track.artist,
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
+                            color: colors.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_results[i].lyrics?.isSynced == true)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.appleBlue.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  t('SYNC', 'SYNC'),
+                                  style: const TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    color: AppTheme.appleBlue,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              CupertinoIcons.chevron_right,
+                              color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                        onTap: () => _select(_results[i]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _LyricsSelection extends StatefulWidget {
@@ -180,7 +272,9 @@ class _LyricsSelection extends StatefulWidget {
 class _LyricsSelectionState extends State<_LyricsSelection> {
   final _link = TextEditingController();
   String? _error;
-  String t(String pt, String en) => Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
+  String t(String pt, String en) =>
+      Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
+
   @override
   void dispose() {
     _link.dispose();
@@ -190,7 +284,7 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
   Future<void> _findSpotify() async {
     final query = '${widget.entry.track.title} ${widget.entry.track.artist}';
     try {
-      final opened = await launchUrl(
+      await launchUrl(
         Uri(
           scheme: 'https',
           host: 'open.spotify.com',
@@ -198,27 +292,14 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
         ),
         mode: LaunchMode.externalApplication,
       );
-      if (!opened) throw StateError('Could not open Spotify');
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = t(
-            'Não foi possível abrir o Spotify.',
-            'Could not open Spotify.',
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
   void _play() {
     final uri = SpotifyService.playbackUri(_link.text.trim());
     if (uri == null) {
       setState(
-        () => _error = t(
-          'Cole o link completo de uma faixa do Spotify.',
-          'Paste a full Spotify song link.',
-        ),
+        () => _error = t('Cole um link do Spotify válido', 'Paste a valid Spotify link'),
       );
       return;
     }
@@ -226,13 +307,15 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    child: SingleChildScrollView(
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         24,
+        16,
         24,
-        24,
-        MediaQuery.viewInsetsOf(context).bottom + 24,
+        MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -240,35 +323,37 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
         children: [
           Text(
             widget.entry.track.title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Text(widget.entry.track.artist),
-          const SizedBox(height: 16),
-          if (widget.entry.lyrics != null)
-            FilledButton.icon(
-              onPressed: () => Navigator.of(context).pop('read'),
-              icon: const Icon(Icons.menu_book),
-              label: Text(t('Abrir letra', 'Open lyrics')),
-            )
-          else
-            Text(
-              t(
-                'Este registro não tem letra disponível.',
-                'This record has no lyrics available.',
-              ),
+            style: const TextStyle(
+              fontFamily: AppTheme.fontSF,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
             ),
-          const SizedBox(height: 16),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
           Text(
-            t(
-              'Para ouvir, escolha esta versão no Spotify. O LRCLIB fornece a letra, mas não o link de reprodução.',
-              'To listen, choose this version in Spotify. LRCLIB provides lyrics, but not a playback link.',
+            widget.entry.track.artist,
+            style: TextStyle(
+              fontFamily: AppTheme.fontSF,
+              color: colors.onSurfaceVariant,
+              fontSize: 14,
             ),
           ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            icon: const Icon(Icons.menu_book),
+            onPressed: () => Navigator.of(context).pop('read'),
+            label: Text(t('Ler letra', 'Read lyrics')),
+          ),
+          const SizedBox(height: 12),
           OutlinedButton.icon(
+            icon: const Icon(Icons.open_in_new),
             onPressed: _findSpotify,
-            icon: const SpotifyIcon(size: 18),
             label: Text(t('Buscar no Spotify', 'Search in Spotify')),
           ),
+          const SizedBox(height: 16),
           TextField(
             controller: _link,
             onSubmitted: (_) => _play(),
@@ -277,14 +362,20 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
                 padding: EdgeInsets.all(12),
                 child: SpotifyIcon(size: 20),
               ),
-              labelText: t('Link da faixa no Spotify', 'Spotify song link'),
-              hintText: 'https://open.spotify.com/track/…',
+              hintText: t('Link da faixa no Spotify…', 'Spotify track link…'),
             ),
           ),
           if (_error != null)
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontSF,
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 13,
+                ),
+              ),
             ),
           const SizedBox(height: 12),
           FilledButton(
@@ -293,6 +384,6 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }

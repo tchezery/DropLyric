@@ -55,20 +55,20 @@ class PlayerPage extends StatefulWidget {
 
 class _PlayerPageState extends State<PlayerPage>
     with SingleTickerProviderStateMixin {
-  // Cores do tema minimalista Sage Paper (conforme imagem de referência)
-  static const Color _sageBg = AppTheme.paper;
-  static const Color _sageInk = AppTheme.ink;
-  static const Color _sageMuted = AppTheme.muted;
-  static const Color _spotifyGreen = AppTheme.yellow;
+  // Apple Clean Light & Dark Themes
+  static const Color _lightBg = AppTheme.white;
+  static const Color _lightInk = AppTheme.labelLight;
+  static const Color _lightMuted = AppTheme.secondaryLabelLight;
+  static const Color _spotifyGreen = AppTheme.spotifyGreen;
 
-  // Cores do tema escuro minimalista (padrão com texto branco e marca-texto amarelo)
-  static const Color _darkBg = Color(0xFF141715);
-  static const Color _darkInk = Colors.white;
-  static const Color _darkMuted = Color(0xFF9EABA2);
+  // Apple OLED Dark Theme
+  static const Color _darkBg = AppTheme.black;
+  static const Color _darkInk = AppTheme.labelDark;
+  static const Color _darkMuted = AppTheme.secondaryLabelDark;
 
-  Color get _canvasColor => _isLightStyle ? _sageBg : _darkBg;
-  Color get _primaryInk => _isLightStyle ? _sageInk : _darkInk;
-  Color get _secondaryInk => _isLightStyle ? _sageMuted : _darkMuted;
+  Color get _canvasColor => _isLightStyle ? _lightBg : _darkBg;
+  Color get _primaryInk => _isLightStyle ? _lightInk : _darkInk;
+  Color get _secondaryInk => _isLightStyle ? _lightMuted : _darkMuted;
 
   // Serviços
   final AudioPlayerService _audioService = AudioPlayerService();
@@ -518,8 +518,8 @@ class _PlayerPageState extends State<PlayerPage>
       context: context,
       backgroundColor: _isLightStyle ? Colors.white : AppTheme.spotifyDarkCard,
       shape: const RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(
-          top: const Radius.circular(20),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
         ),
       ),
       builder: (ctx) {
@@ -1161,23 +1161,25 @@ class _PlayerPageState extends State<PlayerPage>
               ),
             ),
             const SizedBox(width: 10),
-            // Verso da música com efeito marca-texto amarelo quando a linha está ativa
+            // Verso da música com destaque sutil estilo Apple quando a linha está ativa
             Expanded(
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: 1.0,
                 child: Container(
                   padding: isActive
-                      ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5)
+                      ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
                       : const EdgeInsets.symmetric(
                           horizontal: 0,
-                          vertical: 2.5,
+                          vertical: 4,
                         ),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFFFDE68A) // Marca-texto amarelo
+                        ? (_isLightStyle
+                            ? const Color(0xFFE5E5EA)
+                            : const Color(0xFF2C2C2E))
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
