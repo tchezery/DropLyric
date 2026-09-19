@@ -13,6 +13,7 @@ import '../../core/services/dictionary_service.dart';
 class WordActionSheet extends StatefulWidget {
   final String rawWord;
   final String normalized;
+  final String? sentence;
   final bool isInitiallyKnown;
   final String sourceLanguage;
   final String targetLanguage;
@@ -22,6 +23,7 @@ class WordActionSheet extends StatefulWidget {
     super.key,
     required this.rawWord,
     required this.normalized,
+    this.sentence,
     required this.isInitiallyKnown,
     required this.sourceLanguage,
     required this.targetLanguage,
@@ -32,6 +34,7 @@ class WordActionSheet extends StatefulWidget {
     BuildContext context, {
     required String rawWord,
     required String normalized,
+    String? sentence,
     required bool isInitiallyKnown,
     required String sourceLanguage,
     required String targetLanguage,
@@ -44,6 +47,7 @@ class WordActionSheet extends StatefulWidget {
       builder: (ctx) => WordActionSheet(
         rawWord: rawWord,
         normalized: normalized,
+        sentence: sentence,
         isInitiallyKnown: isInitiallyKnown,
         sourceLanguage: sourceLanguage,
         targetLanguage: targetLanguage,
@@ -80,6 +84,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
     try {
       final res = await _dictionaryService.lookupWord(
         widget.normalized,
+        sentence: widget.sentence,
         sourceLang: widget.sourceLanguage,
         targetLang: widget.targetLanguage,
       );
@@ -420,7 +425,10 @@ class _WordActionSheetState extends State<WordActionSheet> {
     }
 
     final def = _definition;
-    if (def == null || (def.meanings.isEmpty && def.translation == null)) {
+    if (def == null ||
+        (def.meanings.isEmpty &&
+            def.translation == null &&
+            def.sentenceTranslation == null)) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -474,10 +482,10 @@ class _WordActionSheetState extends State<WordActionSheet> {
             ),
           ),
 
-        // Translation Card (Apple Inset Grouped)
+        // 1. Literal Word Translation Card
         if (def.translation != null && def.translation!.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: cardColor,
@@ -489,13 +497,13 @@ class _WordActionSheetState extends State<WordActionSheet> {
                 Row(
                   children: [
                     Icon(
-                      CupertinoIcons.globe,
-                      size: 14,
+                      CupertinoIcons.textformat_abc,
+                      size: 16,
                       color: AppTheme.appleBlue,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      tr(context, "TRANSLATION"),
+                      tr(context, "LITERAL TRANSLATION"),
                       style: const TextStyle(
                         fontFamily: '.SF Pro Text',
                         fontSize: 11,
@@ -511,11 +519,73 @@ class _WordActionSheetState extends State<WordActionSheet> {
                   def.translation!,
                   style: TextStyle(
                     fontFamily: '.SF Pro Display',
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: primaryTextColor,
                   ),
                 ),
+              ],
+            ),
+          ),
+
+        // 2. Full Sentence Translation Card
+        if (def.sentenceTranslation != null &&
+            def.sentenceTranslation!.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.text_quote,
+                      size: 16,
+                      color: AppTheme.spotifyGreen,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      tr(context, "FULL SENTENCE"),
+                      style: const TextStyle(
+                        fontFamily: '.SF Pro Text',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.spotifyGreen,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  def.sentenceTranslation!,
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Display',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: primaryTextColor,
+                    height: 1.35,
+                  ),
+                ),
+                if (def.sentenceText != null &&
+                    def.sentenceText!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '“${def.sentenceText!}”',
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                      color: secondaryTextColor,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

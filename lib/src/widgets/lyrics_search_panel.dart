@@ -269,18 +269,20 @@ class _LyricsSelection extends StatelessWidget {
       Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
 
   Future<void> _openSpotify(BuildContext context) async {
-    final query = '${entry.track.title} ${entry.track.artist}';
+    final query = '${entry.track.title} ${entry.track.artist}'.trim();
     Navigator.of(context).pop();
+    final appUri = Uri.parse('spotify:search:${Uri.encodeComponent(query)}');
+    final webUri =
+        Uri.parse('https://open.spotify.com/search/${Uri.encodeComponent(query)}');
     try {
-      await launchUrl(
-        Uri(
-          scheme: 'https',
-          host: 'open.spotify.com',
-          pathSegments: ['search', query],
-        ),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {}
+      if (!await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+    }
   }
 
   @override

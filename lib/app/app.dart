@@ -1,6 +1,7 @@
 import '../src/core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -88,6 +89,20 @@ class _MyAppState extends State<MyApp> {
         initialRoute: AppRoutes.home,
         onGenerateRoute: AppRoutes.generateRoute,
         builder: (context, child) {
+          final isNativeMacOS =
+              !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
+          final mediaQuery = MediaQuery.of(context);
+          final updatedMediaQuery = isNativeMacOS
+              ? mediaQuery.copyWith(
+                  padding: mediaQuery.padding.copyWith(
+                    top: mediaQuery.padding.top + 28.0,
+                  ),
+                  viewPadding: mediaQuery.viewPadding.copyWith(
+                    top: mediaQuery.viewPadding.top + 28.0,
+                  ),
+                )
+              : mediaQuery;
+
           // Define a cor da status bar para o tema dark
           SystemChrome.setSystemUIOverlayStyle(
             const SystemUiOverlayStyle(
@@ -97,10 +112,12 @@ class _MyAppState extends State<MyApp> {
             ),
           );
 
-          return Stack(
-            children: [
-              // O Navigator ocupa toda a tela
-              Positioned.fill(child: child ?? const SizedBox.shrink()),
+          return MediaQuery(
+            data: updatedMediaQuery,
+            child: Stack(
+              children: [
+                // O Navigator ocupa toda a tela
+                Positioned.fill(child: child ?? const SizedBox.shrink()),
               // O Dock flutua sobre o conteúdo (oculto no modo player)
               ValueListenableBuilder<String>(
                 valueListenable: AppRoutes.currentRoute,
@@ -226,8 +243,9 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
             ],
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

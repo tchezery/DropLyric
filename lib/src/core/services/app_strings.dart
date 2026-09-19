@@ -122,6 +122,8 @@ const portugueseStrings = <String, String>{
       "Buscando significado no dicionário...",
   "Try again": "Tentar novamente",
   "TRANSLATION": "TRADUÇÃO",
+  "LITERAL TRANSLATION": "TRADUÇÃO LITERAL",
+  "FULL SENTENCE": "FRASE COMPLETA",
   "DICTIONARY DEFINITIONS": "DEFINIÇÕES DO DICIONÁRIO",
   "English": "Inglês",
   "Portuguese": "Português",

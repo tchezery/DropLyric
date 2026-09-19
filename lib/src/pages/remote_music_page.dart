@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
@@ -57,24 +58,56 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
     AppRoutes.currentRoute.value = previous;
   }
 
-  void _openLink() {
-    final uri = SpotifyService.playbackUri(_input.text.trim());
-    if (uri == null) {
-      setState(
-        () => _error = t('Link do Spotify inválido', 'Invalid Spotify link'),
+  Future<void> _searchOrOpenSpotify() async {
+    final text = _input.text.trim();
+    if (text.isEmpty) {
+      final appUri = Uri.parse('spotify:');
+      final webUri = Uri.parse('https://open.spotify.com');
+      try {
+        if (!await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        }
+      } catch (_) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+      return;
+    }
+
+    final uri = SpotifyService.playbackUri(text);
+    if (uri != null) {
+      setState(() => _error = null);
+      _open(
+        TrackModel(
+          id: uri,
+          title: '',
+          artist: '',
+          album: '',
+          previewAudioUrl: uri,
+        ),
       );
       return;
     }
-    setState(() => _error = null);
-    _open(
-      TrackModel(
-        id: uri,
-        title: '',
-        artist: '',
-        album: '',
-        previewAudioUrl: uri,
-      ),
-    );
+
+    final appSearchUri =
+        Uri.parse('spotify:search:${Uri.encodeComponent(text)}');
+    final webSearchUri =
+        Uri.parse('https://open.spotify.com/search/${Uri.encodeComponent(text)}');
+    try {
+      if (!await launchUrl(appSearchUri, mode: LaunchMode.externalApplication)) {
+        await launchUrl(webSearchUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(webSearchUri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _error =
+                t('Não foi possível abrir o Spotify', 'Could not open Spotify'),
+          );
+        }
+      }
+    }
   }
 
   Widget _groupedCard(BuildContext context, List<Widget> children) {
@@ -175,7 +208,7 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Text(
-                  t('Músicas', 'Music'),
+                  t('Buscar', 'Search'),
                   style: const TextStyle(
                     fontFamily: AppTheme.fontSF,
                     fontSize: 34,
@@ -185,28 +218,30 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                 ),
               ),
 
-              // Lyrics Search Section
-              const LyricsSearchPanel(),
-
-              const SizedBox(height: 16),
-
-              // Link input inside Apple Card
+              // 1. Pesquisar no Spotify (Primeira opção)
+              _heading(t('Pesquisar no Spotify', 'Search on Spotify')),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
                   controller: _input,
-                  onSubmitted: (_) => _openLink(),
-                  textInputAction: TextInputAction.go,
+                  onSubmitted: (_) => _searchOrOpenSpotify(),
+                  textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     prefixIcon: const Padding(
                       padding: EdgeInsets.all(12),
                       child: SpotifyIcon(size: 20),
                     ),
-                    hintText: t('Cole o link do Spotify…', 'Paste Spotify link…'),
+                    hintText: t(
+                      'Buscar no Spotify ou colar link…',
+                      'Search on Spotify or paste link…',
+                    ),
                     suffixIcon: IconButton(
-                      tooltip: t('Tocar', 'Play'),
-                      onPressed: _openLink,
-                      icon: const Icon(CupertinoIcons.arrow_right_circle_fill, size: 28),
+                      tooltip: t('Abrir no Spotify', 'Open in Spotify'),
+                      onPressed: _searchOrOpenSpotify,
+                      icon: const Icon(
+                        CupertinoIcons.arrow_right_circle_fill,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),
@@ -214,7 +249,10 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
 
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
                   child: Text(
                     _error!,
                     style: TextStyle(
@@ -224,6 +262,14 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                     ),
                   ),
                 ),
+
+              const SizedBox(height: 12),
+
+              // 2. Pesquisar apenas a letra (Segunda opção)
+              _heading(t('Pesquisar apenas a letra', 'Search lyrics only')),
+              const LyricsSearchPanel(),
+
+              const SizedBox(height: 16),
 
               // Now Playing
               if (current != null && _session.state['ready'] == true) ...[

@@ -7,6 +7,7 @@ import '../core/repositories/known_words_repository.dart';
 import '../core/services/language_service.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/language_flag.dart';
+import '../widgets/about_modal.dart';
 
 /// Perfil com design Apple Settings & Health stats.
 class ProfilePage extends StatefulWidget {
@@ -299,16 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   iconColor: const Color(0xFF8E8E93),
                   title: t('Sobre o DropLyric', 'About DropLyric'),
                   value: 'v1.0.0',
-                  onTap: () => showAboutDialog(
-                    context: context,
-                    applicationName: 'DropLyric',
-                    applicationVersion: '1.0.0',
-                    applicationIcon: const Icon(
-                      CupertinoIcons.music_note_2,
-                      size: 44,
-                      color: AppTheme.spotifyGreen,
-                    ),
-                  ),
+                  onTap: () => AboutAppModal.show(context),
                 ),
               ],
             ),

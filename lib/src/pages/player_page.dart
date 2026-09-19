@@ -11,6 +11,7 @@ import '../core/models/lyric_line_model.dart';
 import '../core/models/track_model.dart';
 import '../core/repositories/known_words_repository.dart';
 import '../core/services/audio_player_service.dart';
+import '../core/services/dictionary_service.dart';
 import '../core/services/language_service.dart';
 import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
@@ -389,6 +390,13 @@ class _PlayerPageState extends State<PlayerPage>
     final newActive = LyricParser.activeLineAt(lines, pos);
 
     if (newActive != _activeLineIndex) {
+      if (newActive >= 0 && newActive < lines.length) {
+        DictionaryService().prefetchSentence(
+          lines[newActive].rawText,
+          sourceLang: _targetLanguage,
+          targetLang: _translationLanguage,
+        );
+      }
       if (_lyricsMode == LyricsDisplayMode.synced) {
         setState(() => _activeLineIndex = newActive);
       } else {
@@ -469,7 +477,11 @@ class _PlayerPageState extends State<PlayerPage>
     }
   }
 
-  void _openWordActionSheet(String rawWord, String normalized) {
+  void _openWordActionSheet(
+    String rawWord,
+    String normalized, {
+    String? sentence,
+  }) {
     if (_knownWordsLoading || _lyricsLoading) return;
     final track = _currentTrack.id;
     final language = _targetLanguage;
@@ -478,6 +490,7 @@ class _PlayerPageState extends State<PlayerPage>
       context,
       rawWord: rawWord,
       normalized: normalized,
+      sentence: sentence,
       isInitiallyKnown: isKnown,
       sourceLanguage: _targetLanguage,
       targetLanguage: _translationLanguage,
@@ -1234,6 +1247,7 @@ class _PlayerPageState extends State<PlayerPage>
                         onWordPressed: (w, details) => _openWordActionSheet(
                           token.displayText,
                           token.normalizedWord,
+                          sentence: line.rawText,
                         ),
                       );
                     }).toList(),

@@ -6,7 +6,6 @@ import '../core/services/app_strings.dart';
 import '../core/services/language_service.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/spotify_connect_button.dart';
-import '../widgets/spotify_icon.dart';
 import '../widgets/language_flag.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -63,22 +62,36 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 76,
+                    height: 76,
                     decoration: BoxDecoration(
-                      color: hasLanguage
-                          ? AppTheme.spotifyGreen.withValues(alpha: 0.15)
-                          : colors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.35 : 0.08,
+                          ),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    child: Center(
-                      child: hasLanguage
-                          ? const SpotifyIcon(size: 40)
-                          : Icon(
-                              CupertinoIcons.music_note_2,
-                              color: colors.primary,
-                              size: 36,
-                            ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.asset(
+                        'assets/logo.jpg',
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: colors.primary.withValues(alpha: 0.15),
+                          child: Icon(
+                            CupertinoIcons.music_note_2,
+                            color: colors.primary,
+                            size: 36,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

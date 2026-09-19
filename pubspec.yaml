@@ -38,6 +38,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/spotify.svg
+    - assets/logo.jpg
 
 flutter_launcher_icons:
   android: "launcher_icon"
