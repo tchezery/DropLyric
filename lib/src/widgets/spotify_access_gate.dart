@@ -1,4 +1,5 @@
 import '../core/services/app_strings.dart';
+
 import 'package:flutter/material.dart';
 
 import '../core/services/spotify_session.dart';
@@ -18,8 +19,10 @@ class SpotifyAccessGate extends StatelessWidget {
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
+        final colors = Theme.of(context).colorScheme;
         if (session.initializing) {
           return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: SafeArea(
               child: Center(
                 child: Column(
@@ -36,6 +39,7 @@ class SpotifyAccessGate extends StatelessWidget {
         }
         if (session.connected) return child;
         return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
             child: Center(
               child: Padding(
@@ -43,18 +47,26 @@ class SpotifyAccessGate extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.music_note, size: 48),
+                    Icon(Icons.music_note, size: 48, color: colors.primary),
                     const SizedBox(height: 20),
                     Text(
-                      tr(context, "Connect Spotify to browse and search for music."),
+                      tr(
+                        context,
+                        "Connect Spotify to browse and search for music.",
+                      ),
                       textAlign: TextAlign.center,
+                      style: TextStyle(color: colors.onSurface),
                     ),
                     const SizedBox(height: 12),
                     SpotifyConnectButton(session: session),
                     const SizedBox(height: 12),
                     Text(
-                      tr(context, "Your profile and dictionary remain available below."),
+                      tr(
+                        context,
+                        "Your profile and dictionary remain available below.",
+                      ),
                       textAlign: TextAlign.center,
+                      style: TextStyle(color: colors.onSurfaceVariant),
                     ),
                   ],
                 ),

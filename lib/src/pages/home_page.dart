@@ -1,4 +1,5 @@
 import '../core/services/app_strings.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +15,7 @@ import '../core/services/spotify_session.dart';
 import '../widgets/spotify_access_gate.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/track_card.dart';
+import '../widgets/language_flag.dart';
 import 'player_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -30,7 +32,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
   bool _loading = true;
   bool _failed = false;
   PageRoute? _route;
-  String t(String pt, String en) => Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
+  String t(String pt, String en) =>
+      Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
 
   @override
   void initState() {
@@ -87,29 +90,81 @@ class _HomePageState extends State<HomePage> with RouteAware {
     ),
   );
 
-  Widget _card(Widget child) => Padding(
+  Widget _card(BuildContext context, Widget child) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 24),
     child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.sheet,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: child,
     ),
   );
 
+  Widget _languageCard(BuildContext context, MapEntry<String, int> language) {
+    final colors = Theme.of(context).colorScheme;
+    final preference = LanguageService().findByCode(language.key);
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              LanguageFlag(
+                countryCode: preference?.flagCode ?? language.key,
+                width: 30,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  t('Idioma', 'Language'),
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            localizedLanguageName(context, language.key),
+            style: TextStyle(
+              color: colors.onSurface,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t(
+              '${language.value} palavras conhecidas',
+              '${language.value} known words',
+            ),
+            style: TextStyle(color: colors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([_saved, AppLanguage.instance]),
+    listenable: Listenable.merge([
+      _saved,
+      AppLanguage.instance,
+      AppThemeMode.instance,
+    ]),
     builder: (context, _) {
       final tracks = _saved.tracks.take(20).toList();
       final summary = LearningSummary(_words, _saved.tracks);
-      final language = summary.languages.firstOrNull;
-      final languageName = language == null
-          ? null
-          : LanguageService().findByCode(language.key);
       return Scaffold(
         body: SafeArea(
           child: RefreshIndicator(
@@ -149,6 +204,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 _heading(t('Músicas recentes', 'Recent songs')),
                 if (tracks.isEmpty)
                   _card(
+                    context,
                     Text(
                       t(
                         'Abra uma música para começar seu histórico.',
@@ -161,16 +217,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   SizedBox(
                     height:
                         230 + (MediaQuery.textScalerOf(context).scale(24) - 24),
-                    child: Scrollbar(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: tracks.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (context, index) => TrackCard(
-                          track: tracks[index],
-                          onTap: () => _openPlayer(context, tracks[index]),
-                        ),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: tracks.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 14),
+                      itemBuilder: (context, index) => TrackCard(
+                        track: tracks[index],
+                        onTap: () => _openPlayer(context, tracks[index]),
                       ),
                     ),
                   ),
@@ -179,6 +233,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   const Center(child: const CircularProgressIndicator())
                 else if (_failed)
                   _card(
+                    context,
                     Column(
                       children: [
                         Text(
@@ -189,65 +244,40 @@ class _HomePageState extends State<HomePage> with RouteAware {
                         ),
                         TextButton(
                           onPressed: _load,
-                          child: Text(t('Tentar novamente', tr(context, "Try again"))),
+                          child: Text(
+                            t('Tentar novamente', tr(context, "Try again")),
+                          ),
                         ),
                       ],
                     ),
                   )
                 else ...[
-                  _card(
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              CupertinoIcons.globe,
-                              color: AppTheme.yellow,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                t(
-                                  'Idioma com mais palavras conhecidas',
-                                  'Language with the most known words',
-                                ),
-                                style: const TextStyle(color: AppTheme.muted),
-                              ),
-                            ),
-                          ],
+                  if (summary.languages.isEmpty)
+                    _card(
+                      context,
+                      Text(
+                        t(
+                          'Salve palavras nas letras para acompanhar seu progresso.',
+                          'Save words in lyrics to track your progress.',
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          language == null
-                              ? t(
-                                  'Tudo começa com uma palavra',
-                                  'It starts with one word',
-                                )
-                              : '${languageName?.flag ?? ""} ${localizedLanguageName(context, language.key)}',
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          language == null
-                              ? t(
-                                  'Salve palavras nas letras para acompanhar seu progresso.',
-                                  'Save words in lyrics to track your progress.',
-                                )
-                              : t(
-                                  '${language.value} palavras conhecidas',
-                                  '${language.value} known words',
-                                ),
-                          style: const TextStyle(color: AppTheme.muted),
-                        ),
-                      ],
+                        style: const TextStyle(color: AppTheme.muted),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 150,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: summary.languages.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (context, index) =>
+                            _languageCard(context, summary.languages[index]),
+                      ),
                     ),
-                  ),
                   _heading(t('Top 3 artistas', 'Top 3 artists')),
                   _card(
+                    context,
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -328,7 +358,10 @@ class _HomePageState extends State<HomePage> with RouteAware {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                tr(context, "It was not possible to open the track. Try searching for it."),
+                tr(
+                  context,
+                  "It was not possible to open the track. Try searching for it.",
+                ),
               ),
             ),
           );

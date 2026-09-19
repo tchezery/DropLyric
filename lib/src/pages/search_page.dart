@@ -138,7 +138,7 @@ class _SearchPageState extends State<SearchPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Text(
-                isPortuguese ? 'Buscar' : 'Search',
+                    isPortuguese ? 'Buscar' : 'Search',
                 style: const TextStyle(
                   color: AppTheme.spotifyWhite,
                   fontSize: 34,
@@ -323,7 +323,7 @@ class _CategoryCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: [
-              Icon(icon, color: AppTheme.spotifyWhite, size: 20),
+                  Icon(icon, color: AppTheme.spotifyWhite, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

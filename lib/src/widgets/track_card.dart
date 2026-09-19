@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../../app/theme.dart';
 import '../core/models/track_model.dart';
 
 class TrackCard extends StatelessWidget {
@@ -12,12 +11,13 @@ class TrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 152,
         decoration: BoxDecoration(
-          color: AppTheme.spotifyDarkCard,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -39,8 +39,8 @@ class TrackCard extends StatelessWidget {
                 children: [
                   Text(
                     track.title,
-                    style: const TextStyle(
-                      color: AppTheme.spotifyWhite,
+                    style: TextStyle(
+                      color: colors.onSurface,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -50,8 +50,8 @@ class TrackCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     track.artist,
-                    style: const TextStyle(
-                      color: AppTheme.spotifyLightGray,
+                    style: TextStyle(
+                      color: colors.onSurface.withValues(alpha: 0.65),
                       fontSize: 11,
                     ),
                     maxLines: 1,
@@ -76,6 +76,7 @@ class TrackListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -85,8 +86,8 @@ class TrackListTile extends StatelessWidget {
       ),
       title: Text(
         track.title,
-        style: const TextStyle(
-          color: AppTheme.spotifyWhite,
+        style: TextStyle(
+          color: colors.onSurface,
           fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
@@ -95,14 +96,17 @@ class TrackListTile extends StatelessWidget {
       ),
       subtitle: Text(
         track.artist,
-        style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
+        style: TextStyle(
+          color: colors.onSurface.withValues(alpha: 0.65),
+          fontSize: 12,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: IconButton(
-        icon: const Icon(
+        icon: Icon(
           CupertinoIcons.ellipsis_vertical,
-          color: AppTheme.spotifyLightGray,
+          color: colors.onSurface.withValues(alpha: 0.65),
           size: 20,
         ),
         onPressed: () {},
@@ -125,20 +129,20 @@ class _AlbumArt extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _placeholder(),
+        errorBuilder: (_, _, _) => _placeholder(context),
       );
     }
-    return _placeholder();
+    return _placeholder(context);
   }
 
-  Widget _placeholder() => Container(
+  Widget _placeholder(BuildContext context) => Container(
     width: size,
     height: size,
-    color: AppTheme.spotifyMediumGray,
-    child: const Center(
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    child: Center(
       child: Icon(
         CupertinoIcons.music_note,
-        color: AppTheme.spotifyLightGray,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         size: 28,
       ),
     ),

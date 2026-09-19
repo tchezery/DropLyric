@@ -6,10 +6,20 @@ String tr(BuildContext context, String english) {
   return portuguese ? (portugueseStrings[english] ?? english) : english;
 }
 
-String localizedLanguageName(BuildContext context, String code) => tr(context, const {
- 'en': 'English', 'pt': 'Portuguese', 'es': 'Spanish', 'fr': 'French',
- 'it': 'Italian', 'de': 'German', 'ja': 'Japanese', 'ko': 'Korean',
-}[code] ?? code.toUpperCase());
+String localizedLanguageName(BuildContext context, String code) => tr(
+  context,
+  const {
+        'en': 'English',
+        'pt': 'Portuguese',
+        'es': 'Spanish',
+        'fr': 'French',
+        'it': 'Italian',
+        'de': 'German',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+      }[code] ??
+      code.toUpperCase(),
+);
 
 const portugueseStrings = <String, String>{
   "Home": "Início",
@@ -38,38 +48,58 @@ const portugueseStrings = <String, String>{
   "Continue with Spotify app": "Continuar com o app Spotify",
   "Continue with Web": "Continuar pela Web",
   "Restoring your Spotify session…": "Restaurando sua sessão do Spotify…",
-  "Connect Spotify to browse and search for music.": "Conecte o Spotify para explorar e buscar músicas.",
-  "Your profile and dictionary remain available below.": "Seu perfil e dicionário continuam disponíveis abaixo.",
+  "Connect Spotify to browse and search for music.":
+      "Conecte o Spotify para explorar e buscar músicas.",
+  "Your profile and dictionary remain available below.":
+      "Seu perfil e dicionário continuam disponíveis abaixo.",
+  "Choose the language you want to use in the app.":
+      "Escolha o idioma que deseja usar no app.",
+  "Connect your Spotify account to continue.":
+      "Conecte sua conta do Spotify para continuar.",
+  "Continue": "Continuar",
   "Could not load your words.": "Não foi possível carregar suas palavras.",
-  "Could not update word status.": "Não foi possível atualizar o estado da palavra.",
+  "Could not update word status.":
+      "Não foi possível atualizar o estado da palavra.",
   "Refresh words": "Atualizar palavras",
   "Search words...": "Buscar palavras...",
   "Clear search": "Limpar busca",
   "No saved words yet": "Nenhuma palavra salva ainda",
-  "Tap words in lyrics while playing songs to save them!": "Toque nas palavras das letras para salvá-las!",
-  "Select another letter from the A–Z bar above.": "Selecione outra letra na barra de A–Z acima.",
+  "Tap words in lyrics while playing songs to save them!":
+      "Toque nas palavras das letras para salvá-las!",
+  "Select another letter from the A–Z bar above.":
+      "Selecione outra letra na barra de A–Z acima.",
   "Known": "Conhecida",
   "Learning": "Aprendendo",
-  "Definition unavailable. Try again": "Definição indisponível. Tente novamente",
-  "Remove from known": "Marcar como não conhecida",
-  "Mark as known": "Marcar como conhecida",
-  "Spotify search failed. Check your connection and try again.": "A busca no Spotify falhou. Confira sua conexão e tente novamente.",
-  "Could not open the track on Spotify. Try searching.": "Não foi possível abrir a música no Spotify. Tente buscá-la.",
+  "Definition unavailable. Try again":
+      "Definição indisponível. Tente novamente",
+  "Remove from known": "Aprendido",
+  "Mark as known": "Aprendido",
+  "Spotify search failed. Check your connection and try again.":
+      "A busca no Spotify falhou. Confira sua conexão e tente novamente.",
+  "Could not open the track on Spotify. Try searching.":
+      "Não foi possível abrir a música no Spotify. Tente buscá-la.",
   "No tracks found.": "Nenhuma música encontrada.",
-  "It was not possible to open the track. Try searching for it.": "Não foi possível abrir a música. Tente buscá-la.",
+  "It was not possible to open the track. Try searching for it.":
+      "Não foi possível abrir a música. Tente buscá-la.",
   "Calibrate Sync": "Ajustar sincronização",
-  "Adjust to advance (+) or delay (-) the lyrics timing.": "Ajuste para adiantar (+) ou atrasar (-) a letra.",
+  "Adjust to advance (+) or delay (-) the lyrics timing.":
+      "Ajuste para adiantar (+) ou atrasar (-) a letra.",
   "Reset (0ms)": "Redefinir (0ms)",
-  "Could not change the Spotify track.": "Não foi possível trocar a música no Spotify.",
+  "Could not change the Spotify track.":
+      "Não foi possível trocar a música no Spotify.",
   "Back": "Voltar",
   "Adjust sync": "Ajustar sincronização",
   "Dark mode": "Modo escuro",
   "Paper mode": "Modo papel",
-  "Lyrics not available\nfor this track.": "Letra indisponível\npara esta música.",
+    "Use this theme throughout the app": "Usar este tema em todo o app",
+  "Lyrics not available\nfor this track.":
+      "Letra indisponível\npara esta música.",
   "FREE TEXT": "TEXTO LIVRE",
-  "This track only has plain text lyrics.": "Esta música só tem letra sem sincronização.",
+  "This track only has plain text lyrics.":
+      "Esta música só tem letra sem sincronização.",
   "FOLLOW": "ACOMPANHAR",
-  "Could not save the word. Try again.": "Não foi possível salvar a palavra. Tente novamente.",
+  "Could not save the word. Try again.":
+      "Não foi possível salvar a palavra. Tente novamente.",
   "Skip": "Pular",
   "Shuffle: On": "Aleatório: ativado",
   "Shuffle: Off": "Aleatório: desativado",
@@ -80,13 +110,16 @@ const portugueseStrings = <String, String>{
   "My native language": "Meu idioma nativo",
   "Track language / I want to learn": "Idioma da música / quero aprender",
   "Confirm": "Confirmar",
-  "The native and study languages must be different.": "O idioma nativo e o de estudo devem ser diferentes.",
+  "The native and study languages must be different.":
+      "O idioma nativo e o de estudo devem ser diferentes.",
   "Vocabulary": "Vocabulário",
-  "Could not load the definition at this time.": "Não foi possível carregar a definição agora.",
+  "Could not load the definition at this time.":
+      "Não foi possível carregar a definição agora.",
   "KNOWN": "CONHECIDA",
   "LEARNING": "APRENDENDO",
   "Unmark": "Desmarcar",
-  "Searching for meaning in dictionary...": "Buscando significado no dicionário...",
+  "Searching for meaning in dictionary...":
+      "Buscando significado no dicionário...",
   "Try again": "Tentar novamente",
   "TRANSLATION": "TRADUÇÃO",
   "DICTIONARY DEFINITIONS": "DEFINIÇÕES DO DICIONÁRIO",
@@ -113,4 +146,5 @@ const portugueseStrings = <String, String>{
   "From:": "Música:",
   "words": "palavras",
   "ALL": "TODAS",
+    "Language": "Idioma",
 };

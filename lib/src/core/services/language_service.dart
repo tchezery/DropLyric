@@ -7,25 +7,25 @@ import '../database/app_database.dart';
 class LanguagePreference {
   final String code; // BCP-47 (ex: "pt", "en", "es", "fr")
   final String name; // Nome exibível (ex: "Português", "English")
-  final String flag; // Emoji de bandeira
+  final String flagCode; // Código ISO do país da bandeira
 
   const LanguagePreference({
     required this.code,
     required this.name,
-    required this.flag,
+    required this.flagCode,
   });
 }
 
 /// Idiomas suportados pelo Droplyric.
 const List<LanguagePreference> supportedLanguages = [
-  LanguagePreference(code: 'pt', name: 'Português', flag: '🇧🇷'),
-  LanguagePreference(code: 'en', name: 'English', flag: '🇺🇸'),
-  LanguagePreference(code: 'es', name: 'Español', flag: '🇪🇸'),
-  LanguagePreference(code: 'fr', name: 'Français', flag: '🇫🇷'),
-  LanguagePreference(code: 'it', name: 'Italiano', flag: '🇮🇹'),
-  LanguagePreference(code: 'de', name: 'Deutsch', flag: '🇩🇪'),
-  LanguagePreference(code: 'ja', name: '日本語', flag: '🇯🇵'),
-  LanguagePreference(code: 'ko', name: '한국어', flag: '🇰🇷'),
+  LanguagePreference(code: 'pt', name: 'Português', flagCode: 'br'),
+  LanguagePreference(code: 'en', name: 'English', flagCode: 'us'),
+  LanguagePreference(code: 'es', name: 'Español', flagCode: 'es'),
+  LanguagePreference(code: 'fr', name: 'Français', flagCode: 'fr'),
+  LanguagePreference(code: 'it', name: 'Italiano', flagCode: 'it'),
+  LanguagePreference(code: 'de', name: 'Deutsch', flagCode: 'de'),
+  LanguagePreference(code: 'ja', name: '日本語', flagCode: 'jp'),
+  LanguagePreference(code: 'ko', name: '한국어', flagCode: 'kr'),
 ];
 
 bool isLikelyEnglishWord(String value) {
@@ -251,6 +251,7 @@ class LanguageService {
   static const _keyNativeLanguage = 'native_language';
   static const _keyTargetLanguage = 'target_language';
   static const _keyAppLanguage = 'app_language';
+  static const _keyThemeMode = 'theme_light';
 
   LanguageService({AppDatabase? appDatabase})
     : _appDatabase = appDatabase ?? AppDatabase();
@@ -279,8 +280,29 @@ class LanguageService {
     return _getPreference(_keyAppLanguage, defaultValue: 'en');
   }
 
+  Future<bool> hasAppLanguage() async {
+    final db = await _appDatabase.database;
+    final result = await db.query(
+      AppDatabase.tablePreferences,
+      columns: ['key'],
+      where: 'key = ?',
+      whereArgs: [_keyAppLanguage],
+      limit: 1,
+    );
+    return result.isNotEmpty;
+  }
+
   Future<void> setAppLanguage(String languageCode) async {
     await _setPreference(_keyAppLanguage, languageCode);
+  }
+
+  Future<bool> getThemeMode() async {
+    return (await _getPreference(_keyThemeMode, defaultValue: 'light')) ==
+        'light';
+  }
+
+  Future<void> setThemeMode(bool isLight) async {
+    await _setPreference(_keyThemeMode, isLight ? 'light' : 'dark');
   }
 
   /// Retorna o LanguagePreference correspondente a um código BCP-47.
@@ -336,4 +358,24 @@ class AppLanguage extends ChangeNotifier {
   }
 
   bool get isPortuguese => code == 'pt';
+}
+
+class AppThemeMode extends ChangeNotifier {
+  static final instance = AppThemeMode._();
+  AppThemeMode._();
+
+  bool isLight = true;
+  bool loaded = false;
+
+  Future<void> load() async {
+    isLight = await LanguageService().getThemeMode();
+    loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setLight(bool value) async {
+    await LanguageService().setThemeMode(value);
+    isLight = value;
+    notifyListeners();
+  }
 }

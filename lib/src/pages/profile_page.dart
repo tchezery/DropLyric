@@ -1,4 +1,5 @@
 import '../core/services/app_strings.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +21,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final KnownWordsRepository _wordsRepo = KnownWordsRepository();
 
   String _appLanguage = 'en';
+  bool _isLightTheme = true;
   ({int total, Map<String, int> perLanguage})? _stats;
 
   @override
@@ -30,10 +32,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadData() async {
     final appLanguage = await _languageService.getAppLanguage();
+    final isLightTheme = AppThemeMode.instance.isLight;
     final stats = await _wordsRepo.getVocabularyStats();
     if (mounted) {
       setState(() {
         _appLanguage = appLanguage;
+        _isLightTheme = isLightTheme;
         _stats = stats;
       });
     }
@@ -67,7 +71,10 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context) => AlertDialog(
         title: Text(tr(context, "Remove all word history?")),
         content: Text(
-          tr(context, "This will permanently remove every saved word from your dictionary."),
+          tr(
+            context,
+            "This will permanently remove every saved word from your dictionary.",
+          ),
         ),
         actions: [
           TextButton(
@@ -88,16 +95,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppTheme.spotifyBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // Header com gradiente verde
           SliverToBoxAdapter(
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: const [AppTheme.sheet, AppTheme.spotifyBlack],
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors.surface,
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -111,8 +122,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       Text(
                         tr(context, "Profile"),
-                        style: const TextStyle(
-                          color: AppTheme.spotifyWhite,
+                        style: TextStyle(
+                          color: colors.onSurface,
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                         ),
@@ -133,8 +144,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   Text(
                     tr(context, "Progress"),
-                    style: const TextStyle(
-                      color: AppTheme.spotifyWhite,
+                    style: TextStyle(
+                      color: colors.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -168,8 +179,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Text(
                       tr(context, "By language"),
-                      style: const TextStyle(
-                        color: AppTheme.spotifyWhite,
+                      style: TextStyle(
+                        color: colors.onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -188,15 +199,15 @@ class _ProfilePageState extends State<ProfilePage> {
                               children: [
                                 Text(
                                   '${localizedLanguageName(context, e.key)} (${e.key.toUpperCase()})',
-                                  style: const TextStyle(
-                                    color: AppTheme.spotifyWhite,
+                                  style: TextStyle(
+                                    color: colors.onSurface,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 Text(
                                   '${e.value} ${tr(context, 'words')}',
-                                  style: const TextStyle(
-                                    color: AppTheme.spotifyGreen,
+                                  style: TextStyle(
+                                    color: colors.primary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -209,9 +220,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: LinearProgressIndicator(
                                 value: pct,
                                 minHeight: 3,
-                                backgroundColor: AppTheme.spotifyMediumGray,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  AppTheme.spotifyGreen,
+                                backgroundColor: colors.surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colors.primary,
                                 ),
                               ),
                             ),
@@ -233,8 +244,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   Text(
                     tr(context, "Settings"),
-                    style: const TextStyle(
-                      color: AppTheme.spotifyWhite,
+                    style: TextStyle(
+                      color: colors.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -242,6 +253,21 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 12),
                   const SpotifyConnectButton(showDisconnect: true),
                   const SizedBox(height: 12),
+                  _SettingsTile(
+                    icon: _isLightTheme
+                        ? CupertinoIcons.moon
+                        : CupertinoIcons.sun_max,
+                    title: _isLightTheme
+                        ? tr(context, "Dark mode")
+                        : tr(context, "Paper mode"),
+                    subtitle: tr(context, "Use this theme throughout the app"),
+                    onTap: () async {
+                      await AppThemeMode.instance.setLight(!_isLightTheme);
+                      if (mounted) {
+                        setState(() => _isLightTheme = !_isLightTheme);
+                      }
+                    },
+                  ),
                   _SettingsTile(
                     icon: CupertinoIcons.textformat,
                     title: tr(context, "App language"),
@@ -257,7 +283,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   _SettingsTile(
                     icon: CupertinoIcons.info,
                     title: tr(context, "About Droplyric"),
-                    subtitle: tr(context, "Learn languages with music — v1.0.0"),
+                    subtitle: tr(
+                      context,
+                      "Learn languages with music — v1.0.0",
+                    ),
                     onTap: () => showAboutDialog(
                       context: context,
                       applicationName: 'Droplyric',
@@ -269,7 +298,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       children: [
                         Text(
-                          tr(context, "Listen to music, read the lyrics, and mark the words you already know to build your vocabulary."),
+                          tr(
+                            context,
+                            "Listen to music, read the lyrics, and mark the words you already know to build your vocabulary.",
+                          ),
                         ),
                       ],
                     ),
@@ -297,7 +329,7 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.spotifyDarkCard,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -305,8 +337,8 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: const TextStyle(
-                color: AppTheme.spotifyGreen,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 height: 1,
@@ -315,8 +347,8 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.spotifyLightGray,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 height: 1.3,
               ),
@@ -346,22 +378,28 @@ class _SettingsTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-      leading: Icon(icon, color: AppTheme.spotifyLightGray),
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: AppTheme.spotifyWhite,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 12,
+        ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         CupertinoIcons.chevron_right,
-        color: AppTheme.spotifyLightGray,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

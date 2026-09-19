@@ -1,4 +1,5 @@
 import '../core/services/app_strings.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -113,6 +114,7 @@ class _PlayerPageState extends State<PlayerPage>
   int _knownWordsGeneration = 0;
   bool _knownWordsLoading = false;
   String _nativeLanguage = 'pt';
+  String _translationLanguage = 'en';
 
   // Tema: false = Dark Minimal com texto branco (padrão solicitado), true = Sage Paper minimalista
   bool _isLightStyle = true;
@@ -124,6 +126,8 @@ class _PlayerPageState extends State<PlayerPage>
   @override
   void initState() {
     super.initState();
+    _isLightStyle = AppThemeMode.instance.isLight;
+    AppThemeMode.instance.addListener(_onThemeChanged);
     AppRoutes.currentRoute.value = AppRoutes.player;
     _currentTrack = widget.track;
     _targetLanguage = _currentTrack.language.isEmpty
@@ -166,6 +170,12 @@ class _PlayerPageState extends State<PlayerPage>
       }
       if (mounted) _updateSpotifyTrack();
     });
+  }
+
+  void _onThemeChanged() {
+    if (mounted) {
+      setState(() => _isLightStyle = AppThemeMode.instance.isLight);
+    }
   }
 
   void _onPlayerStateChanged() {
@@ -244,10 +254,12 @@ class _PlayerPageState extends State<PlayerPage>
     try {
       final native = await _languageService.getNativeLanguage();
       final preferred = await _languageService.getTargetLanguage();
+      final appLanguage = await _languageService.getAppLanguage();
       if (!mounted || generation != _lyricsGeneration) return;
       setState(() {
         _nativeLanguage = native;
         _preferredTargetLanguage = preferred;
+        _translationLanguage = appLanguage;
         // Resolve after all awaits: a lyric/manual choice may have arrived meanwhile.
         _targetLanguage = _resolveTargetLanguage();
         if (_lyricsResult != null) _buildUniqueWords(_lyricsResult!.lines);
@@ -468,7 +480,7 @@ class _PlayerPageState extends State<PlayerPage>
       normalized: normalized,
       isInitiallyKnown: isKnown,
       sourceLanguage: _targetLanguage,
-      nativeLanguage: _nativeLanguage,
+      targetLanguage: _translationLanguage,
       onToggleWord: () async {
         if (!mounted ||
             track != _currentTrack.id ||
@@ -506,7 +518,9 @@ class _PlayerPageState extends State<PlayerPage>
       context: context,
       backgroundColor: _isLightStyle ? Colors.white : AppTheme.spotifyDarkCard,
       shape: const RoundedRectangleBorder(
-        borderRadius: const BorderRadius.vertical(top: const Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(
+          top: const Radius.circular(20),
+        ),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -545,7 +559,10 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    tr(context, "Adjust to advance (+) or delay (-) the lyrics timing."),
+                    tr(
+                      context,
+                      "Adjust to advance (+) or delay (-) the lyrics timing.",
+                    ),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: subColor, fontSize: 12),
                   ),
@@ -690,7 +707,9 @@ class _PlayerPageState extends State<PlayerPage>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr(context, "Could not change the Spotify track."))),
+          SnackBar(
+            content: Text(tr(context, "Could not change the Spotify track.")),
+          ),
         );
       }
     }
@@ -738,6 +757,7 @@ class _PlayerPageState extends State<PlayerPage>
 
   @override
   void dispose() {
+    AppThemeMode.instance.removeListener(_onThemeChanged);
     _audioService.position.removeListener(_onPositionChanged);
     _audioService.playerState.removeListener(_onPlayerStateChanged);
     SpotifySession.instance.playbackChanges.removeListener(
@@ -877,7 +897,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                 IconButton(
                   onPressed: () =>
-                      setState(() => _isLightStyle = !_isLightStyle),
+                      AppThemeMode.instance.setLight(!_isLightStyle),
                   icon: Icon(
                     _isLightStyle
                         ? CupertinoIcons.moon
@@ -885,7 +905,9 @@ class _PlayerPageState extends State<PlayerPage>
                     size: 18,
                     color: _primaryInk,
                   ),
-                  tooltip: _isLightStyle ? tr(context, "Dark mode") : tr(context, "Paper mode"),
+                  tooltip: _isLightStyle
+                      ? tr(context, "Dark mode")
+                      : tr(context, "Paper mode"),
                 ),
                 GestureDetector(
                   onTap: () => LanguageSelectorSheet.show(
@@ -1050,7 +1072,9 @@ class _PlayerPageState extends State<PlayerPage>
                   if (!isTrackSynced) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(tr(context, "This track only has plain text lyrics.")),
+                        content: Text(
+                          tr(context, "This track only has plain text lyrics."),
+                        ),
                         duration: const Duration(seconds: 2),
                       ),
                     );
@@ -1130,11 +1154,7 @@ class _PlayerPageState extends State<PlayerPage>
                   fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                   color: isActive
                       ? _primaryInk
-                      : _secondaryInk.withValues(
-                          alpha: isManual
-                              ? 0.75
-                              : (index < _activeLineIndex ? 0.35 : 0.55),
-                        ),
+                      : _secondaryInk.withValues(alpha: 0.75),
                   letterSpacing: 0.5,
                   height: 1.5,
                 ),
@@ -1145,11 +1165,7 @@ class _PlayerPageState extends State<PlayerPage>
             Expanded(
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
-                opacity: isAutoSync
-                    ? (isActive
-                          ? 1.0
-                          : (index < _activeLineIndex ? 0.40 : 0.75))
-                    : 1.0,
+                opacity: 1.0,
                 child: Container(
                   padding: isActive
                       ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5)
@@ -1204,7 +1220,10 @@ class _PlayerPageState extends State<PlayerPage>
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  tr(context, "Could not save the word. Try again."),
+                                  tr(
+                                    context,
+                                    "Could not save the word. Try again.",
+                                  ),
                                 ),
                               ),
                             );
@@ -1403,7 +1422,9 @@ class _PlayerPageState extends State<PlayerPage>
               ),
             ],
           ),
-          tooltip: isShuffle ? tr(context, "Shuffle: On") : tr(context, "Shuffle: Off"),
+          tooltip: isShuffle
+              ? tr(context, "Shuffle: On")
+              : tr(context, "Shuffle: Off"),
         );
       },
     );
@@ -1440,7 +1461,9 @@ class _PlayerPageState extends State<PlayerPage>
           ),
           tooltip: isOne
               ? tr(context, "Repeat: One track")
-              : (isActive ? tr(context, "Repeat: All") : tr(context, "Repeat: Off")),
+              : (isActive
+                    ? tr(context, "Repeat: All")
+                    : tr(context, "Repeat: Off")),
         );
       },
     );

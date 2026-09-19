@@ -120,8 +120,8 @@ class _LyricsSearchPanelState extends State<LyricsSearchPanel> {
       const SizedBox(height: 8),
       Text(
         t(
-          'Busca de músicas e letras pelo LRCLIB. Não precisa conectar ao Spotify.',
-          'Search songs and lyrics with LRCLIB. No Spotify connection needed.',
+          'Procure pelaa pela letra da sua música.',
+          'Search if we have the lyrics for your song.',
         ),
       ),
       if (_loading)

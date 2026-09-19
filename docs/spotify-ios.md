@@ -11,7 +11,7 @@ No Spotify Developer Dashboard, o aplicativo do client ID
 `1bdc621fcaa74a21a2c2f90b5b5f0cbc` deve incluir:
 
 - SDK iOS habilitado.
-- Bundle ID `com.example.droplyric`.
+- Bundle ID `com.tchezery.droplyric`.
 - Redirect URI `droplyric://callback`.
 
 Use um iPhone físico com o Spotify instalado e conectado à mesma conta.

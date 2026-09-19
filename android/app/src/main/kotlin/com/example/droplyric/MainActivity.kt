@@ -1,4 +1,4 @@
-package com.example.droplyric
+package com.tchezery.droplyric
 
 import com.spotify.android.appremote.api.ContentApi
 import com.spotify.protocol.types.ListItem
@@ -116,7 +116,7 @@ class MainActivity : FlutterActivity() {
             is CouldNotFindSpotifyApp -> "Instale o aplicativo oficial do Spotify neste Android e entre na sua conta antes de tocar. O login no navegador não instala o player."
             is NotLoggedInException -> "Abra o aplicativo Spotify neste Android e entre com a mesma conta usada no Droplyric."
             is UserNotAuthorizedException -> "Autorize o Droplyric a controlar o Spotify quando a tela de permissão aparecer. Depois tente tocar novamente."
-            is AuthenticationFailedException -> "O Spotify recusou a identificação do aplicativo. Confira o pacote com.example.droplyric e o SHA-1 do APK no painel Spotify Developers."
+            is AuthenticationFailedException -> "O Spotify recusou a identificação do aplicativo. Confira o pacote com.tchezery.droplyric e o SHA-1 do APK no painel Spotify Developers."
             is OfflineModeException -> "Desative o modo offline no aplicativo Spotify e conecte o Android à internet."
             is UnsupportedFeatureVersionException -> "Atualize o aplicativo oficial do Spotify neste Android para usar a reprodução."
             is SpotifyRemoteServiceException -> "O Android não conseguiu acessar o serviço do Spotify. Abra o Spotify e retorne ao Droplyric para tentar novamente."

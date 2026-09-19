@@ -1,4 +1,5 @@
 import '../src/core/services/app_strings.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,16 +8,68 @@ import 'package:flutter/services.dart';
 import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
 import '../src/core/services/language_service.dart';
+import '../src/pages/onboarding_page.dart';
 import 'routes.dart';
 import 'theme.dart';
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _onboardingLoading = true;
+  bool _languageSelected = false;
+  bool _onboardingFinished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppLanguage.instance.addListener(_refreshOnboarding);
+    AppThemeMode.instance.addListener(_refreshOnboarding);
+    SpotifySession.instance.addListener(_refreshOnboarding);
+    _loadOnboarding();
+  }
+
+  @override
+  void dispose() {
+    AppLanguage.instance.removeListener(_refreshOnboarding);
+    AppThemeMode.instance.removeListener(_refreshOnboarding);
+    SpotifySession.instance.removeListener(_refreshOnboarding);
+    super.dispose();
+  }
+
+  Future<void> _loadOnboarding() async {
+    final selected = await LanguageService().hasAppLanguage();
+    if (!mounted) return;
+    setState(() {
+      _languageSelected = selected;
+      _onboardingLoading = false;
+      _onboardingFinished = selected && SpotifySession.instance.connected;
+    });
+  }
+
+  void _refreshOnboarding() {
+    if (_onboardingLoading || !mounted) return;
+    final selected = _languageSelected || AppLanguage.instance.loaded;
+    final finished = selected && SpotifySession.instance.connected;
+    if (selected != _languageSelected || finished != _onboardingFinished) {
+      setState(() {
+        _languageSelected = selected;
+        _onboardingFinished = finished;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: AppLanguage.instance,
+      listenable: Listenable.merge([
+        AppLanguage.instance,
+        AppThemeMode.instance,
+      ]),
       builder: (context, _) => MaterialApp(
         title: 'Droplyric',
         locale: Locale(AppLanguage.instance.code),
@@ -25,8 +78,10 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         // Apenas tema escuro — estilo Spotify
         theme: AppTheme.notesTheme,
-        darkTheme: AppTheme.notesTheme,
-        themeMode: ThemeMode.light,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: AppThemeMode.instance.isLight
+            ? ThemeMode.light
+            : ThemeMode.dark,
         navigatorKey: AppRoutes.navigatorKey,
         navigatorObservers: [AppRoutes.routeObserver],
         initialRoute: AppRoutes.home,
@@ -55,9 +110,9 @@ class MyApp extends StatelessWidget {
                     listenable: SpotifySession.instance,
                     builder: (context, _) {
                       final spotify = SpotifySession.instance;
-                      final hasCurrentTrack =
-                          RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$')
-                              .hasMatch(spotify.uri);
+                      final hasCurrentTrack = RegExp(
+                        r'^spotify:track:[a-zA-Z0-9]{22}$',
+                      ).hasMatch(spotify.uri);
                       if (!AppRoutes.shouldShowDock(route) &&
                           spotify.connected) {
                         return const SizedBox.shrink();
@@ -110,6 +165,7 @@ class MyApp extends StatelessWidget {
                 listenable: SpotifySession.instance,
                 builder: (context, _) {
                   final spotify = SpotifySession.instance;
+                  final colors = Theme.of(context).colorScheme;
                   if (spotify.error.isEmpty || spotify.connected) {
                     return const SizedBox.shrink();
                   }
@@ -121,7 +177,7 @@ class MyApp extends StatelessWidget {
                           margin: const EdgeInsets.all(28),
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppTheme.paper,
+                            color: colors.surface,
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Column(
@@ -145,7 +201,9 @@ class MyApp extends StatelessWidget {
                               Text(
                                 spotify.error,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppTheme.muted),
+                                style: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                ),
                               ),
                               const SizedBox(height: 18),
                               FilledButton.icon(
@@ -163,6 +221,13 @@ class MyApp extends StatelessWidget {
                   );
                 },
               ),
+              if (!_onboardingLoading && !_onboardingFinished)
+                Positioned.fill(
+                  child: OnboardingPage(
+                    languageSelected: _languageSelected,
+                    onFinished: _refreshOnboarding,
+                  ),
+                ),
             ],
           );
         },

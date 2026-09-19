@@ -15,7 +15,7 @@ class WordActionSheet extends StatefulWidget {
   final String normalized;
   final bool isInitiallyKnown;
   final String sourceLanguage;
-  final String nativeLanguage;
+  final String targetLanguage;
   final Future<void> Function() onToggleWord;
 
   const WordActionSheet({
@@ -24,7 +24,7 @@ class WordActionSheet extends StatefulWidget {
     required this.normalized,
     required this.isInitiallyKnown,
     required this.sourceLanguage,
-    required this.nativeLanguage,
+    required this.targetLanguage,
     required this.onToggleWord,
   });
 
@@ -34,7 +34,7 @@ class WordActionSheet extends StatefulWidget {
     required String normalized,
     required bool isInitiallyKnown,
     required String sourceLanguage,
-    required String nativeLanguage,
+    required String targetLanguage,
     required Future<void> Function() onToggleWord,
   }) {
     return showModalBottomSheet(
@@ -46,7 +46,7 @@ class WordActionSheet extends StatefulWidget {
         normalized: normalized,
         isInitiallyKnown: isInitiallyKnown,
         sourceLanguage: sourceLanguage,
-        nativeLanguage: nativeLanguage,
+        targetLanguage: targetLanguage,
         onToggleWord: onToggleWord,
       ),
     );
@@ -81,7 +81,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
       final res = await _dictionaryService.lookupWord(
         widget.normalized,
         sourceLang: widget.sourceLanguage,
-        targetLang: widget.nativeLanguage,
+        targetLang: widget.targetLanguage,
       );
       if (mounted) {
         setState(() {

@@ -33,6 +33,14 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
     super.dispose();
   }
 
+  Widget _heading(String text) => Padding(
+    padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+    ),
+  );
+
   Future<void> _browse({String? id, String? title, bool back = false}) async {
     setState(() {
       _loading = true;
@@ -172,18 +180,15 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             children: [
-              Text(
-                t('Escolher música', 'Choose music'),
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
+              _heading(t('Escolher música', 'Choose music')),
               const SizedBox(height: 16),
               const LyricsSearchPanel(),
               const SizedBox(height: 24),
               const SpotifyConnectButton(),
               Text(
                 t(
-                  'Cole o link de uma música ou escolha nas listas abaixo. A música toca no app Spotify.',
-                  'Paste a song link or choose from the lists below. Music plays in the Spotify app.',
+                  'Cole o link de uma música ou escolha nas listas abaixo.',
+                  'Paste a song link or choose from the lists below.',
                 ),
               ),
               const SizedBox(height: 16),
@@ -214,6 +219,8 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 16),
+              _heading(t('Tocando Agora', 'Playing Right Now')),
               if (current != null && _session.state['ready'] == true) ...[
                 const SizedBox(height: 20),
                 ListTile(
@@ -223,74 +230,8 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                   onTap: () => _open(current, follow: true),
                 ),
               ],
-              const SizedBox(height: 20),
-              if (defaultTargetPlatform == TargetPlatform.macOS)
-                Text(
-                  t(
-                    'No Mac, escolha uma música pelo link ou no app Spotify. Depois use Acompanhar agora.',
-                    'On Mac, choose a song by link or in the Spotify app, then use Follow now.',
-                  ),
-                ),
-              if (defaultTargetPlatform != TargetPlatform.macOS) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        t('Do Spotify', 'From Spotify'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _loading ? null : () => _browse(),
-                      child: Text(t('Carregar', 'Load')),
-                    ),
-                  ],
-                ),
-                Text(
-                  t(
-                    'Recomendações e conteúdos disponíveis para sua conta. Não é uma busca no catálogo.',
-                    'Recommendations and content available to your account. This is not a catalog search.',
-                  ),
-                ),
-                if (_path.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: _loading ? null : () => _browse(back: true),
-                    icon: const Icon(Icons.arrow_back),
-                    label: Text(_path.last.title),
-                  ),
-                if (_loading) const LinearProgressIndicator(),
-                for (final item in _content)
-                  ListTile(
-                    title: Text(item['title'] as String? ?? ''),
-                    subtitle: Text(item['subtitle'] as String? ?? ''),
-                    onTap: _loading
-                        ? null
-                        : item['children'] == true
-                        ? () => _browse(
-                            id: item['id'] as String,
-                            title: item['title'] as String?,
-                          )
-                        : item['playable'] == true
-                        ? () => _playContent(item)
-                        : null,
-                    trailing: item['playable'] == true
-                        ? IconButton(
-                            tooltip: t('Tocar', 'Play'),
-                            onPressed: _loading
-                                ? null
-                                : () => _playContent(item),
-                            icon: const Icon(Icons.play_arrow),
-                          )
-                        : item['children'] == true
-                        ? const Icon(Icons.chevron_right)
-                        : null,
-                  ),
-              ],
               const SizedBox(height: 24),
-              Text(
-                t('Favoritos do DropLyric', 'DropLyric favorites'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+                
               if (favorites.isEmpty)
                 Text(
                   t(
@@ -300,10 +241,7 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                 ),
               ...favorites.map(_track),
               const SizedBox(height: 24),
-              Text(
-                t('Histórico neste aparelho', 'History on this device'),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _heading(t('Histórico', 'History')),
               if (_saved.tracks.isEmpty)
                 Text(
                   t(
