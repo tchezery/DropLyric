@@ -1197,13 +1197,28 @@ class _PlayerPageState extends State<PlayerPage>
       },
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
-      child: Container(
+      child: AnimatedContainer(
         key: _lineKeys[index],
-        padding: const EdgeInsets.symmetric(vertical: 3.5),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isActive
+              ? (_isLightStyle
+                  ? const Color(0xFFFFF176)
+                  : const Color(0xFFFFD600))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isActive
+              ? Border.all(
+                  color: const Color(0xFFFFD600),
+                  width: 0.8,
+                )
+              : null,
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Coluna de Timestamp alinhada à esquerda (como na foto de referência: "12:04  Texto")
+            // Coluna de Timestamp alinhada e centralizada verticalmente
             SizedBox(
               width: 46,
               child: Text(
@@ -1212,93 +1227,77 @@ class _PlayerPageState extends State<PlayerPage>
                   fontSize: 13,
                   fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                   color: isActive
-                      ? _primaryInk
+                      ? (_isLightStyle ? Colors.black : Colors.white)
                       : _secondaryInk.withValues(alpha: 0.75),
                   letterSpacing: 0.5,
-                  height: 1.5,
                 ),
               ),
             ),
             const SizedBox(width: 10),
-            // Verso da música com destaque sutil estilo Apple quando a linha está ativa
+            // Verso da música no modo Acompanhar
             Expanded(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: 1.0,
-                child: Container(
-                  padding: isActive
-                      ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
-                      : const EdgeInsets.symmetric(
-                          horizontal: 0,
-                          vertical: 4,
-                        ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? (_isLightStyle
-                            ? const Color(0xFFE5E5EA)
-                            : const Color(0xFF2C2C2E))
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: line.words.map((token) {
-                      if (!token.isWord) {
-                        return PunctuationSpan(
-                          text: token.displayText,
-                          isActiveLine: isActive,
-                          isLightMode: _isLightStyle,
-                          isManualMode: isManual,
-                          customColor: isActive ? AppTheme.ink : null,
-                        );
-                      }
-                      final isStudyWord = _isStudyWord(token);
-                      if (!isStudyWord) {
-                        return PunctuationSpan(
-                          text: token.displayText,
-                          isActiveLine: isActive,
-                          isLightMode: _isLightStyle,
-                          isManualMode: isManual,
-                          customColor: isActive ? AppTheme.ink : null,
-                        );
-                      }
-                      return InteractiveWord(
-                        word: token.displayText,
-                        isKnown: _knownWords.contains(token.normalizedWord),
-                        isActiveLine: isActive,
-                        isLightMode: _isLightStyle,
-                        isManualMode: isManual,
-                        customColor: isActive ? AppTheme.ink : null,
-
-                        onToggle: () async {
-                          try {
-                            await _toggleWord(
-                              token.displayText,
-                              token.normalizedWord,
-                            );
-                          } catch (_) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  tr(
-                                    context,
-                                    "Could not save the word. Try again.",
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        onWordPressed: (w, details) => _openWordActionSheet(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: line.words.map((token) {
+                  if (!token.isWord) {
+                    return PunctuationSpan(
+                      text: token.displayText,
+                      isActiveLine: isActive,
+                      isLightMode: _isLightStyle,
+                      isManualMode: isManual,
+                      customColor: isActive
+                          ? (_isLightStyle ? Colors.black : Colors.white)
+                          : null,
+                    );
+                  }
+                  final isStudyWord = _isStudyWord(token);
+                  if (!isStudyWord) {
+                    return PunctuationSpan(
+                      text: token.displayText,
+                      isActiveLine: isActive,
+                      isLightMode: _isLightStyle,
+                      isManualMode: isManual,
+                      customColor: isActive
+                          ? (_isLightStyle ? Colors.black : Colors.white)
+                          : null,
+                    );
+                  }
+                  return InteractiveWord(
+                    word: token.displayText,
+                    isKnown: _knownWords.contains(token.normalizedWord),
+                    isActiveLine: isActive,
+                    isLightMode: _isLightStyle,
+                    isManualMode: isManual,
+                    customColor: isActive
+                        ? (_isLightStyle ? Colors.black : Colors.white)
+                        : null,
+                    onToggle: () async {
+                      try {
+                        await _toggleWord(
                           token.displayText,
                           token.normalizedWord,
-                          sentence: line.rawText,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                        );
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              tr(
+                                context,
+                                "Could not save the word. Try again.",
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    onWordPressed: (w, details) => _openWordActionSheet(
+                      token.displayText,
+                      token.normalizedWord,
+                      sentence: line.rawText,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ],

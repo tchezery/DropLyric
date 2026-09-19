@@ -39,6 +39,7 @@ flutter:
   assets:
     - assets/spotify.svg
     - assets/logo.jpg
+    - assets/creator.png
 
 flutter_launcher_icons:
   android: "launcher_icon"

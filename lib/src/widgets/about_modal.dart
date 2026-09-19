@@ -192,15 +192,53 @@ class _AboutAppModalState extends State<AboutAppModal> {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tchézery Ribeiro',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0x33FFFFFF)
+                                : const Color(0x1F000000),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.3 : 0.08,
+                              ),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/creator.png',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tchézery Ribeiro',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontSF,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
 
