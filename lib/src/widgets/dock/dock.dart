@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme.dart';
-
 class DockItem {
   final IconData icon;
   final IconData? activeIcon;
@@ -37,17 +35,18 @@ class Dock extends StatelessWidget {
     if (!isVisible) return const SizedBox.shrink();
 
     final media = MediaQuery.of(context);
+    final colors = Theme.of(context).colorScheme;
 
     return Align(
       alignment: Alignment.bottomCenter,
       child: Material(
-        color: AppTheme.spotifyBlack,
+        color: colors.surface,
         child: Container(
           width: double.infinity,
           padding: EdgeInsets.only(bottom: media.padding.bottom),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: AppTheme.separator, width: 1),
+              top: BorderSide(color: colors.outlineVariant, width: 1),
             ),
           ),
           child: Row(
@@ -97,7 +96,8 @@ class _DockItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppTheme.yellow : AppTheme.spotifyLightGray;
+    final colors = Theme.of(context).colorScheme;
+    final color = isSelected ? colors.primary : colors.onSurfaceVariant;
 
     return Material(
       color: Colors.transparent,
@@ -140,6 +140,7 @@ class _NowPlayingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -148,13 +149,13 @@ class _NowPlayingItem extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: AppTheme.yellow,
+            decoration: BoxDecoration(
+              color: colors.primary,
               shape: BoxShape.circle,
             ),
             child: Padding(
               padding: const EdgeInsets.all(10),
-              child: Icon(item.icon, color: AppTheme.spotifyBlack, size: 23),
+              child: Icon(item.icon, color: colors.onPrimary, size: 23),
             ),
           ),
         ),

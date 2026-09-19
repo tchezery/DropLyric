@@ -39,6 +39,39 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
   test(
+    'mobile connection and content use App Remote without a Web session',
+    () async {
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('droplyric/spotify-auth'),
+        (_) async {
+          fail('Remote-only mode must not request the legacy Web API session');
+        },
+      );
+      await spotifyCall('loginApp');
+      expect(calls.single.method, 'connect');
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('droplyric/spotify'),
+        (call) async {
+          calls.add(call);
+          return [
+            {
+              'id': 'recommendation',
+              'title': 'Mix',
+              'uri': 'spotify:playlist:example',
+              'playable': true,
+              'children': false,
+            },
+          ];
+        },
+      );
+      final content = jsonDecode(await spotifyCall('content')) as List;
+      expect(content.single['title'], 'Mix');
+      await spotifyCall('playContent', 'recommendation');
+      expect(calls.last.method, 'playContent');
+      expect(calls.last.arguments, 'recommendation');
+    },
+  );
+  test(
     'play, pause and seek reach native Spotify without preview audio',
     () async {
       const uri = 'spotify:track:7qiZfU4dY1lWllzX7mPBI3';
@@ -48,6 +81,29 @@ void main() {
       expect(calls.map((c) => c.method), ['play', 'pause', 'seek']);
       expect(calls.first.arguments, uri);
       expect(calls.last.arguments, '45000');
+    },
+  );
+  test(
+    'macOS uses the native bridge without mobile or Web authentication',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(spotifyWebSupported, isTrue);
+      await spotifyCall('loginApp');
+      await spotifyCall('play', 'spotify:track:7qiZfU4dY1lWllzX7mPBI3');
+      await spotifyCall('seek', '12500');
+      await spotifyCall('next');
+      await spotifyCall('previous');
+      await spotifyCall('pause');
+      await spotifyCall('logout');
+      expect(calls.map((c) => c.method), [
+        'connect',
+        'play',
+        'seek',
+        'next',
+        'previous',
+        'pause',
+        'disconnect',
+      ]);
     },
   );
   test('invalid track is rejected before native playback', () async {
@@ -84,29 +140,39 @@ void main() {
     );
     expect(calls, isEmpty);
   });
-  test('native playback events preserve track identity and paused position', () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    await spotifyCall('initialize');
-    const uri = 'spotify:track:7qiZfU4dY1lWllzX7mPBI3';
-    await messenger.handlePlatformMessage(
-      'droplyric/spotify/events',
-      const StandardMethodCodec().encodeSuccessEnvelope({
-        'ready': true,
-        'paused': true,
-        'uri': uri,
-        'position': 45000,
-        'duration': 263000,
-        'error': '',
-      }),
-      (_) {},
-    );
-    final state = jsonDecode(spotifyState()) as Map<String, dynamic>;
-    expect(state['uri'], uri);
-    expect(state['ready'], isTrue);
-    expect(state['paused'], isTrue);
-    expect(state['position'], 45000);
-    expect(state['duration'], 263000);
-  });
+  test(
+    'native playback events preserve track identity and paused position',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      await spotifyCall('initialize');
+      const uri = 'spotify:track:7qiZfU4dY1lWllzX7mPBI3';
+      await messenger.handlePlatformMessage(
+        'droplyric/spotify/events',
+        const StandardMethodCodec().encodeSuccessEnvelope({
+          'ready': true,
+          'paused': true,
+          'uri': uri,
+          'title': 'Song from SDK',
+          'artist': 'Artist',
+          'album': 'Album',
+          'appRemoteAuthorized': true,
+          'position': 45000,
+          'duration': 263000,
+          'error': '',
+        }),
+        (_) {},
+      );
+      final state = jsonDecode(spotifyState()) as Map<String, dynamic>;
+      expect(state['uri'], uri);
+      expect(state['title'], 'Song from SDK');
+      expect(state['artist'], 'Artist');
+      expect(state['authenticated'], isTrue);
+      expect(state['ready'], isTrue);
+      expect(state['paused'], isTrue);
+      expect(state['position'], 45000);
+      expect(state['duration'], 263000);
+    },
+  );
   test('native failure remains visible to Flutter', () async {
     messenger.setMockMethodCallHandler(
       const MethodChannel('droplyric/spotify'),

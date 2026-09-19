@@ -3,19 +3,20 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'spotify_mobile_auth.dart';
-
-const spotifyWebSupported = true;
+bool get spotifyWebSupported =>
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS ||
+    defaultTargetPlatform == TargetPlatform.macOS;
 const _remote = MethodChannel('droplyric/spotify');
 Map<String, dynamic> _playback = {};
 final _clock = Stopwatch()..start();
 int _sampledAt = 0;
 bool _listening = false;
-bool get _nativePlaybackSupported =>
-    defaultTargetPlatform == TargetPlatform.android ||
-    defaultTargetPlatform == TargetPlatform.iOS;
+bool _connecting = false;
+bool _initializing = false;
+String _error = '';
 void _listen() {
-  if (_listening || !_nativePlaybackSupported) return;
+  if (_listening || !spotifyWebSupported) return;
   _listening = true;
   const EventChannel(
     'droplyric/spotify/events',
@@ -31,105 +32,53 @@ void _listen() {
 }
 
 Future<String> spotifyCall(String action, [String argument = '']) async {
-  final auth = SpotifyMobileAuth.instance;
+  if (!spotifyWebSupported) {
+    throw StateError(
+      'Use o DropLyric no Android, iPhone ou Mac para conectar ao Spotify.',
+    );
+  }
   _listen();
-  if (action == 'initialize') {
-    await auth.ready;
-    return '{}';
+  if (action == 'play' &&
+      !RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$').hasMatch(argument)) {
+    throw ArgumentError('Cole o link completo de uma faixa do Spotify.');
   }
-  if (['play', 'pause', 'seek'].contains(action)) {
-    if (!_nativePlaybackSupported) {
-      throw StateError('Player Spotify indisponível nesta plataforma.');
-    }
-    try {
-      if (action == 'play' &&
-          !RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$').hasMatch(argument)) {
-        throw ArgumentError('Faixa Spotify inválida.');
-      }
-      _playback['error'] = '';
-      if (action == 'play' && defaultTargetPlatform == TargetPlatform.iOS) {
-        await auth.preparePlayback();
-      }
-      await _remote.invokeMethod<void>(action, argument);
-    } on PlatformException catch (e) {
-      _playback['error'] = e.message ?? 'Falha no player Spotify.';
-      rethrow;
-    }
-    return '{}';
-  } else if (action == 'track') {
-    return jsonEncode(await auth.getTrack(argument));
-  } else if (action == 'login') {
-    await auth.login();
-    return '{}';
-  } else if (action == 'loginWeb') {
-    await auth.loginWeb();
-    return '{}';
-  } else if (action == 'loginApp') {
-    await auth.loginApp();
-    return '{}';
-  } else if (action == 'logout') {
-    if (_nativePlaybackSupported) {
-      await _remote.invokeMethod<void>('disconnect');
-    }
-    _playback = {};
-    await auth.logout();
-    return '{}';
-  } else if (action == 'reconnect') {
-    _playback['error'] = '';
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      await auth.preparePlayback();
-    }
-    await _remote.invokeMethod<void>('reconnect');
-    return '{}';
-  } else if (action == 'search') {
-    final tracks = await auth.searchSpotify(argument);
-    return jsonEncode({
-      'tracks': {
-        'items': tracks
-            .map(
-              (t) => {
-                'uri': t.id,
-                'name': t.title,
-                'artists': [
-                  {'name': t.artist},
-                ],
-                'album': {
-                  'name': t.album,
-                  'images': t.albumArtUrl != null
-                      ? [
-                          {'url': t.albumArtUrl},
-                        ]
-                      : [],
-                },
-                'external_urls': {'spotify': t.spotifyUrl},
-                'duration_ms': t.duration != null
-                    ? (t.duration! * 1000).toInt()
-                    : 0,
-              },
-            )
-            .toList(),
-      },
-    });
+  final method = switch (action) {
+    'login' || 'loginApp' || 'loginWeb' => 'connect',
+    'logout' => 'disconnect',
+    _ => action,
+  };
+  if (method == 'search' || method == 'track') {
+    throw UnsupportedError(
+      'A busca de catálogo não está disponível neste modo.',
+    );
   }
-  return '{}';
+  _initializing = method == 'initialize';
+  _connecting = method == 'connect';
+  _error = '';
+  try {
+    final result = await _remote.invokeMethod<Object?>(method, argument);
+    if (method == 'disconnect') _playback = {};
+    return jsonEncode(result ?? {});
+  } on PlatformException catch (e) {
+    _error = e.message ?? 'Não foi possível conectar ao Spotify.';
+    rethrow;
+  } finally {
+    _initializing = false;
+    _connecting = false;
+  }
 }
 
-String spotifyState() {
-  final auth = SpotifyMobileAuth.instance;
-  return jsonEncode({
-    'authenticated': auth.isAuthenticated,
-    'initializing': auth.initializing,
-    'connecting': auth.isConnecting,
-    ..._playback,
-    'error': (_playback['error'] as String? ?? '').isNotEmpty
-        ? _playback['error']
-        : auth.error,
-    'position':
-        ((_playback['position'] as num? ?? 0) +
-                (_playback['paused'] == false && _playback['ready'] == true
-                    ? _clock.elapsedMilliseconds - _sampledAt
-                    : 0))
-            .clamp(0, _playback['duration'] as num? ?? 0),
-    'displayName': auth.userDisplayName,
-  });
-}
+String spotifyState() => jsonEncode({
+  ..._playback,
+  'authenticated':
+      _playback['appRemoteAuthorized'] == true || _playback['ready'] == true,
+  'initializing': _initializing,
+  'connecting': _connecting || _playback['connecting'] == true,
+  'error': _error.isNotEmpty ? _error : (_playback['error'] ?? ''),
+  'position':
+      (((_playback['position'] as num?) ?? 0) +
+              (_playback['paused'] == false && _playback['ready'] == true
+                  ? _clock.elapsedMilliseconds - _sampledAt
+                  : 0))
+          .clamp(0, (_playback['duration'] as num?) ?? 0),
+});

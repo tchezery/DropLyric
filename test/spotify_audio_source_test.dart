@@ -4,6 +4,22 @@ import 'package:droplyric/src/core/services/spotify_service.dart';
 
 void main() {
   const uri = 'spotify:track:7qiZfU4dY1lWllzX7mPBI3';
+  test('shared song links and localized links resolve without HTTP', () {
+    for (final link in [
+      'https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3?si=share',
+      'https://open.spotify.com/intl-pt/track/7qiZfU4dY1lWllzX7mPBI3',
+    ]) {
+      expect(SpotifyService.playbackUri(link), uri);
+    }
+    for (final invalid in [
+      'https://open.spotify.com.evil.example/track/7qiZfU4dY1lWllzX7mPBI3',
+      'https://open.spotify.com/playlist/7qiZfU4dY1lWllzX7mPBI3',
+      'https://spotify.link/short',
+      'Shape of You',
+    ]) {
+      expect(SpotifyService.playbackUri(invalid), isNull);
+    }
+  });
   test('Spotify identity wins over a stale external audio URL', () {
     const track = TrackModel(
       id: uri,

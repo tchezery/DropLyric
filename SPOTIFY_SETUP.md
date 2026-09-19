@@ -42,7 +42,7 @@ A validação real de áudio, DRM, login e sincronização exige uma sessão Pre
 
 1. Instale o Spotify oficial e entre com a mesma conta Premium autorizada em Users Management.
 2. No painel Spotify, habilite Android, mantenha `droplyric://callback` e cadastre:
-   - Package name: `com.example.droplyric`
+   - Package name: `com.tchezery.droplyric`
    - SHA-1 do certificado debug deste computador: `BB:BA:FF:16:C1:24:17:B2:EE:0E:B3:8F:A4:26:7B:23:8C:AC:B7:17`
 3. Gere o APK com `flutter build apk --debug` e instale `build/app/outputs/flutter-apk/app-debug.apk`.
 4. No Droplyric, conecte o Spotify e autorize o login no navegador. Ao tocar a primeira faixa, autorize também o controle do Spotify pelo App Remote, se solicitado.

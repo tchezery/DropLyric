@@ -16,6 +16,7 @@ class KnownWordsRepository {
     String language,
     bool known, {
     String? trackName,
+    String? artistName,
   }) async {
     final db = await _appDatabase.database;
     final normalized = word.toLowerCase().trim();
@@ -30,6 +31,7 @@ class KnownWordsRepository {
         normalizedWord: normalized,
         language: language,
         trackName: trackName,
+        artistName: artistName,
         createdAt: DateTime.now(),
       ).toMap(),
       conflictAlgorithm: ConflictAlgorithm.ignore,
@@ -45,6 +47,7 @@ class KnownWordsRepository {
     String word,
     String language, {
     String? trackName,
+    String? artistName,
   }) async {
     final db = await _appDatabase.database;
     final normalized = word.toLowerCase().trim();
@@ -70,6 +73,7 @@ class KnownWordsRepository {
           normalizedWord: normalized,
           language: language,
           trackName: trackName,
+          artistName: artistName,
           createdAt: DateTime.now(),
         );
         await txn.insert(

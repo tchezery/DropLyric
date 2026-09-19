@@ -20,7 +20,12 @@ void main() {
     });
     var repository = KnownWordsRepository(appDatabase: database);
     expect(
-      await repository.toggleWord(' Hello ', 'en', trackName: 'Song'),
+      await repository.toggleWord(
+        ' Hello ',
+        'en',
+        trackName: 'Song',
+        artistName: 'Artist',
+      ),
       isTrue,
     );
     expect(await repository.toggleWord('hello', 'pt'), isTrue);
@@ -31,6 +36,7 @@ void main() {
     final words = await repository.getKnownWordsList(language: 'en');
     expect(words.single.word, 'Hello');
     expect(words.single.trackName, 'Song');
+    expect(words.single.artistName, 'Artist');
     expect((await repository.getVocabularyStats()).total, 2);
     expect(await repository.toggleWord('HELLO', 'en'), isFalse);
     await database.close();
@@ -49,5 +55,45 @@ void main() {
       repository.toggleWord('world', 'en'),
     ]);
     expect(await repository.getKnownWordsSet('en'), isEmpty);
+  });
+  test('upgrades existing vocabulary without losing words', () async {
+    sqfliteFfiInit();
+    final directory = await Directory.systemTemp.createTemp(
+      'droplyric-upgrade-',
+    );
+    final path = '${directory.path}/words.db';
+    final old = await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, _) async {
+          await db.execute(
+            'CREATE TABLE known_words (id INTEGER PRIMARY KEY, word TEXT NOT NULL, normalized_word TEXT NOT NULL, language TEXT NOT NULL, track_name TEXT, created_at INTEGER NOT NULL, UNIQUE(normalized_word, language))',
+          );
+          await db.insert('known_words', {
+            'word': 'hello',
+            'normalized_word': 'hello',
+            'language': 'en',
+            'track_name': 'Old song',
+            'created_at': 1,
+          });
+        },
+      ),
+    );
+    await old.close();
+    final database = AppDatabase.forTesting(
+      (options) => databaseFactoryFfi.openDatabase(path, options: options),
+    );
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+    final repository = KnownWordsRepository(appDatabase: database);
+    final words = await repository.getKnownWordsList();
+    expect(words.single.word, 'hello');
+    expect(words.single.artistName, isNull);
+    await repository.setWordKnown('new', 'en', true, artistName: 'Queen');
+    await repository.setWordKnown('new', 'en', true, artistName: 'Other');
+    expect((await repository.getKnownWordsList()).first.artistName, 'Queen');
   });
 }

@@ -4,7 +4,7 @@ A modern Flutter application.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Install Dependencies
 ```bash
@@ -18,9 +18,9 @@ flutter run
 
 ---
 
-## 🖥️ Platform Support
+## Platform Support
 
-If you need to add or regenerate platform runners (macOS, Web, Linux, Windows), run:
+If you need to add or regenerate platform runners (macOS, Web, Linux, Windows, IOS, Android), run:
 
 ```bash
 flutter create --platforms=macos,web,linux,windows .
@@ -28,7 +28,7 @@ flutter create --platforms=macos,web,linux,windows .
 
 ---
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```bash
 lib/

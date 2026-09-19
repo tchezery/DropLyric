@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class AppTheme {
   static const paper = Color(0xFFF7F5EF);
   static const sheet = Color(0xFFFFFEFA);
@@ -9,13 +10,13 @@ class AppTheme {
   static const marker = Color(0xFFFFE89A);
   static const separator = Color(0xFFE4E0D6);
   // Compatibility aliases for existing screens.
-  static const spotifyGreen = yellow;
-  static const spotifyGreenLight = marker;
-  static const spotifyBlack = paper;
-  static const spotifyDarkCard = sheet;
-  static const spotifyMediumGray = separator;
-  static const spotifyLightGray = muted;
-  static const spotifyWhite = ink;
+    static const spotifyGreen = yellow;
+    static const spotifyGreenLight = marker;
+      static const spotifyBlack = paper;
+      static const spotifyDarkCard = sheet;
+      static const spotifyMediumGray = separator;
+      static const spotifyLightGray = muted;
+      static const spotifyWhite = ink;
   static const primaryColor = yellow;
   static const backgroundColor = paper;
   static const cardColor = sheet;
@@ -104,7 +105,50 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme => notesTheme;
+  static ThemeData get darkTheme {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: yellow,
+      brightness: Brightness.dark,
+      surface: const Color(0xFF1C1B19),
+      primary: marker,
+      onPrimary: ink,
+      secondary: yellow,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: const Color(0xFF121210),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF121210),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1C1B19),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dividerTheme: const DividerThemeData(color: Color(0xFF3A3935)),
+      iconTheme: const IconThemeData(color: marker),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF302F2B),
+        hintStyle: const TextStyle(color: Color(0xFFB5B1A8)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF1C1B19),
+        showDragHandle: true,
+      ),
+    );
+  }
+
   static LinearGradient get greenGradient =>
       const LinearGradient(colors: [marker, paper]);
   static LinearGradient playerBackgroundGradient(Color dominantColor) =>

@@ -1,10 +1,11 @@
+import '../core/services/app_strings.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../core/repositories/known_words_repository.dart';
 import '../core/services/language_service.dart';
-import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/spotify_connect_button.dart';
 
 /// Perfil no estilo Spotify.
@@ -19,9 +20,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final LanguageService _languageService = LanguageService();
   final KnownWordsRepository _wordsRepo = KnownWordsRepository();
 
-  String _nativeLanguage = 'pt';
-  String _targetLanguage = 'en';
   String _appLanguage = 'en';
+  bool _isLightTheme = true;
   ({int total, Map<String, int> perLanguage})? _stats;
 
   @override
@@ -31,31 +31,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadData() async {
-    final native = await _languageService.getNativeLanguage();
-    final target = await _languageService.getTargetLanguage();
     final appLanguage = await _languageService.getAppLanguage();
+    final isLightTheme = AppThemeMode.instance.isLight;
     final stats = await _wordsRepo.getVocabularyStats();
     if (mounted) {
       setState(() {
-        _nativeLanguage = native;
-        _targetLanguage = target;
         _appLanguage = appLanguage;
+        _isLightTheme = isLightTheme;
         _stats = stats;
       });
     }
-  }
-
-  Future<void> _onLanguagesUpdated(String native, String target) async {
-    await _languageService.setNativeLanguage(native);
-    await _languageService.setTargetLanguage(target);
-    _loadData();
   }
 
   Future<void> _chooseAppLanguage() async {
     final selected = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('App language'),
+        title: Text(tr(context, "App language")),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 'en'),
@@ -77,18 +69,21 @@ class _ProfilePageState extends State<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove all word history?'),
-        content: const Text(
-          'This will permanently remove every saved word from your dictionary.',
+        title: Text(tr(context, "Remove all word history?")),
+        content: Text(
+          tr(
+            context,
+            "This will permanently remove every saved word from your dictionary.",
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr(context, "Cancel")),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove all'),
+            child: Text(tr(context, "Remove all")),
           ),
         ],
       ),
@@ -100,19 +95,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final nativeLang = _languageService.findByCode(_nativeLanguage);
-    final targetLang = _languageService.findByCode(_targetLanguage);
-
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppTheme.spotifyBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // Header com gradiente verde
           SliverToBoxAdapter(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.sheet, AppTheme.spotifyBlack],
+                  colors: [
+                    colors.surface,
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -124,10 +120,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Profile',
+                      Text(
+                        tr(context, "Profile"),
                         style: TextStyle(
-                          color: AppTheme.spotifyWhite,
+                          color: colors.onSurface,
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                         ),
@@ -146,10 +142,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Progress',
+                  Text(
+                    tr(context, "Progress"),
                     style: TextStyle(
-                      color: AppTheme.spotifyWhite,
+                      color: colors.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -159,12 +155,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _StatCard(
                         value: '${_stats?.total ?? 0}',
-                        label: 'Known\nWords',
+                        label: tr(context, "Known\nWords"),
                       ),
                       const SizedBox(width: 12),
                       _StatCard(
                         value: '${_stats?.perLanguage.length ?? 0}',
-                        label: 'Practiced\nLanguages',
+                        label: tr(context, "Practiced\nLanguages"),
                       ),
                     ],
                   ),
@@ -181,17 +177,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'By language',
+                    Text(
+                      tr(context, "By language"),
                       style: TextStyle(
-                        color: AppTheme.spotifyWhite,
+                        color: colors.onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 12),
                     ..._stats!.perLanguage.entries.map((e) {
-                      final lang = _languageService.findByCode(e.key);
                       final total = _stats!.total;
                       final pct = total > 0 ? e.value / total : 0.0;
                       return Padding(
@@ -203,16 +198,16 @@ class _ProfilePageState extends State<ProfilePage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '${lang?.name ?? e.key} (${e.key.toUpperCase()})',
-                                  style: const TextStyle(
-                                    color: AppTheme.spotifyWhite,
+                                  '${localizedLanguageName(context, e.key)} (${e.key.toUpperCase()})',
+                                  style: TextStyle(
+                                    color: colors.onSurface,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 Text(
-                                  '${e.value} words',
-                                  style: const TextStyle(
-                                    color: AppTheme.spotifyGreen,
+                                  '${e.value} ${tr(context, 'words')}',
+                                  style: TextStyle(
+                                    color: colors.primary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -225,9 +220,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: LinearProgressIndicator(
                                 value: pct,
                                 minHeight: 3,
-                                backgroundColor: AppTheme.spotifyMediumGray,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  AppTheme.spotifyGreen,
+                                backgroundColor: colors.surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colors.primary,
                                 ),
                               ),
                             ),
@@ -247,10 +242,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Settings',
+                  Text(
+                    tr(context, "Settings"),
                     style: TextStyle(
-                      color: AppTheme.spotifyWhite,
+                      color: colors.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -259,35 +254,39 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SpotifyConnectButton(showDisconnect: true),
                   const SizedBox(height: 12),
                   _SettingsTile(
-                    icon: CupertinoIcons.globe,
-                    title: 'Study languages',
-                    subtitle:
-                        '${nativeLang?.name ?? _nativeLanguage} (${_nativeLanguage.toUpperCase()}) → '
-                        '${targetLang?.name ?? _targetLanguage} (${_targetLanguage.toUpperCase()})',
-                    onTap: () => LanguageSelectorSheet.show(
-                      context,
-                      currentNativeLanguage: _nativeLanguage,
-                      currentTargetLanguage: _targetLanguage,
-                      languageService: _languageService,
-                      onConfirm: _onLanguagesUpdated,
-                    ),
+                    icon: _isLightTheme
+                        ? CupertinoIcons.moon
+                        : CupertinoIcons.sun_max,
+                    title: _isLightTheme
+                        ? tr(context, "Dark mode")
+                        : tr(context, "Paper mode"),
+                    subtitle: tr(context, "Use this theme throughout the app"),
+                    onTap: () async {
+                      await AppThemeMode.instance.setLight(!_isLightTheme);
+                      if (mounted) {
+                        setState(() => _isLightTheme = !_isLightTheme);
+                      }
+                    },
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.textformat,
-                    title: 'App language',
+                    title: tr(context, "App language"),
                     subtitle: _appLanguage == 'pt' ? 'Português' : 'English',
                     onTap: _chooseAppLanguage,
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.delete,
-                    title: 'Remove all word history',
-                    subtitle: 'Delete every saved word',
+                    title: tr(context, "Remove all word history"),
+                    subtitle: tr(context, "Delete every saved word"),
                     onTap: _removeAllWordHistory,
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.info,
-                    title: 'About Droplyric',
-                    subtitle: 'Learn languages with music — v1.0.0',
+                    title: tr(context, "About Droplyric"),
+                    subtitle: tr(
+                      context,
+                      "Learn languages with music — v1.0.0",
+                    ),
                     onTap: () => showAboutDialog(
                       context: context,
                       applicationName: 'Droplyric',
@@ -298,8 +297,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: AppTheme.spotifyGreen,
                       ),
                       children: [
-                        const Text(
-                          'Listen to music, read the lyrics, and mark the words you already know to build your vocabulary.',
+                        Text(
+                          tr(
+                            context,
+                            "Listen to music, read the lyrics, and mark the words you already know to build your vocabulary.",
+                          ),
                         ),
                       ],
                     ),
@@ -309,7 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
+          const SliverToBoxAdapter(child: const SizedBox(height: 120)),
         ],
       ),
     );
@@ -327,7 +329,7 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.spotifyDarkCard,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -335,8 +337,8 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: const TextStyle(
-                color: AppTheme.spotifyGreen,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 height: 1,
@@ -345,8 +347,8 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.spotifyLightGray,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 height: 1.3,
               ),
@@ -376,22 +378,28 @@ class _SettingsTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-      leading: Icon(icon, color: AppTheme.spotifyLightGray),
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: AppTheme.spotifyWhite,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(color: AppTheme.spotifyLightGray, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 12,
+        ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         CupertinoIcons.chevron_right,
-        color: AppTheme.spotifyLightGray,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

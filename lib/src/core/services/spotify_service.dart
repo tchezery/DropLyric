@@ -93,11 +93,13 @@ class SpotifyService {
     final valid = RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$');
     if (track != null && valid.hasMatch(track.id)) return track.id;
     if (valid.hasMatch(source)) return source;
-    final link = Uri.tryParse(track?.spotifyUrl ?? '');
+    final link = Uri.tryParse(track?.spotifyUrl ?? source.trim());
     if (link?.scheme == 'https' &&
         link?.host == 'open.spotify.com' &&
-        link!.pathSegments.length == 2 &&
-        link.pathSegments.first == 'track') {
+        (link!.pathSegments.length == 2 ||
+            (link.pathSegments.length == 3 &&
+                link.pathSegments.first.startsWith('intl-'))) &&
+        link.pathSegments[link.pathSegments.length - 2] == 'track') {
       final uri = 'spotify:track:${link.pathSegments.last}';
       if (valid.hasMatch(uri)) return uri;
     }

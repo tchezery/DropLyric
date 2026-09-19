@@ -15,9 +15,6 @@ import UIKit
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
-    if SpotifyAuthBridge.shared.handleCallback(url) {
-      return true
-    }
     if SpotifyRemoteBridge.shared.handleCallback(url) {
       return true
     }
@@ -28,7 +25,6 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DroplyricSpotify") {
       SpotifyRemoteBridge.shared.register(messenger: registrar.messenger())
-      SpotifyAuthBridge.shared.register(messenger: registrar.messenger())
     }
   }
 }

@@ -45,7 +45,7 @@ class InteractiveWord extends StatelessWidget {
     if (isKnown) {
       opacity = isActiveLine ? 0.40 : 0.30;
     } else {
-      opacity = isActiveLine ? 1.0 : (isManualMode ? 1.0 : 0.85);
+      opacity = 1.0;
     }
 
     final fontSize = isActiveLine ? 16.5 : 15.0;

@@ -5,6 +5,7 @@ class KnownWordModel {
   final String normalizedWord;
   final String language;
   final String? trackName;
+  final String? artistName;
   final DateTime createdAt;
 
   const KnownWordModel({
@@ -13,6 +14,7 @@ class KnownWordModel {
     required this.normalizedWord,
     required this.language,
     this.trackName,
+    this.artistName,
     required this.createdAt,
   });
 
@@ -23,9 +25,8 @@ class KnownWordModel {
       normalizedWord: map['normalized_word'] as String,
       language: map['language'] as String,
       trackName: map['track_name'] as String?,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(
-        map['created_at'] as int,
-      ),
+      artistName: map['artist_name'] as String?,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );
   }
 
@@ -36,11 +37,11 @@ class KnownWordModel {
       'normalized_word': normalizedWord,
       'language': language,
       'track_name': trackName,
+      'artist_name': artistName,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
 
   @override
-  String toString() =>
-      'KnownWordModel(word: $word, language: $language)';
+  String toString() => 'KnownWordModel(word: $word, language: $language)';
 }

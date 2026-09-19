@@ -21,7 +21,6 @@ class SceneDelegate: FlutterSceneDelegate {
     // app_links 6.x only registers UIApplicationDelegate callbacks. With the
     // scene lifecycle, Safari delivers the Spotify callback here instead.
     for context in contexts {
-      if SpotifyAuthBridge.shared.handleCallback(context.url) { continue }
       if SpotifyRemoteBridge.shared.handleCallback(context.url) { continue }
       AppLinks.shared.handleLink(url: context.url)
     }
@@ -29,7 +28,6 @@ class SceneDelegate: FlutterSceneDelegate {
 
   override func sceneDidBecomeActive(_ scene: UIScene) {
     super.sceneDidBecomeActive(scene)
-    SpotifyAuthBridge.shared.becomeActive()
     SpotifyRemoteBridge.shared.becomeActive()
   }
 
