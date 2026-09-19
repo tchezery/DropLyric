@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/routes.dart';
@@ -8,6 +7,7 @@ import '../core/services/spotify_service.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/lyrics_search_panel.dart';
+import '../widgets/spotify_icon.dart';
 import 'player_page.dart';
 
 class RemoteMusicPage extends StatefulWidget {
@@ -20,9 +20,6 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
   final _input = TextEditingController();
   final _session = SpotifySession.instance;
   final _saved = SavedTracks.instance;
-  List<Map<String, dynamic>> _content = [];
-  final List<({String id, String title})> _path = [];
-  bool _loading = false;
   String? _error;
   bool get _pt => Localizations.localeOf(context).languageCode == 'pt';
   String t(String pt, String en) => _pt ? pt : en;
@@ -40,42 +37,6 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
       style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
     ),
   );
-
-  Future<void> _browse({String? id, String? title, bool back = false}) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final nextPath = [..._path];
-    if (back && nextPath.isNotEmpty) {
-      nextPath.removeLast();
-    } else if (id != null) {
-      nextPath.add((id: id, title: title ?? ''));
-    }
-    try {
-      final items = await _session.content(
-        nextPath.isEmpty ? '' : nextPath.last.id,
-      );
-      if (!mounted) return;
-      setState(() {
-        _path
-          ..clear()
-          ..addAll(nextPath);
-        _content = items;
-      });
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = t(
-            'Não foi possível carregar. Conecte ao Spotify e tente novamente.',
-            'Could not load content. Connect to Spotify and try again.',
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
 
   Future<void> _open(TrackModel track, {bool follow = false}) async {
     final previous = AppRoutes.currentRoute.value;
@@ -110,34 +71,6 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
         previewAudioUrl: uri,
       ),
     );
-  }
-
-  Future<void> _playContent(Map<String, dynamic> item) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      await _session.command('playContent', item['id'] as String);
-      // Player events provide the actual track metadata, including for playlists.
-      if (!mounted) return;
-      final current = _session.currentTrack;
-      await _open(
-        current ?? const TrackModel(id: '', title: '', artist: '', album: ''),
-        follow: true,
-      );
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = t(
-            'Não foi possível tocar. Confira a conexão com o Spotify.',
-            'Could not play. Check your Spotify connection.',
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
   }
 
   Widget _track(TrackModel track) => ListTile(
@@ -197,6 +130,10 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                 onSubmitted: (_) => _openLink(),
                 textInputAction: TextInputAction.go,
                 decoration: InputDecoration(
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SpotifyIcon(size: 20),
+                  ),
                   labelText: t(
                     'Link da música no Spotify',
                     'Spotify song link',
@@ -224,7 +161,7 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
               if (current != null && _session.state['ready'] == true) ...[
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.graphic_eq),
+                  leading: const SpotifyIcon(size: 24),
                   title: Text(t('Acompanhar agora', 'Follow now')),
                   subtitle: Text('${current.title} • ${current.artist}'),
                   onTap: () => _open(current, follow: true),

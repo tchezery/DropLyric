@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/services/spotify_session.dart';
 import 'spotify_connect_button.dart';
+import 'spotify_icon.dart';
 
 /// Mantém as músicas ocultas até a conexão, sem bloquear o dock.
 class SpotifyAccessGate extends StatelessWidget {
@@ -28,6 +29,8 @@ class SpotifyAccessGate extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const SpotifyIcon(size: 48),
+                    const SizedBox(height: 16),
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
                     Text(tr(context, "Restoring your Spotify session…")),
@@ -47,7 +50,7 @@ class SpotifyAccessGate extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.music_note, size: 48, color: colors.primary),
+                    const SpotifyIcon(size: 56),
                     const SizedBox(height: 20),
                     Text(
                       tr(

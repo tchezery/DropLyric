@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../core/services/spotify_session.dart';
+import 'spotify_icon.dart';
 
 class SpotifyConnectButton extends StatelessWidget {
   const SpotifyConnectButton({
@@ -30,7 +31,7 @@ class SpotifyConnectButton extends StatelessWidget {
               children: [
                 if (!session.fullyConnected || showDisconnect)
                   OutlinedButton.icon(
-                    icon: const Icon(CupertinoIcons.music_note),
+                    icon: const SpotifyIcon(size: 20),
                     label: Text(
                       session.connecting
                           ? (pt ? 'Conectando…' : 'Connecting…')
@@ -68,19 +69,7 @@ class SpotifyConnectButton extends StatelessWidget {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  CupertinoIcons.checkmark_alt,
-                  color: Colors.white,
-                  size: 14,
-                ),
-              ),
+              const SpotifyIcon(size: 16),
               const SizedBox(width: 5),
               Text(
                 tr(context, "100% connected"),
@@ -104,7 +93,7 @@ class SpotifyConnectButton extends StatelessWidget {
                 ),
               if (session.connected && !session.appRemoteAuthorized) ...[
                 OutlinedButton.icon(
-                  icon: const Icon(CupertinoIcons.music_note),
+                  icon: const SpotifyIcon(size: 20),
                   label: Text(tr(context, "Continue with Spotify app")),
                   onPressed: session.initializing || session.connecting
                       ? null
@@ -121,7 +110,7 @@ class SpotifyConnectButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  icon: const Icon(CupertinoIcons.music_note),
+                  icon: const SpotifyIcon(size: 20),
                   label: Text(tr(context, "Continue with Spotify app")),
                   onPressed: session.initializing || session.connecting
                       ? null

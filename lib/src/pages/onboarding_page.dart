@@ -6,6 +6,7 @@ import '../core/services/app_strings.dart';
 import '../core/services/language_service.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/spotify_connect_button.dart';
+import '../widgets/spotify_icon.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({
@@ -59,11 +60,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    CupertinoIcons.music_note_2,
-                    color: AppTheme.spotifyGreen,
-                    size: 64,
-                  ),
+                  hasLanguage
+                      ? const SpotifyIcon(size: 64)
+                      : const Icon(
+                          CupertinoIcons.music_note_2,
+                          color: AppTheme.spotifyGreen,
+                          size: 64,
+                        ),
                   const SizedBox(height: 24),
                   Text(
                     'DropLyric',

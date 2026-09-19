@@ -9,6 +9,7 @@ import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
 import '../src/core/services/language_service.dart';
 import '../src/pages/onboarding_page.dart';
+import '../src/widgets/spotify_icon.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -183,11 +184,7 @@ class _MyAppState extends State<MyApp> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                CupertinoIcons.wifi_exclamationmark,
-                                color: AppTheme.yellow,
-                                size: 42,
-                              ),
+                              const SpotifyIcon(size: 48),
                               const SizedBox(height: 14),
                               Text(
                                 tr(context, "Spotify connection required"),
@@ -207,7 +204,7 @@ class _MyAppState extends State<MyApp> {
                               ),
                               const SizedBox(height: 18),
                               FilledButton.icon(
-                                icon: const Icon(CupertinoIcons.refresh),
+                                icon: const SpotifyIcon(size: 18, color: Colors.black),
                                 label: Text(tr(context, "Reconnect Spotify")),
                                 onPressed: spotify.connecting
                                     ? null

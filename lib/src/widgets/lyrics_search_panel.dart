@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
 import '../pages/player_page.dart';
+import 'spotify_icon.dart';
 
 class LyricsSearchPanel extends StatefulWidget {
   const LyricsSearchPanel({super.key, this.service});
@@ -265,13 +266,17 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
           ),
           OutlinedButton.icon(
             onPressed: _findSpotify,
-            icon: const Icon(Icons.open_in_new),
+            icon: const SpotifyIcon(size: 18),
             label: Text(t('Buscar no Spotify', 'Search in Spotify')),
           ),
           TextField(
             controller: _link,
             onSubmitted: (_) => _play(),
             decoration: InputDecoration(
+              prefixIcon: const Padding(
+                padding: EdgeInsets.all(12),
+                child: SpotifyIcon(size: 20),
+              ),
               labelText: t('Link da faixa no Spotify', 'Spotify song link'),
               hintText: 'https://open.spotify.com/track/…',
             ),
