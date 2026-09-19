@@ -1,8 +1,8 @@
+import '../../core/services/app_strings.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 
-/// Barra de vocabulário elegante compatível com o tema Stoic e Dark.
 class VocabularyProgressBar extends StatefulWidget {
   final int knownCount;
   final int totalCount;
@@ -64,7 +64,7 @@ class _VocabularyProgressBarState extends State<VocabularyProgressBar> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Vocabulary',
+                tr(context, "Vocabulary"),
                 style: TextStyle(
                   color: labelColor,
                   fontSize: 12,

@@ -1,3 +1,4 @@
+import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +21,48 @@ class SpotifyConnectButton extends StatelessWidget {
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
+        if (session.remoteOnly && !compact) {
+          final pt = Localizations.localeOf(context).languageCode == 'pt';
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!session.fullyConnected || showDisconnect)
+                  OutlinedButton.icon(
+                    icon: const Icon(CupertinoIcons.music_note),
+                    label: Text(
+                      session.connecting
+                          ? (pt ? 'Conectando…' : 'Connecting…')
+                          : session.connected && showDisconnect
+                          ? (pt ? 'Desconectar' : tr(context, "Disconnect"))
+                          : (pt
+                                ? 'Conectar ao app Spotify'
+                                : 'Connect to Spotify app'),
+                    ),
+                    onPressed: session.connecting
+                        ? null
+                        : () async {
+                            try {
+                              await session.command(
+                                session.connected && showDisconnect
+                                    ? 'logout'
+                                    : 'loginApp',
+                              );
+                            } catch (_) {
+                              /* The session exposes the native error below. */
+                            }
+                          },
+                  ),
+                if (session.error.isNotEmpty)
+                  Text(
+                    session.error,
+                    style: const TextStyle(color: Colors.orangeAccent),
+                  ),
+              ],
+            ),
+          );
+        }
         if (compact) {
           if (!session.fullyConnected) return const SizedBox.shrink();
           return Row(
@@ -39,9 +82,9 @@ class SpotifyConnectButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 5),
-              const Text(
-                '100% connected',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              Text(
+                tr(context, "100% connected"),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
               ),
             ],
           );
@@ -54,7 +97,7 @@ class SpotifyConnectButton extends StatelessWidget {
               if (session.connected && showDisconnect)
                 OutlinedButton.icon(
                   icon: const Icon(CupertinoIcons.xmark_circle),
-                  label: const Text('Disconnect'),
+                  label: Text(tr(context, "Disconnect")),
                   onPressed: session.initializing || session.connecting
                       ? null
                       : () => session.command('logout'),
@@ -62,7 +105,7 @@ class SpotifyConnectButton extends StatelessWidget {
               if (session.connected && !session.appRemoteAuthorized) ...[
                 OutlinedButton.icon(
                   icon: const Icon(CupertinoIcons.music_note),
-                  label: const Text('Continue with Spotify app'),
+                  label: Text(tr(context, "Continue with Spotify app")),
                   onPressed: session.initializing || session.connecting
                       ? null
                       : () => session.command('loginApp'),
@@ -71,7 +114,7 @@ class SpotifyConnectButton extends StatelessWidget {
               if (!session.connected) ...[
                 OutlinedButton.icon(
                   icon: const Icon(CupertinoIcons.globe),
-                  label: const Text('Continue with Web'),
+                  label: Text(tr(context, "Continue with Web")),
                   onPressed: session.initializing || session.connecting
                       ? null
                       : () => session.command('loginWeb'),
@@ -79,7 +122,7 @@ class SpotifyConnectButton extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   icon: const Icon(CupertinoIcons.music_note),
-                  label: const Text('Continue with Spotify app'),
+                  label: Text(tr(context, "Continue with Spotify app")),
                   onPressed: session.initializing || session.connecting
                       ? null
                       : () => session.command('loginApp'),

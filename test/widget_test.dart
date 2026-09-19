@@ -4,6 +4,9 @@ import 'package:droplyric/src/core/services/spotify_session.dart';
 import 'package:droplyric/src/widgets/spotify_access_gate.dart';
 
 class TestSession extends ChangeNotifier implements SpotifySession {
+  TestSession({required this.remoteOnly});
+  @override
+  final bool remoteOnly;
   bool _connected = false;
   @override
   bool get connected => _connected;
@@ -14,6 +17,10 @@ class TestSession extends ChangeNotifier implements SpotifySession {
   @override
   bool get connecting => false;
   @override
+  bool get appRemoteAuthorized => false;
+  @override
+  bool get fullyConnected => false;
+  @override
   String get error => '';
   void setConnected(bool value) {
     _connected = value;
@@ -22,7 +29,7 @@ class TestSession extends ChangeNotifier implements SpotifySession {
 
   @override
   Future<void> command(String action, [String argument = '']) async {
-    setConnected(action == 'login');
+    setConnected(action == 'loginWeb');
   }
 
   @override
@@ -30,30 +37,45 @@ class TestSession extends ChangeNotifier implements SpotifySession {
 }
 
 void main() {
-  testWidgets('music requires login and becomes hidden again on logout', (
+  testWidgets('mobile selection stays accessible without Web API login', (
     tester,
   ) async {
-    final session = TestSession();
+    final session = TestSession(remoteOnly: true);
     await tester.pumpWidget(
       MaterialApp(
         home: SpotifyAccessGate(
           session: session,
-          child: const Scaffold(body: Text('Catálogo Spotify')),
+          child: const Scaffold(body: Text('Choose music')),
         ),
       ),
     );
-    expect(find.text('Catálogo Spotify'), findsNothing);
-    expect(
-      find.text('Conecte o Spotify para ver e buscar músicas.'),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Conectar Spotify Premium'));
+    expect(find.text('Choose music'), findsOneWidget);
+    expect(find.text('Continue with Web'), findsNothing);
+    session.setConnected(true);
     await tester.pump();
-    expect(find.text('Catálogo Spotify'), findsOneWidget);
     session.setConnected(false);
     await tester.pump();
-    expect(find.text('Catálogo Spotify'), findsNothing);
-    expect(find.textContaining('perfil e dicionário'), findsOneWidget);
+    expect(find.text('Choose music'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    session.dispose();
+  });
+  testWidgets('web retains its existing login flow', (tester) async {
+    final session = TestSession(remoteOnly: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SpotifyAccessGate(
+          session: session,
+          child: const Scaffold(body: Text('Catalog')),
+        ),
+      ),
+    );
+    expect(find.text('Catalog'), findsNothing);
+    await tester.tap(find.text('Continue with Web'));
+    await tester.pump();
+    expect(find.text('Catalog'), findsOneWidget);
+    session.setConnected(false);
+    await tester.pump();
+    expect(find.text('Catalog'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     session.dispose();
   });

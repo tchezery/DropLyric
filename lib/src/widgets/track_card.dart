@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../core/models/track_model.dart';
 
-/// Card de música estilo Spotify — dark, rounded corners, album art.
 class TrackCard extends StatelessWidget {
   final TrackModel track;
   final VoidCallback onTap;

@@ -1,3 +1,4 @@
+import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -7,8 +8,7 @@ import '../core/repositories/known_words_repository.dart';
 import '../core/services/dictionary_service.dart';
 import '../core/services/language_service.dart';
 
-/// Dicionário starter pré-carregado por idioma para enriquecer a busca e indicar total de palavras
-const Map<String, List<String>> starterDictionaries = {
+Map<String, List<String>> starterDictionaries = {
   'en': [
     'about',
     'after',
@@ -277,7 +277,7 @@ class DictionaryItem {
   });
 }
 
-/// Personal dictionary with language list, A-Z letter index, word counts, total language counts, and known badges.
+/// Personal dictionary with a single A-Z list of saved words.
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
 
@@ -292,10 +292,8 @@ class _LibraryPageState extends State<LibraryPage> {
 
   List<KnownWordModel> _knownWords = [];
   bool _loading = true;
-  String? _selectedLanguageCode;
   String _selectedLetter = 'ALL';
   String _nativeLanguage = 'pt';
-  bool _knownOnly = false;
   String? _error;
 
   @override
@@ -332,7 +330,7 @@ class _LibraryPageState extends State<LibraryPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Could not load your words.';
+          _error = "Could not load your words.";
         });
       }
     }
@@ -377,40 +375,34 @@ class _LibraryPageState extends State<LibraryPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update word status.')),
+          SnackBar(content: Text(tr(context, "Could not update word status."))),
         );
       }
     }
   }
 
-  /// Retorna a lista unificada de palavras (Dicionário Starter + Palavras salvas pelo usuário) para um idioma.
-  List<DictionaryItem> _getLanguageDictionary(String langCode) {
-    final knownMap = <String, KnownWordModel>{};
-    for (final kw in _knownWords.where((w) => w.language == langCode)) {
-      if (langCode == 'en' && !isLikelyEnglishWord(kw.normalizedWord)) {
-        continue;
-      }
-      knownMap[kw.normalizedWord] = kw;
-    }
+  List<DictionaryItem> _getDictionary() {
+    final items =
+        _knownWords
+            .where(
+              (word) =>
+                  word.language != 'en' ||
+                  isLikelyEnglishWord(word.normalizedWord),
+            )
+            .map(
+              (word) => DictionaryItem(
+                word: word.word,
+                normalizedWord: word.normalizedWord,
+                language: word.language,
+                trackName: word.trackName,
+                createdAt: word.createdAt,
+                isKnown: true,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.normalizedWord.compareTo(b.normalizedWord));
 
-    final itemsMap = <String, DictionaryItem>{};
-
-    // The dictionary contains only words the user has saved.
-    for (final kw in knownMap.values) {
-      itemsMap[kw.normalizedWord] = DictionaryItem(
-        word: kw.word,
-        normalizedWord: kw.normalizedWord,
-        language: langCode,
-        trackName: kw.trackName,
-        createdAt: kw.createdAt,
-        isKnown: true,
-      );
-    }
-
-    final result = itemsMap.values.toList()
-      ..sort((a, b) => a.normalizedWord.compareTo(b.normalizedWord));
-
-    return result;
+    return items;
   }
 
   Map<String, int> _computeLetterCounts(List<DictionaryItem> items) {
@@ -464,179 +456,15 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedLanguageCode != null) {
-      return _buildLanguageDictionaryView(_selectedLanguageCode!);
-    }
-
-    return _buildLanguageListView();
+    return _buildWordListView();
   }
 
-  /// Visão 1: Lista de Idiomas com total de palavras do idioma e palavras conhecidas
-  Widget _buildLanguageListView() {
-    final languagesWithWords = supportedLanguages
-        .where((lang) => _getLanguageDictionary(lang.code).isNotEmpty)
-        .toList();
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 12, 4),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Dictionary',
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _load,
-                    tooltip: 'Refresh words',
-                    icon: const Icon(CupertinoIcons.refresh),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                '${_knownWords.length} total words known · Select a language to explore',
-                style: const TextStyle(color: AppTheme.muted, fontSize: 14),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                  ? Center(
-                      child: TextButton(
-                        onPressed: _load,
-                        child: Text('$_error Try again'),
-                      ),
-                    )
-                  : languagesWithWords.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No saved words yet. Open a lyric and mark words as known.',
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                      itemCount: languagesWithWords.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final lang = languagesWithWords[index];
-                        final items = _getLanguageDictionary(lang.code);
-                        final totalWords = items.length;
-                        final knownWordsCount = items
-                            .where((i) => i.isKnown)
-                            .length;
-                        final percent = totalWords > 0
-                            ? ((knownWordsCount / totalWords) * 100).round()
-                            : 0;
-
-                        return Material(
-                          color: AppTheme.sheet,
-                          borderRadius: BorderRadius.circular(14),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            leading: Container(
-                              width: 44,
-                              height: 44,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: AppTheme.paper,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                lang.flag,
-                                style: const TextStyle(fontSize: 24),
-                              ),
-                            ),
-                            title: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    lang.name,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.ink,
-                                    ),
-                                  ),
-                                ),
-                                
-                              ],
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '$knownWordsCount known',
-                                style: TextStyle(
-                                  color: knownWordsCount > 0
-                                      ? AppTheme.yellow
-                                      : AppTheme.muted,
-                                  fontSize: 13,
-                                  fontWeight: knownWordsCount > 0
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                            trailing: const Icon(
-                              CupertinoIcons.chevron_right,
-                              color: AppTheme.muted,
-                              size: 18,
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _selectedLanguageCode = lang.code;
-                                _selectedLetter = 'ALL';
-                                _knownOnly = false;
-                                _searchController.clear();
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Visão 2: Dicionário do Idioma selecionado com A-Z index, contagem total de palavras e badges
-  Widget _buildLanguageDictionaryView(String langCode) {
-    final lang = _languageService.findByCode(langCode);
-    final langName = lang?.name ?? langCode.toUpperCase();
-    final langFlag = lang?.flag ?? '';
-
-    final dictionaryItems = _getLanguageDictionary(langCode);
+  Widget _buildWordListView() {
+    final dictionaryItems = _getDictionary();
     final totalWords = dictionaryItems.length;
-    final knownCount = dictionaryItems.where((i) => i.isKnown).length;
-    final percent = totalWords > 0
-        ? ((knownCount / totalWords) * 100).round()
-        : 0;
-
-    final visibleSource = _knownOnly
-        ? dictionaryItems.where((item) => item.isKnown).toList()
-        : dictionaryItems;
-    final letterCounts = _computeLetterCounts(visibleSource);
+    final letterCounts = _computeLetterCounts(dictionaryItems);
     final query = _searchController.text.trim().toLowerCase();
-    final filteredItems = _filterItems(visibleSource, _selectedLetter, query);
+    final filteredItems = _filterItems(dictionaryItems, _selectedLetter, query);
 
     final alphabetList = [
       'ALL',
@@ -649,41 +477,29 @@ class _LibraryPageState extends State<LibraryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Bar com botão voltar
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(24, 20, 12, 4),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedLanguageCode = null;
-                      });
-                    },
-                    icon: const Icon(CupertinoIcons.chevron_left, size: 28),
-                    color: AppTheme.ink,
-                    tooltip: 'Back to Languages',
-                  ),
-                  const SizedBox(width: 4),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$langFlag $langName Dictionary',
+                          tr(context, "Dictionary"),
                           style: const TextStyle(
-                            fontSize: 22,
+                            fontSize: 34,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
+                            letterSpacing: -1,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '$knownCount known · $totalWords in app dictionary ($percent% mastered)',
+                          Localizations.localeOf(context).languageCode == 'pt'
+                            ? '$totalWords ${totalWords == 1 ? 'palavra salva' : 'palavras salvas'}'
+                            : '$totalWords saved ${totalWords == 1 ? 'word' : 'words'}',
                           style: const TextStyle(
                             color: AppTheme.muted,
-                            fontSize: 12,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -691,7 +507,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    tooltip: 'Refresh words',
+                    tooltip: tr(context, "Refresh words"),
                     icon: const Icon(CupertinoIcons.refresh),
                   ),
                 ],
@@ -705,7 +521,7 @@ class _LibraryPageState extends State<LibraryPage> {
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Search word in $langName...',
+                  hintText: tr(context, "Search words..."),
                   prefixIcon: const Icon(
                     CupertinoIcons.search,
                     color: AppTheme.muted,
@@ -713,7 +529,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   suffixIcon: query.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'Clear search',
+                          tooltip: tr(context, "Clear search"),
                           icon: const Icon(CupertinoIcons.clear, size: 18),
                           onPressed: () {
                             _searchController.clear();
@@ -723,21 +539,6 @@ class _LibraryPageState extends State<LibraryPage> {
                 ),
               ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment<bool>(value: false, label: Text('All')),
-                  ButtonSegment<bool>(value: true, label: Text('Known')),
-                ],
-                selected: {_knownOnly},
-                onSelectionChanged: (selection) {
-                  setState(() => _knownOnly = selection.first);
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
 
             // Barra Seletora A-Z com contagem de palavras por letra
             SizedBox(
@@ -755,7 +556,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   return ChoiceChip(
                     showCheckmark: false,
                     label: Text(
-                      letter == 'ALL' ? 'ALL ($count)' : '$letter ($count)',
+                      letter == 'ALL' ? '${tr(context, 'ALL')} ($count)' : '$letter ($count)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected
@@ -793,7 +594,16 @@ class _LibraryPageState extends State<LibraryPage> {
 
             // Lista de palavras filtradas
             Expanded(
-              child: filteredItems.isEmpty
+              child: _loading
+                  ? const Center(child: const CircularProgressIndicator())
+                  : _error != null
+                  ? Center(
+                      child: TextButton(
+                        onPressed: _load,
+                        child: Text('${tr(context, _error!)} ${tr(context, 'Try again')}'),
+                      ),
+                    )
+                  : filteredItems.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32),
@@ -808,8 +618,8 @@ class _LibraryPageState extends State<LibraryPage> {
                             const SizedBox(height: 16),
                             Text(
                               dictionaryItems.isEmpty
-                                  ? 'No words in $langName dictionary'
-                                  : 'No words starting with "$_selectedLetter"',
+                                  ? tr(context, "No saved words yet")
+                                  : Localizations.localeOf(context).languageCode == 'pt' ? 'Nenhuma palavra começa com "$_selectedLetter"' : 'No words starting with "$_selectedLetter"',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 18,
@@ -819,8 +629,8 @@ class _LibraryPageState extends State<LibraryPage> {
                             const SizedBox(height: 8),
                             Text(
                               dictionaryItems.isEmpty
-                                  ? 'Tap words in lyrics while playing songs to save them!'
-                                  : 'Select another letter from the A–Z bar above.',
+                                  ? tr(context, "Tap words in lyrics while playing songs to save them!")
+                                  : tr(context, "Select another letter from the A–Z bar above."),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: AppTheme.muted,
@@ -843,7 +653,6 @@ class _LibraryPageState extends State<LibraryPage> {
                           ),
                           item: item,
                           nativeLanguage: _nativeLanguage,
-                          languageName: langName,
                           onToggleKnown: () => _toggleKnown(
                             item.word,
                             item.normalizedWord,
@@ -863,14 +672,12 @@ class _LibraryPageState extends State<LibraryPage> {
 
 class _DictionaryEntry extends StatefulWidget {
   final DictionaryItem item;
-  final String languageName;
   final String nativeLanguage;
   final VoidCallback onToggleKnown;
 
   const _DictionaryEntry({
     super.key,
     required this.item,
-    required this.languageName,
     required this.nativeLanguage,
     required this.onToggleKnown,
   });
@@ -896,7 +703,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final dateStr = item.createdAt != null
-        ? 'Saved on ${item.createdAt!.day.toString().padLeft(2, '0')}/${item.createdAt!.month.toString().padLeft(2, '0')}/${item.createdAt!.year} · '
+        ? '${tr(context, 'Saved on')} ${item.createdAt!.day.toString().padLeft(2, '0')}/${item.createdAt!.month.toString().padLeft(2, '0')}/${item.createdAt!.year} · '
         : '';
 
     return Material(
@@ -943,7 +750,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    item.isKnown ? 'Known' : 'Learning',
+                    item.isKnown ? tr(context, "Known") : tr(context, "Learning"),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -962,7 +769,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
             children: [
               if (item.trackName?.isNotEmpty == true)
                 Text(
-                  'From: ${item.trackName!}',
+                  '${tr(context, 'From:')} ${item.trackName!}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppTheme.muted, fontSize: 12),
@@ -975,7 +782,9 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '$dateStr${widget.languageName}',
+              dateStr.endsWith(' · ')
+                  ? dateStr.substring(0, dateStr.length - 3)
+                  : dateStr,
               style: const TextStyle(color: AppTheme.muted, fontSize: 12),
             ),
           ),
@@ -986,8 +795,8 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: LinearProgressIndicator(),
+                    padding: const EdgeInsets.all(12),
+                    child: const LinearProgressIndicator(),
                   );
                 }
                 final data = snapshot.data;
@@ -997,7 +806,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                   return TextButton.icon(
                     onPressed: _lookup,
                     icon: const Icon(CupertinoIcons.refresh, size: 16),
-                    label: const Text('Definition unavailable. Try again'),
+                    label: Text(tr(context, "Definition unavailable. Try again")),
                   );
                 }
                 return Column(
@@ -1030,7 +839,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                           children: [
                             if (meaning.partOfSpeech.isNotEmpty)
                               Text(
-                                meaning.partOfSpeech,
+                                tr(context, meaning.partOfSpeech),
                                 style: const TextStyle(
                                   color: AppTheme.yellow,
                                   fontSize: 12,
@@ -1071,7 +880,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                     : CupertinoIcons.bookmark,
                 size: 17,
               ),
-              label: Text(item.isKnown ? 'Remove from known' : 'Mark as known'),
+              label: Text(item.isKnown ? tr(context, "Remove from known") : tr(context, "Mark as known")),
             ),
           ),
         ],

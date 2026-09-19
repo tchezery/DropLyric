@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>O DropLyric acompanha a música e controla a reprodução no Spotify para mostrar a letra sincronizada.</string>
 </dict>
 </plist>

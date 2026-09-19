@@ -1,3 +1,7 @@
+import '../core/services/app_strings.dart';
+import 'package:flutter/foundation.dart';
+
+import 'remote_music_page.dart';
 import '../widgets/spotify_access_gate.dart';
 
 import 'package:flutter/cupertino.dart';
@@ -11,7 +15,6 @@ import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../core/models/track_model.dart';
 import '../core/services/spotify_service.dart';
-import '../core/services/language_service.dart';
 import '../widgets/track_card.dart';
 import 'player_page.dart';
 
@@ -64,9 +67,9 @@ class _SearchPageState extends State<SearchPage> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Spotify search failed. Check your connection and try again.',
+            tr(context, "Spotify search failed. Check your connection and try again."),
           ),
         ),
       );
@@ -88,9 +91,9 @@ class _SearchPageState extends State<SearchPage> {
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'Could not open the track on Spotify. Try searching.',
+                tr(context, "Could not open the track on Spotify. Try searching."),
               ),
             ),
           );
@@ -122,7 +125,8 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isPortuguese = AppLanguage.instance.isPortuguese;
+    if (!kIsWeb) return const RemoteMusicPage();
+    final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
     return Scaffold(
       backgroundColor: AppTheme.spotifyBlack,
       body: SafeArea(
@@ -132,10 +136,10 @@ class _SearchPageState extends State<SearchPage> {
             const SpotifyConnectButton(),
             // Header
             Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Text(
                 isPortuguese ? 'Buscar' : 'Search',
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.spotifyWhite,
                   fontSize: 34,
                   fontWeight: FontWeight.w800,
@@ -165,7 +169,7 @@ class _SearchPageState extends State<SearchPage> {
                     hintText: isPortuguese
                         ? 'Que música você quer aprender?'
                         : 'What track do you want to learn?',
-                    hintStyle: TextStyle(color: AppTheme.muted, fontSize: 14),
+                    hintStyle: const TextStyle(color: AppTheme.muted, fontSize: 14),
                     border: InputBorder.none,
                     filled: false,
                     prefixIcon: const Icon(
@@ -207,10 +211,10 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildBody() {
-    final isPortuguese = AppLanguage.instance.isPortuguese;
+    final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppTheme.spotifyGreen),
+        child: const CircularProgressIndicator(color: AppTheme.spotifyGreen),
       );
     }
 
@@ -226,19 +230,19 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     if (_searched && _results.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               CupertinoIcons.search,
               size: 52,
               color: AppTheme.spotifyMediumGray,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'No tracks found.',
-              style: TextStyle(color: AppTheme.spotifyLightGray),
+              tr(context, "No tracks found."),
+              style: const TextStyle(color: AppTheme.spotifyLightGray),
             ),
           ],
         ),
@@ -250,10 +254,10 @@ class _SearchPageState extends State<SearchPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Text(
             isPortuguese ? 'Explorar categorias' : 'Explore categories',
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.spotifyWhite,
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -273,7 +277,13 @@ class _SearchPageState extends State<SearchPage> {
             itemBuilder: (ctx, i) {
               final (label, icon, color) = _categories[i];
               return _CategoryCard(
-                label: label,
+                label: switch (label) {
+                  'English' => localizedLanguageName(context, 'en'),
+                  'Español' => localizedLanguageName(context, 'es'),
+                  'Français' => localizedLanguageName(context, 'fr'),
+                  'Português' => localizedLanguageName(context, 'pt'),
+                  _ => label,
+                },
                 icon: icon,
                 color: color,
                 onTap: () {

@@ -128,7 +128,9 @@ class AppRoutes {
     await navigator.push(
       MaterialPageRoute(
         settings: const RouteSettings(name: player),
-        builder: (_) => SpotifyAccessGate(child: PlayerPage(track: track)),
+        builder: (_) => SpotifyAccessGate(
+          child: PlayerPage(track: track, followCurrent: true),
+        ),
       ),
     );
   }

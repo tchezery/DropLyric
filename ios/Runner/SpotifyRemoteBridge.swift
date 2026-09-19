@@ -2,7 +2,7 @@ import Flutter
 import SpotifyiOS
 import UIKit
 
-/// Controls the installed Spotify app; the Web API PKCE login stays in Dart.
+/// Controls and browses the installed Spotify app without Web API calls.
 final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
   SPTAppRemoteDelegate, SPTAppRemotePlayerStateDelegate {
   static let shared = SpotifyRemoteBridge()
@@ -13,6 +13,7 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
     remote.delegate = self
     return remote
   }()
+  private var contentItems: [String: SPTAppRemoteContentItem] = [:]
   private var events: FlutterEventSink?
   private var state: [String: Any] = [
     "ready": false, "paused": true, "error": "", "appRemoteAuthorized": false,
@@ -49,6 +50,53 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
       wantsConnection = true
       connectIfNeeded()
       result(nil)
+    case "content":
+      guard remote.isConnected, let api = remote.contentAPI else {
+        result(FlutterError(code: "spotify_connection", message: "Conecte ao app Spotify primeiro.", details: nil))
+        return
+      }
+      let key = call.arguments as? String ?? ""
+      let callback: SPTAppRemoteCallback = { [weak self] value, error in
+        if let error = error { result(FlutterError(code: "spotify_content", message: error.localizedDescription, details: nil)); return }
+        let items = value as? [SPTAppRemoteContentItem] ?? []
+        result(items.map { item -> [String: Any] in
+          self?.contentItems[item.identifier] = item
+          return ["id": item.identifier, "uri": item.uri, "title": item.title ?? "",
+            "subtitle": item.subtitle ?? "", "playable": item.isPlayable, "children": item.isContainer]
+        })
+      }
+      if key.isEmpty {
+        api.fetchRecommendedContentItems(forType: SPTAppRemoteContentTypeDefault, flattenContainers: false, callback: callback)
+      } else if let item = contentItems[key] {
+        api.fetchChildren(of: item, callback: callback)
+      } else {
+        result(FlutterError(code: "spotify_content", message: "Atualize a lista do Spotify.", details: nil))
+      }
+    case "playContent":
+      guard remote.isConnected, let item = contentItems[call.arguments as? String ?? ""], item.isPlayable else {
+        result(FlutterError(code: "spotify_content", message: "Conecte ao Spotify e atualize a lista.", details: nil))
+        return
+      }
+      remote.playerAPI?.play(item.uri) { [weak self] _, error in self?.complete(result, error: error) }
+    case "connect":
+      guard pendingResult == nil else {
+        result(FlutterError(code: "spotify_busy", message: "Aguarde a conexão com o Spotify.", details: nil)); return
+      }
+      if remote.isConnected { result(nil); return }
+      wantsConnection = true
+      pendingURI = ""
+      pendingResult = result
+      didWakeSpotify = false
+      awaitingAuthorization = false
+      state["error"] = ""
+      timeout?.invalidate()
+      timeout = Timer.scheduledTimer(withTimeInterval: 90, repeats: false) { [weak self] _ in
+        self?.failPending("A conexão expirou. Tente conectar novamente.")
+      }
+      // An empty URI resumes Spotify's existing context during authorization.
+      appRemoteAuthorized = false
+      remote.connectionParameters.accessToken = nil
+      wakeSpotify("")
     case "play":
       guard let uri = call.arguments as? String,
         uri.range(of: "^spotify:track:[a-zA-Z0-9]{22}$", options: .regularExpression) != nil
@@ -79,6 +127,13 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
       if remote.connectionParameters.accessToken != nil {
         connectIfNeeded()
       } else { wakeSpotify(uri) }
+    case "next", "previous":
+      guard remote.isConnected, let player = remote.playerAPI else {
+        result(FlutterError(code: "spotify_connection", message: "Reconecte ao Spotify.", details: nil)); return
+      }
+      let callback: SPTAppRemoteCallback = { [weak self] _, error in self?.complete(result, error: error) }
+      if call.method == "next" { player.skip(toNext: callback) }
+      else { player.skip(toPrevious: callback) }
     case "pause":
       if pendingResult != nil { failPending("Reprodução cancelada.") }
       guard let player = remote.playerAPI, remote.isConnected else { result(nil); return }
@@ -129,6 +184,7 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
 
   func clearSession() {
     wantsConnection = false
+    contentItems.removeAll()
     connectionTimeout?.invalidate()
     connectionTimeout = nil
     connecting = false
@@ -224,7 +280,8 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
     if let uri = pendingURI, let result = pendingResult {
       clearPending()
       // Authorization can leave the previous track playing: explicitly select ours.
-      play(uri, result: result)
+      if uri.isEmpty { refreshState(); result(nil) }
+      else { play(uri, result: result) }
     } else { refreshState() }
   }
 
@@ -270,6 +327,8 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
   func playerStateDidChange(_ playerState: SPTAppRemotePlayerState) {
     state = ["ready": remote.isConnected && active, "paused": playerState.isPaused,
       "uri": playerState.track.uri, "position": playerState.playbackPosition,
+      "title": playerState.track.name, "artist": playerState.track.artist.name,
+      "album": playerState.track.album.name,
       "duration": playerState.track.duration, "error": ""]
     emit()
   }
@@ -342,6 +401,7 @@ final class SpotifyRemoteBridge: NSObject, FlutterStreamHandler,
     result(nil)
   }
   private func emit() {
+    state["connecting"] = awaitingAuthorization || pendingResult != nil
     state["appRemoteAuthorized"] = appRemoteAuthorized
     events?(state)
   }

@@ -1,3 +1,4 @@
+import '../../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -92,7 +93,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _errorMessage = 'Could not load the definition at this time.';
+          _errorMessage = "Could not load the definition at this time.";
         });
       }
     }
@@ -116,7 +117,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
           setState(() => _isKnown = _savedKnown!);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save the word. Try again.')),
+          SnackBar(content: Text(tr(context, "Could not save the word. Try again."))),
         );
       }
     }
@@ -127,7 +128,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
     Clipboard.setData(ClipboardData(text: widget.rawWord));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Word "${widget.rawWord}" copied!'),
+        content: Text(Localizations.localeOf(context).languageCode == 'pt' ? 'Palavra "${widget.rawWord}" copiada!' : 'Word "${widget.rawWord}" copied!'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
       ),
@@ -141,12 +142,12 @@ class _WordActionSheetState extends State<WordActionSheet> {
     return Container(
       constraints: BoxConstraints(maxHeight: media.size.height * 0.78),
       decoration: const BoxDecoration(
-        color: Color(0xFFFFFEFA),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-        border: Border(
-          top: BorderSide(color: Color(0xFFE4E0D6), width: 1.2),
-          left: BorderSide(color: Color(0xFFE4E0D6), width: 1.2),
-          right: BorderSide(color: Color(0xFFE4E0D6), width: 1.2),
+        color: const Color(0xFFFFFEFA),
+        borderRadius: const BorderRadius.vertical(top: const Radius.circular(22)),
+        border: const Border(
+          top: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
+          left: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
+          right: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
         ),
       ),
       child: SafeArea(
@@ -204,7 +205,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                _isKnown ? 'KNOWN' : 'LEARNING',
+                                _isKnown ? tr(context, "KNOWN") : tr(context, "LEARNING"),
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -220,7 +221,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                               widget.sourceLanguage.toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF74716A),
+                                color: const Color(0xFF74716A),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -265,15 +266,15 @@ class _WordActionSheetState extends State<WordActionSheet> {
                           const Icon(
                             CupertinoIcons.book, // Livrinho solicitado!
                             size: 19,
-                            color: Color(0xFF141F17),
+                            color: const Color(0xFF141F17),
                           ),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Dictionary',
-                            style: TextStyle(
+                          Text(
+                            tr(context, "Dictionary"),
+                            style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF141F17),
+                              color: const Color(0xFF141F17),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -317,7 +318,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              _isKnown ? 'Desmarcar' : 'Dominar',
+                              _isKnown ? tr(context, "Unmark") : tr(context, "Mark as known"),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -359,7 +360,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
             ),
 
             const SizedBox(height: 12),
-            const Divider(color: Color(0xFFE4E0D6), height: 1),
+            const Divider(color: const Color(0xFFE4E0D6), height: 1),
 
             // Área de conteúdo do Dicionário
             Expanded(child: _buildDictionaryBody()),
@@ -371,20 +372,20 @@ class _WordActionSheetState extends State<WordActionSheet> {
 
   Widget _buildDictionaryBody() {
     if (_loading) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(
-                color: Color(0xFFFDE68A),
+              const CircularProgressIndicator(
+                color: const Color(0xFFFDE68A),
                 strokeWidth: 2.2,
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               Text(
-                'Searching for meaning in dictionary...',
-                style: TextStyle(fontSize: 12, color: Color(0xFF74716A)),
+                tr(context, "Searching for meaning in dictionary..."),
+                style: const TextStyle(fontSize: 12, color: const Color(0xFF74716A)),
               ),
             ],
           ),
@@ -406,7 +407,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               ),
               const SizedBox(height: 12),
               Text(
-                _errorMessage!,
+                tr(context, _errorMessage!),
                 style: const TextStyle(fontSize: 13, color: AppTheme.muted),
                 textAlign: TextAlign.center,
               ),
@@ -414,7 +415,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               TextButton.icon(
                 onPressed: _lookup,
                 icon: const Icon(CupertinoIcons.refresh, size: 16),
-                label: const Text('Try again'),
+                label: Text(tr(context, "Try again")),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFDE68A),
                 ),
@@ -436,7 +437,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
               const Icon(CupertinoIcons.book, size: 44, color: AppTheme.muted),
               const SizedBox(height: 12),
               Text(
-                'Nenhum significado detalhado encontrado\npara "${widget.rawWord}".',
+                Localizations.localeOf(context).languageCode == 'pt' ? 'Nenhum significado detalhado encontrado\npara "${widget.rawWord}".' : 'No detailed meaning found\nfor "${widget.rawWord}".',
                 style: const TextStyle(fontSize: 13, color: AppTheme.muted),
                 textAlign: TextAlign.center,
               ),
@@ -458,7 +459,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                 const Icon(
                   CupertinoIcons.volume_up,
                   size: 16,
-                  color: Color(0xFF74716A),
+                  color: const Color(0xFF74716A),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -466,7 +467,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF74716A),
+                    color: const Color(0xFF74716A),
                   ),
                 ),
               ],
@@ -493,11 +494,11 @@ class _WordActionSheetState extends State<WordActionSheet> {
                     const Icon(
                       CupertinoIcons.globe,
                       size: 15,
-                      color: Color(0xFFFDE68A),
+                      color: const Color(0xFFFDE68A),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'TRADUÇÃO EM PORTUGUÊS',
+                      tr(context, "TRANSLATION"),
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
@@ -522,14 +523,14 @@ class _WordActionSheetState extends State<WordActionSheet> {
 
         // Lista de Significados e Definições
         if (def.meanings.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'DICTIONARY DEFINITIONS',
-              style: TextStyle(
+              tr(context, "DICTIONARY DEFINITIONS"),
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF74716A),
+                color: const Color(0xFF74716A),
                 letterSpacing: 0.8,
               ),
             ),
@@ -558,11 +559,11 @@ class _WordActionSheetState extends State<WordActionSheet> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        meaning.partOfSpeech.toLowerCase(),
+                        tr(context, meaning.partOfSpeech.toLowerCase()),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFFDE68A),
+                          color: const Color(0xFFFDE68A),
                         ),
                       ),
                     ),
@@ -571,7 +572,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.45,
-                      color: Color(0xFF242320),
+                      color: const Color(0xFF242320),
                     ),
                   ),
                   if (meaning.example != null &&
@@ -582,7 +583,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
                       style: const TextStyle(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
-                        color: Color(0xFF74716A),
+                        color: const Color(0xFF74716A),
                         height: 1.4,
                       ),
                     ),

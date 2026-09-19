@@ -63,10 +63,78 @@ String? detectLyricLanguage(String text) {
   final words = RegExp(
     r"[A-Za-zÀ-ÿ]+",
     unicode: true,
-  ).allMatches(text.toLowerCase()).map((match) => match.group(0)!).toList();
+  ).allMatches(text.toLowerCase()).map((match) => match.group(0)!).toSet();
   if (words.isEmpty) return null;
 
+  // Count distinct markers so a repeated refrain cannot dominate detection.
+  // Ambiguous English/Portuguese words (a/as/do) are not Portuguese evidence.
   const markers = <String, Set<String>>{
+    'en': {
+      'i',
+      'you',
+      'your',
+      'yours',
+      'the',
+      'and',
+      'my',
+      'mine',
+      'we',
+      'our',
+      'they',
+      'their',
+      'them',
+      'it',
+      'its',
+      'is',
+      'are',
+      'was',
+      'were',
+      'this',
+      'that',
+      'these',
+      'those',
+      'with',
+      'without',
+      'from',
+      'for',
+      'to',
+      'of',
+      'in',
+      'on',
+      'not',
+      'have',
+      'has',
+      'had',
+      'will',
+      'would',
+      'can',
+      'could',
+      'should',
+      'when',
+      'where',
+      'what',
+      'why',
+      'who',
+      'how',
+      'there',
+      'here',
+      'never',
+      'always',
+      'love',
+      'heart',
+      'night',
+      'dream',
+      'dreams',
+      'feel',
+      'want',
+      'know',
+      'let',
+      'don',
+      'doesn',
+      'didn',
+      'won',
+      'ain',
+    },
     'es': {
       'el',
       'la',
@@ -88,10 +156,7 @@ String? detectLyricLanguage(String text) {
       'eres',
     },
     'pt': {
-      'o',
-      'a',
       'os',
-      'as',
       'que',
       'por',
       'para',
@@ -99,10 +164,21 @@ String? detectLyricLanguage(String text) {
       'uma',
       'um',
       'não',
-      'do',
       'da',
       'como',
       'você',
+      'eu',
+      'meu',
+      'minha',
+      'voces',
+      'vocês',
+      'saudade',
+      'coração',
+      'estou',
+      'quero',
+      'tenho',
+      'sou',
+      'nosso',
       'vida',
       'amor',
     },
@@ -162,7 +238,9 @@ String? detectLyricLanguage(String text) {
   }
   final ranked = scores.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
-  if (ranked.first.value < 2) return null;
+  if (ranked.first.value < 2 || ranked.first.value == ranked[1].value) {
+    return null;
+  }
   return ranked.first.key;
 }
 

@@ -1,3 +1,4 @@
+import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import '../core/services/audio_player_service.dart';
 import '../core/services/language_service.dart';
 import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
+import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/lyrics/interactive_word.dart';
 import '../widgets/lyrics/language_selector_sheet.dart';
@@ -26,12 +28,22 @@ enum LyricsDisplayMode { synced, manual }
 /// Tela do player minimalista com tipografia monoespaçada e controles estilo Spotify.
 class PlayerPage extends StatefulWidget {
   final TrackModel track;
+  final bool followCurrent;
+  final bool lyricsOnly;
+  final LyricsResult? initialLyrics;
+  final LanguageService? languageService;
+  final KnownWordsRepository? wordsRepository;
   final List<TrackModel>? playlist;
   final int? initialIndex;
 
   const PlayerPage({
     super.key,
     required this.track,
+    this.followCurrent = false,
+    this.lyricsOnly = false,
+    this.initialLyrics,
+    this.languageService,
+    this.wordsRepository,
     this.playlist,
     this.initialIndex,
   });
@@ -60,14 +72,19 @@ class _PlayerPageState extends State<PlayerPage>
   // Serviços
   final AudioPlayerService _audioService = AudioPlayerService();
   final LyricsService _lyricsService = LyricsService();
-  final KnownWordsRepository _wordsRepo = KnownWordsRepository();
-  final LanguageService _languageService = LanguageService();
+  late final KnownWordsRepository _wordsRepo =
+      widget.wordsRepository ?? KnownWordsRepository();
+  late final LanguageService _languageService =
+      widget.languageService ?? LanguageService();
 
   // Faixa atual e playlist
   late TrackModel _currentTrack;
   late List<TrackModel> _playlist;
   late int _currentIndex;
   int _trackLoadGeneration = 0;
+  bool _requestingTrack = false;
+  String? _expectedUri;
+  int _lyricsGeneration = 0;
 
   // Estado da letra
   LyricsResult? _lyricsResult;
@@ -91,6 +108,10 @@ class _PlayerPageState extends State<PlayerPage>
   // Idiomas
   String _targetLanguage = 'en';
   String? _detectedTrackLanguage;
+  String? _manualTrackLanguage;
+  String _preferredTargetLanguage = 'en';
+  int _knownWordsGeneration = 0;
+  bool _knownWordsLoading = false;
   String _nativeLanguage = 'pt';
 
   // Tema: false = Dark Minimal com texto branco (padrão solicitado), true = Sage Paper minimalista
@@ -105,6 +126,9 @@ class _PlayerPageState extends State<PlayerPage>
     super.initState();
     AppRoutes.currentRoute.value = AppRoutes.player;
     _currentTrack = widget.track;
+    _targetLanguage = _currentTrack.language.isEmpty
+        ? 'en'
+        : _currentTrack.language;
     _playlist = widget.playlist != null && widget.playlist!.isNotEmpty
         ? widget.playlist!
         : SpotifyService.curatedTracks;
@@ -122,14 +146,25 @@ class _PlayerPageState extends State<PlayerPage>
     _loadAll();
     _audioService.position.addListener(_onPositionChanged);
     _audioService.playerState.addListener(_onPlayerStateChanged);
-    SpotifySession.instance.playbackChanges.addListener(_onSpotifyTrackChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _audioService.play(
+    if (!widget.lyricsOnly) {
+      SpotifySession.instance.playbackChanges.addListener(
+        _onSpotifyTrackChanged,
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || widget.lyricsOnly) return;
+      if (widget.followCurrent) {
+        _audioService.syncSpotifyTrack(_currentTrack.id);
+      } else {
+        _expectedUri = _currentTrack.id;
+        _requestingTrack = true;
+        await _audioService.play(
           _currentTrack.previewAudioUrl ?? '',
           track: _currentTrack,
         );
+        _requestingTrack = false;
       }
+      if (mounted) _updateSpotifyTrack();
     });
   }
 
@@ -147,9 +182,24 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   Future<void> _updateSpotifyTrack() async {
-    final uri = SpotifySession.instance.uri;
+    if (widget.lyricsOnly || _requestingTrack) return;
+    final session = SpotifySession.instance;
+    final uri = session.uri;
+    final metadata = session.currentTrack;
+    if (_expectedUri != null) {
+      if (uri != _expectedUri) return;
+      _expectedUri = null;
+    }
+    if (session.remoteOnly &&
+        (session.state['ready'] != true || metadata == null)) {
+      return;
+    }
     if (!RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$').hasMatch(uri) ||
-        uri == _currentTrack.id) {
+        (uri == _currentTrack.id &&
+            (!session.remoteOnly ||
+                (metadata!.title == _currentTrack.title &&
+                    metadata.artist == _currentTrack.artist &&
+                    metadata.album == _currentTrack.album)))) {
       return;
     }
     final generation = ++_trackLoadGeneration;
@@ -160,13 +210,18 @@ class _PlayerPageState extends State<PlayerPage>
         artist: '',
         album: '',
         previewAudioUrl: null,
-        language: _currentTrack.language,
+        language: uri == _currentTrack.id ? _currentTrack.language : '',
       ),
     );
     if (!mounted || generation != _trackLoadGeneration) return;
     setState(() {
+      if (_currentTrack.id != resolved.id) {
+        _manualTrackLanguage = null;
+        _detectedTrackLanguage = null;
+      }
       _currentTrack = resolved;
-      _detectedTrackLanguage = null;
+      _targetLanguage = _resolveTargetLanguage();
+      _knownWords = {};
       _lyricsLoading = true;
       _lyricsResult = null;
       _activeLineIndex = -1;
@@ -177,14 +232,26 @@ class _PlayerPageState extends State<PlayerPage>
     await _loadAll();
   }
 
-  Future<void> _loadAll() async {
-    try {
-      _nativeLanguage = await _languageService.getNativeLanguage();
-      _targetLanguage = _currentTrack.language.isNotEmpty
+  String _resolveTargetLanguage() =>
+      _manualTrackLanguage ??
+      _detectedTrackLanguage ??
+      (_currentTrack.language.isNotEmpty
           ? _currentTrack.language
-          : (_detectedTrackLanguage ??
-                await _languageService.getTargetLanguage());
-      if (mounted) setState(() {});
+          : _preferredTargetLanguage);
+
+  Future<void> _loadAll() async {
+    final generation = _lyricsGeneration;
+    try {
+      final native = await _languageService.getNativeLanguage();
+      final preferred = await _languageService.getTargetLanguage();
+      if (!mounted || generation != _lyricsGeneration) return;
+      setState(() {
+        _nativeLanguage = native;
+        _preferredTargetLanguage = preferred;
+        // Resolve after all awaits: a lyric/manual choice may have arrived meanwhile.
+        _targetLanguage = _resolveTargetLanguage();
+        if (_lyricsResult != null) _buildUniqueWords(_lyricsResult!.lines);
+      });
       await _loadKnownWords();
     } catch (e) {
       debugPrint('Error loading language preferences: $e');
@@ -192,44 +259,67 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   Future<void> _loadKnownWords() async {
+    final generation = ++_knownWordsGeneration;
+    final language = _targetLanguage;
+    final track = _currentTrack.id;
+    if (mounted) setState(() => _knownWordsLoading = true);
     try {
-      final words = await _wordsRepo.getKnownWordsSet(_targetLanguage);
-      if (mounted) {
+      await _wordWrites;
+      final words = await _wordsRepo.getKnownWordsSet(language);
+      if (mounted &&
+          generation == _knownWordsGeneration &&
+          language == _targetLanguage &&
+          track == _currentTrack.id) {
         setState(() => _knownWords = words);
         _updateStats();
       }
     } catch (e) {
       debugPrint('Error loading known words: $e');
+    } finally {
+      if (mounted && generation == _knownWordsGeneration) {
+        setState(() => _knownWordsLoading = false);
+      }
     }
   }
 
   Future<void> _loadLyrics() async {
+    final generation = ++_lyricsGeneration;
+    if (_currentTrack.title.isEmpty || _currentTrack.artist.isEmpty) {
+      if (mounted) setState(() => _lyricsLoading = false);
+      _fadeCtrl.forward();
+      return;
+    }
+    SavedTracks.instance.remember(_currentTrack).catchError((Object error) {
+      debugPrint('Could not save recent track: $error');
+    });
     if (mounted) setState(() => _lyricsLoading = true);
     try {
-      final result = await _lyricsService.getLyrics(
-        trackName: _currentTrack.title,
-        artistName: _currentTrack.artist,
-        albumName: _currentTrack.album.isNotEmpty ? _currentTrack.album : null,
-        duration: _currentTrack.duration,
-      );
-      if (mounted) {
-        final detected = _currentTrack.language.isEmpty
-            ? detectLyricLanguage(
-                result?.plainText ??
-                    result?.lines.map((line) => line.rawText).join(' ') ??
-                    '',
-              )
-            : null;
-        if (detected != null) {
-          _detectedTrackLanguage = detected;
-          _targetLanguage = detected;
-        }
+      final result =
+          (_currentTrack.id == widget.track.id ? widget.initialLyrics : null) ??
+          await _lyricsService.getLyrics(
+            trackName: _currentTrack.title,
+            artistName: _currentTrack.artist,
+            albumName: _currentTrack.album.isNotEmpty
+                ? _currentTrack.album
+                : null,
+            duration: _currentTrack.duration,
+          );
+      if (mounted && generation == _lyricsGeneration) {
+        final detected = detectLyricLanguage(
+          result?.plainText?.trim().isNotEmpty == true
+              ? result!.plainText!
+              : result?.lines.map((line) => line.rawText).join(' ') ?? '',
+        );
+        _detectedTrackLanguage = detected;
+        final previousLanguage = _targetLanguage;
+        _targetLanguage = _resolveTargetLanguage();
+        if (_targetLanguage != previousLanguage) _knownWords = {};
         setState(() {
           _lyricsResult = result;
           _lyricsLoading = false;
           _lineKeys.clear();
           _activeLineIndex = -1;
-          _lyricsMode = result?.isSynced == true
+          _lyricsMode = !widget.lyricsOnly && result?.isSynced == true
               ? LyricsDisplayMode.synced
               : LyricsDisplayMode.manual;
         });
@@ -238,7 +328,8 @@ class _PlayerPageState extends State<PlayerPage>
           // The language may have changed after the lyrics were identified.
           // Reload the dictionary for this track so words from another
           // language are never used to calculate or display this song's state.
-          if (detected != null) await _loadKnownWords();
+          await _loadKnownWords();
+          if (!mounted || generation != _lyricsGeneration) return;
           _updateStats();
           _onPositionChanged();
         }
@@ -246,7 +337,7 @@ class _PlayerPageState extends State<PlayerPage>
       }
     } catch (e) {
       debugPrint('Error loading lyrics: $e');
-      if (mounted) {
+      if (mounted && generation == _lyricsGeneration) {
         setState(() => _lyricsLoading = false);
       }
     }
@@ -320,6 +411,7 @@ class _PlayerPageState extends State<PlayerPage>
   final Map<String, bool> _savedWordStates = {};
 
   Future<void> _toggleWord(String word, String normalized) async {
+    if (_knownWordsLoading || _lyricsLoading) return;
     final language = _targetLanguage;
     final key = '$language:$normalized';
     final previous = _knownWords.contains(normalized);
@@ -328,6 +420,8 @@ class _PlayerPageState extends State<PlayerPage>
     _wordVersions[key] = version;
     _savedWordStates.putIfAbsent(key, () => previous);
     final trackName = _currentTrack.title;
+    final artistName = _currentTrack.artist;
+    final trackId = _currentTrack.id;
     setState(() {
       desired ? _knownWords.add(normalized) : _knownWords.remove(normalized);
       _updateStats();
@@ -340,6 +434,7 @@ class _PlayerPageState extends State<PlayerPage>
         language,
         desired,
         trackName: trackName,
+        artistName: artistName,
       );
       _savedWordStates[key] = desired;
     });
@@ -349,6 +444,7 @@ class _PlayerPageState extends State<PlayerPage>
     } catch (_) {
       if (mounted &&
           language == _targetLanguage &&
+          trackId == _currentTrack.id &&
           _wordVersions[key] == version) {
         setState(() {
           _savedWordStates[key] == true
@@ -362,6 +458,9 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _openWordActionSheet(String rawWord, String normalized) {
+    if (_knownWordsLoading || _lyricsLoading) return;
+    final track = _currentTrack.id;
+    final language = _targetLanguage;
     final isKnown = _knownWords.contains(normalized);
     WordActionSheet.show(
       context,
@@ -370,20 +469,30 @@ class _PlayerPageState extends State<PlayerPage>
       isInitiallyKnown: isKnown,
       sourceLanguage: _targetLanguage,
       nativeLanguage: _nativeLanguage,
-      onToggleWord: () => _toggleWord(rawWord, normalized),
+      onToggleWord: () async {
+        if (!mounted ||
+            track != _currentTrack.id ||
+            language != _targetLanguage) {
+          return;
+        }
+        await _toggleWord(rawWord, normalized);
+      },
     );
   }
 
   Future<void> _onLanguagesUpdated(String native, String target) async {
-    await _languageService.setNativeLanguage(native);
-    await _languageService.setTargetLanguage(target);
+    if (!mounted) return;
     setState(() {
+      _manualTrackLanguage = target;
       _nativeLanguage = native;
       _targetLanguage = target;
       _knownWords = {};
       _knownUniqueInLyrics = 0;
+      if (_lyricsResult != null) _buildUniqueWords(_lyricsResult!.lines);
     });
     await _loadKnownWords();
+    await _languageService.setNativeLanguage(native);
+    await _languageService.setTargetLanguage(target);
   }
 
   String _fmt(Duration d) {
@@ -397,7 +506,7 @@ class _PlayerPageState extends State<PlayerPage>
       context: context,
       backgroundColor: _isLightStyle ? Colors.white : AppTheme.spotifyDarkCard,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: const Radius.circular(20)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -427,7 +536,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Calibrate Sync',
+                    tr(context, "Calibrate Sync"),
                     style: TextStyle(
                       color: textColor,
                       fontSize: 16,
@@ -436,7 +545,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Adjust to advance (+) or delay (-) the lyrics timing.',
+                    tr(context, "Adjust to advance (+) or delay (-) the lyrics timing."),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: subColor, fontSize: 12),
                   ),
@@ -516,7 +625,7 @@ class _PlayerPageState extends State<PlayerPage>
                       _onPositionChanged();
                     },
                     child: Text(
-                      'Reset (0ms)',
+                      tr(context, "Reset (0ms)"),
                       style: TextStyle(color: subColor, fontSize: 12),
                     ),
                   ),
@@ -555,6 +664,10 @@ class _PlayerPageState extends State<PlayerPage>
     setState(() {
       _currentIndex = newIndex;
       _currentTrack = _playlist[newIndex];
+      _manualTrackLanguage = null;
+      _detectedTrackLanguage = null;
+      _targetLanguage = _resolveTargetLanguage();
+      _knownWords = {};
       _lyricsLoading = true;
       _lyricsResult = null;
       _activeLineIndex = -1;
@@ -562,13 +675,33 @@ class _PlayerPageState extends State<PlayerPage>
     });
     _loadLyrics();
     _loadAll();
+    _requestingTrack = true;
     await _audioService.play(
       _currentTrack.previewAudioUrl ?? '',
       track: _currentTrack,
     );
+    _requestingTrack = false;
+    if (mounted) _updateSpotifyTrack();
+  }
+
+  Future<void> _skipRemote(String action) async {
+    try {
+      await SpotifySession.instance.command(action);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr(context, "Could not change the Spotify track."))),
+        );
+      }
+    }
   }
 
   void _onPrevious() {
+    if (SpotifySession.instance.remoteOnly) {
+      _expectedUri = null;
+      _skipRemote('previous');
+      return;
+    }
     final pos = _audioService.position.value;
     if (pos.inSeconds > 3) {
       _audioService.seekTo(Duration.zero);
@@ -585,6 +718,11 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _onNext() {
+    if (SpotifySession.instance.remoteOnly) {
+      _expectedUri = null;
+      _skipRemote('next');
+      return;
+    }
     if (_playlist.isEmpty) return;
     if (_audioService.shuffleMode.value && _playlist.length > 1) {
       int nextIndex;
@@ -628,7 +766,9 @@ class _PlayerPageState extends State<PlayerPage>
           child: Column(
             children: [
               _buildTopBar(),
-              _buildModeSelector(),
+              if (_knownWordsLoading)
+                const LinearProgressIndicator(minHeight: 2),
+              if (!widget.lyricsOnly) _buildModeSelector(),
               if (_totalUniqueWords > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -642,7 +782,18 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                 ),
               Expanded(child: _buildLyricsArea()),
-              _buildControls(media),
+              if (widget.lyricsOnly)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    AppLanguage.instance.isPortuguese
+                        ? 'Leitura da letra • sem reprodução'
+                        : 'Lyrics reading • no playback',
+                    style: TextStyle(color: _secondaryInk),
+                  ),
+                )
+              else
+                _buildControls(media),
             ],
           ),
         ),
@@ -669,7 +820,7 @@ class _PlayerPageState extends State<PlayerPage>
               },
               icon: const Icon(CupertinoIcons.chevron_left, size: 28),
               color: _primaryInk,
-              tooltip: 'Back',
+              tooltip: tr(context, "Back"),
             ),
           ),
           Padding(
@@ -678,7 +829,7 @@ class _PlayerPageState extends State<PlayerPage>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _currentTrack.title,
+                  _currentTrack.title.isEmpty ? 'Spotify' : _currentTrack.title,
                   style: TextStyle(
                     color: _primaryInk,
                     fontSize: 15,
@@ -722,7 +873,7 @@ class _PlayerPageState extends State<PlayerPage>
                       size: 18,
                     ),
                     color: _primaryInk,
-                    tooltip: 'Adjust sync',
+                    tooltip: tr(context, "Adjust sync"),
                   ),
                 IconButton(
                   onPressed: () =>
@@ -734,7 +885,7 @@ class _PlayerPageState extends State<PlayerPage>
                     size: 18,
                     color: _primaryInk,
                   ),
-                  tooltip: _isLightStyle ? 'Dark mode' : 'Paper mode',
+                  tooltip: _isLightStyle ? tr(context, "Dark mode") : tr(context, "Paper mode"),
                 ),
                 GestureDetector(
                   onTap: () => LanguageSelectorSheet.show(
@@ -808,7 +959,7 @@ class _PlayerPageState extends State<PlayerPage>
               ),
               const SizedBox(height: 16),
               Text(
-                'Lyrics not available\nfor this track.',
+                tr(context, "Lyrics not available\nfor this track."),
                 style: TextStyle(
                   color: _isLightStyle
                       ? const Color(0xFF8E8E93)
@@ -878,7 +1029,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    'FREE TEXT',
+                    tr(context, "FREE TEXT"),
                     style: TextStyle(
                       color: _lyricsMode == LyricsDisplayMode.manual
                           ? _canvasColor
@@ -898,9 +1049,9 @@ class _PlayerPageState extends State<PlayerPage>
                 onTap: () {
                   if (!isTrackSynced) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('This track only has plain text lyrics.'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(tr(context, "This track only has plain text lyrics.")),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                     return;
@@ -925,7 +1076,7 @@ class _PlayerPageState extends State<PlayerPage>
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    'FOLLOW',
+                    tr(context, "FOLLOW"),
                     style: TextStyle(
                       color: _lyricsMode == LyricsDisplayMode.synced
                           ? _canvasColor
@@ -1051,9 +1202,9 @@ class _PlayerPageState extends State<PlayerPage>
                           } catch (_) {
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text(
-                                  'Could not save the word. Try again.',
+                                  tr(context, "Could not save the word. Try again."),
                                 ),
                               ),
                             );
@@ -1202,7 +1353,7 @@ class _PlayerPageState extends State<PlayerPage>
                 onPressed: _onPrevious,
                 icon: const Icon(CupertinoIcons.backward_end_fill, size: 34),
                 color: _primaryInk,
-                tooltip: 'Back',
+                tooltip: tr(context, "Back"),
               ),
 
               // 3. Play / Pause central
@@ -1213,7 +1364,7 @@ class _PlayerPageState extends State<PlayerPage>
                 onPressed: _onNext,
                 icon: const Icon(CupertinoIcons.forward_end_fill, size: 34),
                 color: _primaryInk,
-                tooltip: 'Pular',
+                tooltip: tr(context, "Skip"),
               ),
 
               // 5. Loop / Repetir
@@ -1252,7 +1403,7 @@ class _PlayerPageState extends State<PlayerPage>
               ),
             ],
           ),
-          tooltip: isShuffle ? 'Shuffle: On' : 'Shuffle: Off',
+          tooltip: isShuffle ? tr(context, "Shuffle: On") : tr(context, "Shuffle: Off"),
         );
       },
     );
@@ -1288,8 +1439,8 @@ class _PlayerPageState extends State<PlayerPage>
             ],
           ),
           tooltip: isOne
-              ? 'Repeat: One track'
-              : (isActive ? 'Repeat: All' : 'Repeat: Off'),
+              ? tr(context, "Repeat: One track")
+              : (isActive ? tr(context, "Repeat: All") : tr(context, "Repeat: Off")),
         );
       },
     );

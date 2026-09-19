@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/lyric_line_model.dart';
+import '../models/track_model.dart';
 
 /// Resultado de busca de letras da API LRCLIB.
 class LyricsResult {
@@ -18,8 +19,59 @@ class LyricsResult {
   });
 }
 
+/// A LRCLIB record identifies a lyrics version, never a Spotify recording.
+class LyricsSearchEntry {
+  final TrackModel track;
+  final LyricsResult? lyrics;
+  final bool instrumental;
+  const LyricsSearchEntry({
+    required this.track,
+    this.lyrics,
+    required this.instrumental,
+  });
+}
+
 /// Serviço de busca de letras via LRCLIB API com cache em memória.
 class LyricsService {
+  LyricsService({this.client});
+  final http.Client? client;
+
+  Future<List<LyricsSearchEntry>> search(String query) async {
+    query = query.trim();
+    if (query.isEmpty) return [];
+    final response = await (client?.get ?? http.get)(
+      Uri.parse('$_baseUrl/search').replace(queryParameters: {'q': query}),
+      headers: {'Lrclib-Client': 'DropLyric/1.0.0'},
+    ).timeout(_timeout);
+    if (response.statusCode != 200) {
+      throw StateError('LRCLIB: ${response.statusCode}');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! List) throw const FormatException('Invalid LRCLIB response');
+    return data
+        .whereType<Map<String, dynamic>>()
+        .where(
+          (item) =>
+              item['id'] is num &&
+              item['trackName'] is String &&
+              item['artistName'] is String,
+        )
+        .map(
+          (item) => LyricsSearchEntry(
+            track: TrackModel(
+              id: 'lrclib:${item['id']}',
+              title: item['trackName'] as String,
+              artist: item['artistName'] as String,
+              album: item['albumName'] as String? ?? '',
+              duration: (item['duration'] as num?)?.toDouble(),
+            ),
+            lyrics: _parseResponse(item),
+            instrumental: item['instrumental'] == true,
+          ),
+        )
+        .toList();
+  }
+
   // Cache simples em memória (chave: "artist|title")
   final Map<String, LyricsResult> _cache = {};
 

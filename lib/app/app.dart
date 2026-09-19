@@ -1,5 +1,7 @@
+import '../src/core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../src/widgets/dock/dock.dart';
@@ -17,6 +19,9 @@ class MyApp extends StatelessWidget {
       listenable: AppLanguage.instance,
       builder: (context, _) => MaterialApp(
         title: 'Droplyric',
+        locale: Locale(AppLanguage.instance.code),
+        supportedLocales: const [Locale('en'), Locale('pt')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         debugShowCheckedModeBanner: false,
         // Apenas tema escuro — estilo Spotify
         theme: AppTheme.notesTheme,
@@ -61,7 +66,7 @@ class MyApp extends StatelessWidget {
                         DockItem(
                           icon: CupertinoIcons.music_note_list,
                           activeIcon: CupertinoIcons.music_note_list,
-                          label: 'Home',
+                          label: tr(context, "Home"),
                         ),
                         DockItem(
                           icon: CupertinoIcons.search,
@@ -70,15 +75,15 @@ class MyApp extends StatelessWidget {
                               ? 'Buscar'
                               : 'Search',
                         ),
-                        const DockItem(
+                        DockItem(
                           icon: CupertinoIcons.book,
                           activeIcon: CupertinoIcons.book,
-                          label: 'Dictionary',
+                          label: tr(context, "Dictionary"),
                         ),
-                        const DockItem(
+                        DockItem(
                           icon: Icons.person_outline_rounded,
                           activeIcon: CupertinoIcons.person,
-                          label: 'Profile',
+                          label: tr(context, "Profile"),
                         ),
                       ];
                       return Dock(
@@ -88,9 +93,9 @@ class MyApp extends StatelessWidget {
                         },
                         items: items,
                         nowPlayingItem: hasCurrentTrack
-                            ? const DockItem(
+                            ? DockItem(
                                 icon: CupertinoIcons.music_note_2,
-                                label: 'Letra',
+                                label: tr(context, "Lyrics"),
                               )
                             : null,
                         onNowPlaying: hasCurrentTrack
@@ -128,10 +133,10 @@ class MyApp extends StatelessWidget {
                                 size: 42,
                               ),
                               const SizedBox(height: 14),
-                              const Text(
-                                'Spotify connection required',
+                              Text(
+                                tr(context, "Spotify connection required"),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -145,7 +150,7 @@ class MyApp extends StatelessWidget {
                               const SizedBox(height: 18),
                               FilledButton.icon(
                                 icon: const Icon(CupertinoIcons.refresh),
-                                label: const Text('Reconnect Spotify'),
+                                label: Text(tr(context, "Reconnect Spotify")),
                                 onPressed: spotify.connecting
                                     ? null
                                     : () => spotify.command('loginWeb'),

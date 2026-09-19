@@ -60,7 +60,8 @@ class AudioPlayerService {
   bool get _playbackSupported =>
       kIsWeb ||
       defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   Future<void> play(String url, {TrackModel? track}) async {
     error.value = null;
@@ -69,7 +70,8 @@ class AudioPlayerService {
       error.value = 'This track does not have a valid Spotify identifier.';
       return;
     }
-    if (!SpotifySession.instance.connected) {
+    if (!SpotifySession.instance.remoteOnly &&
+        !SpotifySession.instance.connected) {
       error.value = 'Connect your Spotify account to play music.';
       return;
     }
@@ -84,6 +86,7 @@ class AudioPlayerService {
       duration.value = Duration.zero;
       playerState.value = PlayerState(false, ProcessingState.loading);
       await SpotifySession.instance.command('play', uri);
+      if (_disposed) return;
       // O App Remote confirma o comando antes de emitir o próximo estado do
       // player. Atualiza a UI imediatamente; os eventos do Spotify corrigem
       // o estado caso a reprodução falhe ou seja pausada.

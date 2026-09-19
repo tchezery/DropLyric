@@ -12,7 +12,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 /// - **Desktop** (macOS/Linux/Windows): usa `sqflite_common_ffi`.
 class AppDatabase {
   static const _dbName = 'droplyric.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
 
   // Nomes de tabelas (centralizados para evitar typos)
   static const tableKnownWords = 'known_words';
@@ -110,6 +110,7 @@ class AppDatabase {
         normalized_word TEXT  NOT NULL,
         language      TEXT    NOT NULL,
         track_name    TEXT,
+        artist_name   TEXT,
         created_at    INTEGER NOT NULL,
         UNIQUE(normalized_word, language)
       )
@@ -146,7 +147,11 @@ class AppDatabase {
     int oldVersion,
     int newVersion,
   ) async {
-    // Migrações futuras serão adicionadas aqui
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE $tableKnownWords ADD COLUMN artist_name TEXT',
+      );
+    }
   }
 
   /// Fecha a conexão com o banco de dados.

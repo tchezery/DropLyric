@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/track_model.dart';
 import 'spotify_bridge.dart';
+import 'saved_tracks.dart';
 
 class SpotifySession extends ChangeNotifier {
   static final instance = SpotifySession._();
@@ -17,7 +18,29 @@ class SpotifySession extends ChangeNotifier {
     }
   }
   final ChangeNotifier playbackChanges = ChangeNotifier();
+  bool get remoteOnly => !kIsWeb;
   bool get supported => spotifyWebSupported;
+  TrackModel? get currentTrack {
+    if (!RegExp(r'^spotify:track:[a-zA-Z0-9]{22}$').hasMatch(uri) ||
+        (state['title'] as String? ?? '').isEmpty) {
+      return null;
+    }
+    return TrackModel(
+      id: uri,
+      title: state['title'] as String,
+      artist: state['artist'] as String? ?? '',
+      album: state['album'] as String? ?? '',
+      previewAudioUrl: uri,
+      spotifyUrl: 'https://open.spotify.com/track/${uri.split(':').last}',
+      duration: duration.inMilliseconds / 1000,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> content([String parent = '']) async {
+    final data = jsonDecode(await spotifyCall('content', parent)) as List;
+    return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Map<String, dynamic> state = {};
   bool get connected => state['authenticated'] == true;
   bool get appRemoteAuthorized => state['appRemoteAuthorized'] == true;
@@ -43,11 +66,28 @@ class SpotifySession extends ChangeNotifier {
         state['error'] != next['error'];
     final playbackChanged =
         state['uri'] != next['uri'] ||
+        state['title'] != next['title'] ||
+        state['artist'] != next['artist'] ||
+        state['album'] != next['album'] ||
         state['paused'] != next['paused'] ||
         state['position'] != next['position'] ||
         state['duration'] != next['duration'];
     final trackChanged = state['uri'] != next['uri'];
+    final metadataChanged =
+        state['uri'] != next['uri'] ||
+        state['title'] != next['title'] ||
+        state['artist'] != next['artist'];
     state = next;
+    if (remoteOnly &&
+        state['ready'] == true &&
+        metadataChanged &&
+        currentTrack != null) {
+      unawaited(
+        SavedTracks.instance.remember(currentTrack!).catchError((Object error) {
+          debugPrint('Could not save listening history: $error');
+        }),
+      );
+    }
     if (accountChanged || trackChanged || playbackChanged) notifyListeners();
     if (playbackChanged || accountChanged) playbackChanges.notifyListeners();
   }
@@ -71,6 +111,12 @@ class SpotifySession extends ChangeNotifier {
   }
 
   Future<TrackModel> resolve(TrackModel track) async {
+    if (remoteOnly) {
+      final current = currentTrack;
+      return current?.id == track.id
+          ? current!.copyWith(language: track.language)
+          : track;
+    }
     // A busca já devolve os metadados completos do Spotify.
     if (track.id.startsWith('spotify:track:') &&
         track.previewAudioUrl == track.id) {

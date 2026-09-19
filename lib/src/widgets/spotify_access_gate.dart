@@ -1,3 +1,4 @@
+import '../core/services/app_strings.dart';
 import 'package:flutter/material.dart';
 
 import '../core/services/spotify_session.dart';
@@ -13,19 +14,20 @@ class SpotifyAccessGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = this.session ?? SpotifySession.instance;
+    if (session.remoteOnly) return child;
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
         if (session.initializing) {
-          return const Scaffold(
+          return Scaffold(
             body: SafeArea(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Restoring your Spotify session…'),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(tr(context, "Restoring your Spotify session…")),
                   ],
                 ),
               ),
@@ -43,15 +45,15 @@ class SpotifyAccessGate extends StatelessWidget {
                   children: [
                     const Icon(Icons.music_note, size: 48),
                     const SizedBox(height: 20),
-                    const Text(
-                      'Connect Spotify to browse and search for music.',
+                    Text(
+                      tr(context, "Connect Spotify to browse and search for music."),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     SpotifyConnectButton(session: session),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Your profile and dictionary remain available below.',
+                    Text(
+                      tr(context, "Your profile and dictionary remain available below."),
                       textAlign: TextAlign.center,
                     ),
                   ],
