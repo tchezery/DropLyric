@@ -118,62 +118,71 @@ class _MyAppState extends State<MyApp> {
               children: [
                 // O Navigator ocupa toda a tela
                 Positioned.fill(child: child ?? const SizedBox.shrink()),
-              // O Dock flutua sobre o conteúdo (oculto no modo player)
-              ValueListenableBuilder<String>(
-                valueListenable: AppRoutes.currentRoute,
-                builder: (context, route, _) {
-                  final selectedIndex = _getRouteIndex(route);
+              // O Dock flutua sobre o conteúdo (oculto no modo player ou quando há popups/modais abertos)
+              ValueListenableBuilder<int>(
+                valueListenable: AppRouteObserver.popupRouteCount,
+                builder: (context, popupCount, _) {
+                  if (popupCount > 0) {
+                    return const SizedBox.shrink();
+                  }
 
-                  return ListenableBuilder(
-                    listenable: SpotifySession.instance,
-                    builder: (context, _) {
-                      final spotify = SpotifySession.instance;
-                      final hasCurrentTrack = RegExp(
-                        r'^spotify:track:[a-zA-Z0-9]{22}$',
-                      ).hasMatch(spotify.uri);
-                      if (!AppRoutes.shouldShowDock(route) &&
-                          spotify.connected) {
-                        return const SizedBox.shrink();
-                      }
-                      final items = <DockItem>[
-                        DockItem(
-                          icon: CupertinoIcons.music_note_list,
-                          activeIcon: CupertinoIcons.music_note_list,
-                          label: tr(context, "Home"),
-                        ),
-                        DockItem(
-                          icon: CupertinoIcons.search,
-                          activeIcon: CupertinoIcons.search,
-                          label: AppLanguage.instance.isPortuguese
-                              ? 'Buscar'
-                              : 'Search',
-                        ),
-                        DockItem(
-                          icon: CupertinoIcons.book,
-                          activeIcon: CupertinoIcons.book,
-                          label: tr(context, "Dictionary"),
-                        ),
-                        DockItem(
-                          icon: Icons.person_outline_rounded,
-                          activeIcon: CupertinoIcons.person,
-                          label: tr(context, "Profile"),
-                        ),
-                      ];
-                      return Dock(
-                        selectedIndex: selectedIndex,
-                        onItemSelected: (index) {
-                          AppRoutes.navigateTo(_getRouteByIndex(index));
+                  return ValueListenableBuilder<String>(
+                    valueListenable: AppRoutes.currentRoute,
+                    builder: (context, route, _) {
+                      final selectedIndex = _getRouteIndex(route);
+
+                      return ListenableBuilder(
+                        listenable: SpotifySession.instance,
+                        builder: (context, _) {
+                          final spotify = SpotifySession.instance;
+                          final hasCurrentTrack = RegExp(
+                            r'^spotify:track:[a-zA-Z0-9]{22}$',
+                          ).hasMatch(spotify.uri);
+                          if (!AppRoutes.shouldShowDock(route) &&
+                              spotify.connected) {
+                            return const SizedBox.shrink();
+                          }
+                          final items = <DockItem>[
+                            DockItem(
+                              icon: CupertinoIcons.music_note_list,
+                              activeIcon: CupertinoIcons.music_note_list,
+                              label: tr(context, "Home"),
+                            ),
+                            DockItem(
+                              icon: CupertinoIcons.search,
+                              activeIcon: CupertinoIcons.search,
+                              label: AppLanguage.instance.isPortuguese
+                                  ? 'Buscar'
+                                  : 'Search',
+                            ),
+                            DockItem(
+                              icon: CupertinoIcons.book,
+                              activeIcon: CupertinoIcons.book,
+                              label: tr(context, "Dictionary"),
+                            ),
+                            DockItem(
+                              icon: Icons.person_outline_rounded,
+                              activeIcon: CupertinoIcons.person,
+                              label: tr(context, "Profile"),
+                            ),
+                          ];
+                          return Dock(
+                            selectedIndex: selectedIndex,
+                            onItemSelected: (index) {
+                              AppRoutes.navigateTo(_getRouteByIndex(index));
+                            },
+                            items: items,
+                            nowPlayingItem: hasCurrentTrack
+                                ? DockItem(
+                                    icon: CupertinoIcons.music_note_2,
+                                    label: tr(context, "Lyrics"),
+                                  )
+                                : null,
+                            onNowPlaying: hasCurrentTrack
+                                ? AppRoutes.openCurrentTrack
+                                : null,
+                          );
                         },
-                        items: items,
-                        nowPlayingItem: hasCurrentTrack
-                            ? DockItem(
-                                icon: CupertinoIcons.music_note_2,
-                                label: tr(context, "Lyrics"),
-                              )
-                            : null,
-                        onNowPlaying: hasCurrentTrack
-                            ? AppRoutes.openCurrentTrack
-                            : null,
                       );
                     },
                   );

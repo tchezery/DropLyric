@@ -477,6 +477,44 @@ class _PlayerPageState extends State<PlayerPage>
     }
   }
 
+  Future<void> _markSentenceWordsKnown(List<String> words) async {
+    if (_knownWordsLoading || _lyricsLoading || words.isEmpty) return;
+    final language = _targetLanguage;
+    final trackName = _currentTrack.title;
+    final artistName = _currentTrack.artist;
+    final trackId = _currentTrack.id;
+
+    final normalizedList =
+        words.map((w) => w.toLowerCase().trim()).where((w) => w.isNotEmpty).toList();
+    if (normalizedList.isEmpty) return;
+
+    setState(() {
+      _knownWords.addAll(normalizedList);
+      _updateStats();
+    });
+
+    final write = _wordWrites.then((_) async {
+      await _wordsRepo.setWordsKnown(
+        words,
+        language,
+        true,
+        trackName: trackName,
+        artistName: artistName,
+      );
+      for (final norm in normalizedList) {
+        _savedWordStates['$language:$norm'] = true;
+      }
+    });
+    _wordWrites = write.catchError((Object _) {});
+    try {
+      await write;
+    } catch (_) {
+      if (mounted && language == _targetLanguage && trackId == _currentTrack.id) {
+        await _loadKnownWords();
+      }
+    }
+  }
+
   void _openWordActionSheet(
     String rawWord,
     String normalized, {
@@ -501,6 +539,14 @@ class _PlayerPageState extends State<PlayerPage>
           return;
         }
         await _toggleWord(rawWord, normalized);
+      },
+      onMarkSentenceKnown: (words) async {
+        if (!mounted ||
+            track != _currentTrack.id ||
+            language != _targetLanguage) {
+          return;
+        }
+        await _markSentenceWordsKnown(words);
       },
     );
   }

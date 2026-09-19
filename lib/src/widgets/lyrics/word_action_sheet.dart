@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
+import '../../core/repositories/known_words_repository.dart';
 import '../../core/services/dictionary_service.dart';
 
 /// Modal de ações ao pressionar uma palavra da letra:
 /// - Ícone de Livrinho (📖 Dicionário) para ver significado completo, fonética e tradução.
 /// - Botão para alternar status no vocabulário (Conhecida / Estudo).
 /// - Botão para copiar a palavra.
+/// - Botão para marcar todas as palavras da frase como conhecidas.
 class WordActionSheet extends StatefulWidget {
   final String rawWord;
   final String normalized;
@@ -18,6 +20,7 @@ class WordActionSheet extends StatefulWidget {
   final String sourceLanguage;
   final String targetLanguage;
   final Future<void> Function() onToggleWord;
+  final Future<void> Function(List<String> words)? onMarkSentenceKnown;
 
   const WordActionSheet({
     super.key,
@@ -28,6 +31,7 @@ class WordActionSheet extends StatefulWidget {
     required this.sourceLanguage,
     required this.targetLanguage,
     required this.onToggleWord,
+    this.onMarkSentenceKnown,
   });
 
   static Future<void> show(
@@ -39,10 +43,12 @@ class WordActionSheet extends StatefulWidget {
     required String sourceLanguage,
     required String targetLanguage,
     required Future<void> Function() onToggleWord,
+    Future<void> Function(List<String> words)? onMarkSentenceKnown,
   }) {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      showDragHandle: false,
       isScrollControlled: true,
       builder: (ctx) => WordActionSheet(
         rawWord: rawWord,
@@ -52,6 +58,7 @@ class WordActionSheet extends StatefulWidget {
         sourceLanguage: sourceLanguage,
         targetLanguage: targetLanguage,
         onToggleWord: onToggleWord,
+        onMarkSentenceKnown: onMarkSentenceKnown,
       ),
     );
   }
@@ -67,12 +74,89 @@ class _WordActionSheetState extends State<WordActionSheet> {
   bool _loading = true;
   WordDefinition? _definition;
   String? _errorMessage;
+  bool _sentenceKnownLoading = false;
+  bool _sentenceAllKnown = false;
 
   @override
   void initState() {
     super.initState();
     _isKnown = widget.isInitiallyKnown;
     _lookup();
+  }
+
+  List<String> _extractWords(String sentence) {
+    final matches = RegExp(
+      r"[a-zA-ZÀ-ÿ\u0100-\u017F]+(?:['’][a-zA-ZÀ-ÿ\u0100-\u017F]+)*",
+    ).allMatches(sentence);
+    return matches
+        .map((m) => m.group(0)!)
+        .where((w) => w.trim().isNotEmpty)
+        .toList();
+  }
+
+  Future<void> _handleMarkSentenceKnown(String sentenceText) async {
+    final words = _extractWords(sentenceText);
+    if (words.isEmpty) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _sentenceKnownLoading = true;
+    });
+
+    try {
+      if (widget.onMarkSentenceKnown != null) {
+        await widget.onMarkSentenceKnown!(words);
+      } else {
+        await KnownWordsRepository().setWordsKnown(
+          words,
+          widget.sourceLanguage,
+          true,
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _sentenceKnownLoading = false;
+          _sentenceAllKnown = true;
+          _isKnown = true;
+        });
+
+        final isPt = Localizations.localeOf(context).languageCode == 'pt';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  CupertinoIcons.checkmark_seal_fill,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isPt
+                        ? 'Todas as ${words.length} palavras da frase foram marcadas como conhecidas!'
+                        : 'All ${words.length} words in sentence marked as known!',
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.spotifyGreen,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _sentenceKnownLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr(context, "Could not save the word. Try again.")),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _lookup() async {
@@ -454,6 +538,15 @@ class _WordActionSheetState extends State<WordActionSheet> {
       );
     }
 
+    final isPortuguese =
+        Localizations.localeOf(context).languageCode == 'pt';
+    final sentenceToShow =
+        (def.sentenceText != null && def.sentenceText!.isNotEmpty)
+            ? def.sentenceText!
+            : widget.sentence;
+    final hasSentenceTranslation =
+        def.sentenceTranslation != null && def.sentenceTranslation!.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
@@ -529,8 +622,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
           ),
 
         // 2. Full Sentence Translation Card
-        if (def.sentenceTranslation != null &&
-            def.sentenceTranslation!.isNotEmpty)
+        if (hasSentenceTranslation || (sentenceToShow != null && sentenceToShow.isNotEmpty))
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
@@ -561,22 +653,23 @@ class _WordActionSheetState extends State<WordActionSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  def.sentenceTranslation!,
-                  style: TextStyle(
-                    fontFamily: '.SF Pro Display',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: primaryTextColor,
-                    height: 1.35,
-                  ),
-                ),
-                if (def.sentenceText != null &&
-                    def.sentenceText!.isNotEmpty) ...[
+                if (hasSentenceTranslation) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '“${def.sentenceText!}”',
+                    def.sentenceTranslation!,
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Display',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: primaryTextColor,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+                if (sentenceToShow != null && sentenceToShow.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '“$sentenceToShow”',
                     style: TextStyle(
                       fontFamily: '.SF Pro Text',
                       fontSize: 13,
@@ -586,6 +679,69 @@ class _WordActionSheetState extends State<WordActionSheet> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: _sentenceKnownLoading
+                      ? null
+                      : () => _handleMarkSentenceKnown(sentenceToShow ?? ''),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _sentenceAllKnown
+                          ? AppTheme.spotifyGreen.withValues(alpha: 0.15)
+                          : (isDark
+                              ? const Color(0xFF3A3A3C)
+                              : const Color(0xFFE5E5EA)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _sentenceAllKnown
+                            ? AppTheme.spotifyGreen.withValues(alpha: 0.4)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_sentenceKnownLoading)
+                          const CupertinoActivityIndicator(radius: 8)
+                        else
+                          Icon(
+                            _sentenceAllKnown
+                                ? CupertinoIcons.checkmark_seal_fill
+                                : CupertinoIcons.checkmark_alt_circle,
+                            size: 16,
+                            color: _sentenceAllKnown
+                                ? AppTheme.spotifyGreen
+                                : (isDark ? Colors.white : AppTheme.labelLight),
+                          ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _sentenceAllKnown
+                              ? (isPortuguese
+                                  ? 'Todas as palavras aprendidas!'
+                                  : 'All sentence words known!')
+                              : (isPortuguese
+                                  ? 'Sei todas as palavras da frase'
+                                  : 'I know all words in this sentence'),
+                          style: TextStyle(
+                            fontFamily: '.SF Pro Text',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _sentenceAllKnown
+                                ? AppTheme.spotifyGreen
+                                : primaryTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

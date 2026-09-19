@@ -31,6 +31,7 @@ class LanguageSelectorSheet extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (_) => LanguageSelectorSheet(
         currentNativeLanguage: currentNativeLanguage,
