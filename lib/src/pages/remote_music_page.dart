@@ -9,6 +9,7 @@ import '../core/services/spotify_service.dart';
 import '../core/services/spotify_session.dart';
 import '../widgets/lyrics_search_panel.dart';
 import '../widgets/spotify_icon.dart';
+import '../widgets/track_card.dart';
 import 'player_page.dart';
 
 class RemoteMusicPage extends StatefulWidget {
@@ -112,20 +113,10 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: Icon(
-            CupertinoIcons.music_note,
-            color: colors.onSurfaceVariant,
-            size: 22,
-          ),
-        ),
+      leading: AlbumArtImage(
+        track: track,
+        size: 44,
+        borderRadius: BorderRadius.circular(10),
       ),
       title: Text(
         track.title,
@@ -241,7 +232,11 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                   context,
                   [
                     ListTile(
-                      leading: const SpotifyIcon(size: 28),
+                      leading: AlbumArtImage(
+                        track: current,
+                        size: 44,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       title: Text(
                         current.title,
                         style: const TextStyle(

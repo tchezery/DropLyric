@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../core/models/track_model.dart';
+import '../core/services/spotify_cover_service.dart';
 
 class TrackCard extends StatelessWidget {
   final TrackModel track;
@@ -40,7 +41,11 @@ class TrackCard extends StatelessWidget {
             // Album artwork with Apple squircle top corners
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-              child: _AlbumArt(url: track.albumArtUrl, size: 156),
+              child: AlbumArtImage(
+                track: track,
+                url: track.albumArtUrl,
+                size: 156,
+              ),
             ),
 
             // Track info
@@ -98,7 +103,11 @@ class TrackListTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: _AlbumArt(url: track.albumArtUrl, size: 50),
+        child: AlbumArtImage(
+          track: track,
+          url: track.albumArtUrl,
+          size: 50,
+        ),
       ),
       title: Text(
         track.title,
@@ -131,35 +140,107 @@ class TrackListTile extends StatelessWidget {
   }
 }
 
-class _AlbumArt extends StatelessWidget {
+class AlbumArtImage extends StatefulWidget {
   final String? url;
+  final TrackModel? track;
+  final String? spotifyUri;
   final double size;
+  final double? width;
+  final double? height;
+  final BorderRadius? borderRadius;
 
-  const _AlbumArt({this.url, required this.size});
+  const AlbumArtImage({
+    super.key,
+    this.url,
+    this.track,
+    this.spotifyUri,
+    this.size = 50,
+    this.width,
+    this.height,
+    this.borderRadius,
+  });
+
+  @override
+  State<AlbumArtImage> createState() => _AlbumArtImageState();
+}
+
+class _AlbumArtImageState extends State<AlbumArtImage> {
+  String? _resolvedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveUrl();
+  }
+
+  @override
+  void didUpdateWidget(covariant AlbumArtImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url ||
+        oldWidget.track?.id != widget.track?.id ||
+        oldWidget.spotifyUri != widget.spotifyUri) {
+      _resolveUrl();
+    }
+  }
+
+  Future<void> _resolveUrl() async {
+    if (widget.url != null && widget.url!.isNotEmpty) {
+      setState(() => _resolvedUrl = widget.url);
+      return;
+    }
+
+    final cached = await SpotifyCoverService.instance.getCoverUrl(
+      track: widget.track,
+      spotifyUriOrUrl: widget.spotifyUri,
+    );
+
+    if (mounted) {
+      setState(() {
+        _resolvedUrl = cached;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (url != null && url!.isNotEmpty) {
-      return Image.network(
-        url!,
-        width: size,
-        height: size,
+    final w = widget.width ?? widget.size;
+    final h = widget.height ?? widget.size;
+
+    if (_resolvedUrl != null && _resolvedUrl!.isNotEmpty) {
+      Widget image = Image.network(
+        _resolvedUrl!,
+        width: w,
+        height: h,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _placeholder(context),
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) return child;
+          return _placeholder(context, w, h);
+        },
+        errorBuilder: (_, _, _) => _placeholder(context, w, h),
       );
+
+      if (widget.borderRadius != null) {
+        image = ClipRRect(borderRadius: widget.borderRadius!, child: image);
+      }
+      return image;
     }
-    return _placeholder(context);
+
+    Widget placeholder = _placeholder(context, w, h);
+    if (widget.borderRadius != null) {
+      placeholder = ClipRRect(borderRadius: widget.borderRadius!, child: placeholder);
+    }
+    return placeholder;
   }
 
-  Widget _placeholder(BuildContext context) => Container(
-    width: size,
-    height: size,
+  Widget _placeholder(BuildContext context, double w, double h) => Container(
+    width: w,
+    height: h,
     color: Theme.of(context).colorScheme.surfaceContainerHighest,
     child: Center(
       child: Icon(
         CupertinoIcons.music_note,
-        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-        size: size * 0.4,
+        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        size: (w < h ? w : h) * 0.4,
       ),
     ),
   );

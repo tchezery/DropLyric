@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../core/services/lyrics_service.dart';
-import '../core/services/spotify_service.dart';
 import '../pages/player_page.dart';
 import 'spotify_icon.dart';
 
@@ -262,27 +261,16 @@ class _LyricsSearchPanelState extends State<LyricsSearchPanel> {
   }
 }
 
-class _LyricsSelection extends StatefulWidget {
+class _LyricsSelection extends StatelessWidget {
   const _LyricsSelection({required this.entry});
   final LyricsSearchEntry entry;
-  @override
-  State<_LyricsSelection> createState() => _LyricsSelectionState();
-}
 
-class _LyricsSelectionState extends State<_LyricsSelection> {
-  final _link = TextEditingController();
-  String? _error;
-  String t(String pt, String en) =>
+  String t(BuildContext context, String pt, String en) =>
       Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
 
-  @override
-  void dispose() {
-    _link.dispose();
-    super.dispose();
-  }
-
-  Future<void> _findSpotify() async {
-    final query = '${widget.entry.track.title} ${widget.entry.track.artist}';
+  Future<void> _openSpotify(BuildContext context) async {
+    final query = '${entry.track.title} ${entry.track.artist}';
+    Navigator.of(context).pop();
     try {
       await launchUrl(
         Uri(
@@ -295,92 +283,133 @@ class _LyricsSelectionState extends State<_LyricsSelection> {
     } catch (_) {}
   }
 
-  void _play() {
-    final uri = SpotifyService.playbackUri(_link.text.trim());
-    if (uri == null) {
-      setState(
-        () => _error = t('Cole um link do Spotify válido', 'Paste a valid Spotify link'),
-      );
-      return;
-    }
-    Navigator.of(context).pop(uri);
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       padding: EdgeInsets.fromLTRB(
         24,
-        16,
+        14,
         24,
-        MediaQuery.of(context).viewInsets.bottom + 32,
+        MediaQuery.of(context).padding.bottom + 28,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Drag indicator
+          Center(
+            child: Container(
+              width: 36,
+              height: 5,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFD1D1D6),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+
           Text(
-            widget.entry.track.title,
+            entry.track.title,
             style: const TextStyle(
               fontFamily: AppTheme.fontSF,
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
+              letterSpacing: -0.5,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
-            widget.entry.track.artist,
+            entry.track.artist,
             style: TextStyle(
               fontFamily: AppTheme.fontSF,
               color: colors.onSurfaceVariant,
-              fontSize: 14,
+              fontSize: 15,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            icon: const Icon(Icons.menu_book),
-            onPressed: () => Navigator.of(context).pop('read'),
-            label: Text(t('Ler letra', 'Read lyrics')),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.open_in_new),
-            onPressed: _findSpotify,
-            label: Text(t('Buscar no Spotify', 'Search in Spotify')),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _link,
-            onSubmitted: (_) => _play(),
-            decoration: InputDecoration(
-              prefixIcon: const Padding(
-                padding: EdgeInsets.all(12),
-                child: SpotifyIcon(size: 20),
-              ),
-              hintText: t('Link da faixa no Spotify…', 'Spotify track link…'),
-            ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(
-                  fontFamily: AppTheme.fontSF,
-                  color: Theme.of(context).colorScheme.error,
-                  fontSize: 13,
+          const SizedBox(height: 24),
+
+          // Opção 1: Abrir no Spotify (Primeira opção)
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => _openSpotify(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
                 ),
               ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SpotifyIcon(size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    t(context, 'Abrir no Spotify', 'Open in Spotify'),
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.open_in_new,
+                    size: 16,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ),
+          ),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _play,
-            child: Text(t('Tocar pelo link', 'Play using link')),
+
+          // Opção 2: Pesquisar somente a letra (Segunda opção)
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => Navigator.of(context).pop('read'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppTheme.appleBlue,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.menu_book,
+                    color: AppTheme.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    t(context, 'Ver somente a letra', 'View lyrics only'),
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
