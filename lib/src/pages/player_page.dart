@@ -27,6 +27,7 @@ import '../widgets/lyrics/interactive_word.dart';
 import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
 import '../widgets/lyrics/word_action_sheet.dart';
+import '../widgets/playback_source_badge.dart';
 
 /// Modo de exibição das letras:
 /// - `synced`: a letra acompanha a música com rolagem automática e destaque na linha ativa.
@@ -1097,7 +1098,9 @@ class _PlayerPageState extends State<PlayerPage>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _currentTrack.title.isEmpty ? 'Spotify' : _currentTrack.title,
+                  _currentTrack.title.isEmpty
+                      ? (_isYouTubeTrack ? 'YouTube' : 'Spotify')
+                      : _currentTrack.title,
                   style: TextStyle(
                     color: _primaryInk,
                     fontSize: 15,
@@ -1111,18 +1114,34 @@ class _PlayerPageState extends State<PlayerPage>
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _currentTrack.artist,
-                  style: TextStyle(
-                    color: _secondaryInk,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    PlaybackSourceBadge(
+                      isYouTube: _isYouTubeTrack,
+                      isSpotify: !_isYouTubeTrack,
+                      fontSize: 10,
+                      iconSize: 11,
+                    ),
+                    if (_currentTrack.artist.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _currentTrack.artist,
+                          style: TextStyle(
+                            color: _secondaryInk,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

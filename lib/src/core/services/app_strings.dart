@@ -148,5 +148,7 @@ const portugueseStrings = <String, String>{
   "From:": "Música:",
   "words": "palavras",
   "ALL": "TODAS",
-    "Language": "Idioma",
+  "Language": "Idioma",
+  "Playing via YouTube": "Tocando no YouTube",
+  "Playing via Spotify": "Tocando no Spotify",
 };

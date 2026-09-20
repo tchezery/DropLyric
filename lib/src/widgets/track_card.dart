@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../core/models/track_model.dart';
 import '../core/services/spotify_cover_service.dart';
+import 'playback_source_badge.dart';
 
 class TrackCard extends StatelessWidget {
   final TrackModel track;
@@ -38,14 +39,29 @@ class TrackCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Album artwork with Apple squircle top corners
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-              child: AlbumArtImage(
-                track: track,
-                url: track.albumArtUrl,
-                size: 156,
-              ),
+            // Album artwork with Apple squircle top corners & source badge
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(17),
+                  ),
+                  child: AlbumArtImage(
+                    track: track,
+                    url: track.albumArtUrl,
+                    size: 156,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: PlaybackSourceBadge(
+                    track: track,
+                    compact: true,
+                    iconSize: 12,
+                  ),
+                ),
+              ],
             ),
 
             // Track info
@@ -101,13 +117,26 @@ class TrackListTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: AlbumArtImage(
-          track: track,
-          url: track.albumArtUrl,
-          size: 50,
-        ),
+      leading: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AlbumArtImage(
+              track: track,
+              url: track.albumArtUrl,
+              size: 50,
+            ),
+          ),
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: PlaybackSourceBadge(
+              track: track,
+              compact: true,
+              iconSize: 9,
+            ),
+          ),
+        ],
       ),
       title: Text(
         track.title,
