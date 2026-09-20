@@ -28,6 +28,7 @@ import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
 import '../widgets/lyrics/word_action_sheet.dart';
 import '../widgets/playback_source_badge.dart';
+import '../widgets/spotify_icon.dart';
 
 /// Modo de exibição das letras:
 /// - `synced`: a letra acompanha a música com rolagem automática e destaque na linha ativa.
@@ -1180,6 +1181,29 @@ class _PlayerPageState extends State<PlayerPage>
                     tooltip: _showVideo
                         ? tr(context, "Hide video")
                         : tr(context, "Show video"),
+                  ),
+                ] else ...[
+                  IconButton(
+                    onPressed: () {
+                      String? url = _currentTrack.spotifyUrl;
+                      if (url == null || url.isEmpty) {
+                        if (_currentTrack.id.startsWith('spotify:track:')) {
+                          final id = _currentTrack.id.split(':').last;
+                          url = 'https://open.spotify.com/track/$id';
+                        } else if (_currentTrack.title.isNotEmpty) {
+                          url =
+                              'https://open.spotify.com/search/${Uri.encodeComponent("${_currentTrack.title} ${_currentTrack.artist}")}';
+                        }
+                      }
+                      if (url != null && url.isNotEmpty) {
+                        launchUrl(
+                          Uri.parse(url),
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
+                    icon: const SpotifyIcon(size: 20),
+                    tooltip: tr(context, "Open in Spotify App"),
                   ),
                 ],
                 if (_lyricsMode == LyricsDisplayMode.synced &&

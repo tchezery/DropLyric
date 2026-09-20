@@ -151,4 +151,6 @@ const portugueseStrings = <String, String>{
   "Language": "Idioma",
   "Playing via YouTube": "Tocando no YouTube",
   "Playing via Spotify": "Tocando no Spotify",
+  "Open in Spotify App": "Abrir no Spotify",
+  "Open in YouTube App": "Abrir no YouTube",
 };
