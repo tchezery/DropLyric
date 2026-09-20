@@ -10,7 +10,6 @@ import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
 import '../src/core/services/language_service.dart';
 import '../src/pages/onboarding_page.dart';
-import '../src/widgets/spotify_icon.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -45,18 +44,23 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadOnboarding() async {
     final selected = await LanguageService().hasAppLanguage();
+    final completed = await LanguageService().isOnboardingComplete();
     if (!mounted) return;
     setState(() {
       _languageSelected = selected;
       _onboardingLoading = false;
-      _onboardingFinished = selected && SpotifySession.instance.connected;
+      _onboardingFinished =
+          selected && (completed || SpotifySession.instance.connected);
     });
   }
 
-  void _refreshOnboarding() {
+  void _refreshOnboarding() async {
     if (_onboardingLoading || !mounted) return;
     final selected = _languageSelected || AppLanguage.instance.loaded;
-    final finished = selected && SpotifySession.instance.connected;
+    final completed = await LanguageService().isOnboardingComplete();
+    final finished =
+        selected && (completed || SpotifySession.instance.connected);
+    if (!mounted) return;
     if (selected != _languageSelected || finished != _onboardingFinished) {
       setState(() {
         _languageSelected = selected;
@@ -138,8 +142,7 @@ class _MyAppState extends State<MyApp> {
                           final hasCurrentTrack = RegExp(
                             r'^spotify:track:[a-zA-Z0-9]{22}$',
                           ).hasMatch(spotify.uri);
-                          if (!AppRoutes.shouldShowDock(route) &&
-                              spotify.connected) {
+                          if (!AppRoutes.shouldShowDock(route)) {
                             return const SizedBox.shrink();
                           }
                           final items = <DockItem>[
@@ -188,62 +191,7 @@ class _MyAppState extends State<MyApp> {
                   );
                 },
               ),
-              ListenableBuilder(
-                listenable: SpotifySession.instance,
-                builder: (context, _) {
-                  final spotify = SpotifySession.instance;
-                  final colors = Theme.of(context).colorScheme;
-                  if (spotify.error.isEmpty || spotify.connected) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned.fill(
-                    child: ColoredBox(
-                      color: Colors.black54,
-                      child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.all(28),
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SpotifyIcon(size: 48),
-                              const SizedBox(height: 14),
-                              Text(
-                                tr(context, "Spotify connection required"),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                spotify.error,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              FilledButton.icon(
-                                icon: const SpotifyIcon(size: 18, color: Colors.black),
-                                label: Text(tr(context, "Reconnect Spotify")),
-                                onPressed: spotify.connecting
-                                    ? null
-                                    : () => spotify.command('loginWeb'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+
               if (!_onboardingLoading && !_onboardingFinished)
                 Positioned.fill(
                   child: OnboardingPage(

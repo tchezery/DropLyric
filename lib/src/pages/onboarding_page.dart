@@ -105,66 +105,130 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    hasLanguage
-                        ? tr(context, 'Connect your Spotify account to continue.')
-                        : tr(context, 'Choose your preferred language.'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      color: colors.onSurfaceVariant,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
+                    Text(
+                      hasLanguage
+                          ? tr(context, 'Choose how you want to listen:')
+                          : tr(context, 'Choose your preferred language.'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontSF,
+                        color: colors.onSurfaceVariant,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 36),
-                  if (!hasLanguage) ...[
-                    _LanguageButton(
-                      flagCode: 'us',
-                      label: 'English',
-                      selected: _selectedLanguage == 'en',
-                      onPressed: _saving ? null : () => _saveLanguage('en'),
-                    ),
-                    const SizedBox(height: 12),
-                    _LanguageButton(
-                      flagCode: 'br',
-                      label: 'Português',
-                      selected: _selectedLanguage == 'pt',
-                      onPressed: _saving ? null : () => _saveLanguage('pt'),
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0x26FFFFFF)
-                              : const Color(0x14000000),
-                          width: 0.8,
+                    const SizedBox(height: 32),
+                    if (!hasLanguage) ...[
+                      _LanguageButton(
+                        flagCode: 'us',
+                        label: 'English',
+                        selected: _selectedLanguage == 'en',
+                        onPressed: _saving ? null : () => _saveLanguage('en'),
+                      ),
+                      const SizedBox(height: 12),
+                      _LanguageButton(
+                        flagCode: 'br',
+                        label: 'Português',
+                        selected: _selectedLanguage == 'pt',
+                        onPressed: _saving ? null : () => _saveLanguage('pt'),
+                      ),
+                    ] else ...[
+                      // 1. Botão YouTube Music (Livre de cotas / reprodução direta)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF0000),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          icon: const Icon(
+                            CupertinoIcons.play_rectangle_fill,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          label: Text(
+                            AppLanguage.instance.isPortuguese
+                                ? 'Continuar com YouTube'
+                                : 'Continue with YouTube',
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontSF,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          onPressed: () async {
+                            await LanguageService().setOnboardingComplete(true);
+                            widget.onFinished();
+                          },
                         ),
                       ),
-                      child: const SpotifyConnectButton(),
-                    ),
-                    const SizedBox(height: 20),
-                    ListenableBuilder(
-                      listenable: SpotifySession.instance,
-                      builder: (context, _) {
-                        if (!SpotifySession.instance.connected) {
-                          return const SizedBox.shrink();
-                        }
-                        return SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: widget.onFinished,
-                            icon: const Icon(CupertinoIcons.arrow_right, size: 18),
-                            label: Text(tr(context, 'Continue')),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                  ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              AppLanguage.instance.isPortuguese ? 'ou' : 'or',
+                              style: TextStyle(
+                                color: colors.onSurfaceVariant,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // 2. Conectar Spotify
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0x26FFFFFF)
+                                : const Color(0x14000000),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: const SpotifyConnectButton(),
+                      ),
+                      const SizedBox(height: 16),
+                      ListenableBuilder(
+                        listenable: SpotifySession.instance,
+                        builder: (context, _) {
+                          if (!SpotifySession.instance.connected) {
+                            return const SizedBox.shrink();
+                          }
+                          return SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () async {
+                                await LanguageService().setOnboardingComplete(true);
+                                widget.onFinished();
+                              },
+                              icon: const Icon(CupertinoIcons.arrow_right, size: 18),
+                              label: Text(tr(context, 'Continue')),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                 ],
               ),
             ),

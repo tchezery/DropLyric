@@ -2,7 +2,6 @@ import '../core/services/app_strings.dart';
 import 'package:flutter/foundation.dart';
 
 import 'remote_music_page.dart';
-import '../widgets/spotify_access_gate.dart';
 
 import 'package:flutter/cupertino.dart';
 
@@ -109,7 +108,7 @@ class _SearchPageState extends State<SearchPage> {
       PageRouteBuilder(
         settings: const RouteSettings(name: AppRoutes.player),
         pageBuilder: (ctx, animation, _) =>
-            SpotifyAccessGate(child: PlayerPage(track: track)),
+            PlayerPage(track: track),
         transitionDuration: const Duration(milliseconds: 350),
         transitionsBuilder: (ctx, animation, _, child) => SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)

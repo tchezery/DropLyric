@@ -11,7 +11,6 @@ import '../core/repositories/known_words_repository.dart';
 import '../core/services/language_service.dart';
 import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
-import '../widgets/spotify_access_gate.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/track_card.dart';
 import '../widgets/language_flag.dart';
@@ -459,9 +458,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: AppRoutes.player),
-        builder: (_) => SpotifyAccessGate(
-          child: PlayerPage(track: track, lyricsOnly: lyricsOnly),
-        ),
+        builder: (_) => PlayerPage(track: track, lyricsOnly: lyricsOnly),
       ),
     );
     AppRoutes.currentRoute.value = previous;

@@ -11,6 +11,7 @@ import '../core/services/spotify_session.dart';
 import '../widgets/lyrics_search_panel.dart';
 import '../widgets/spotify_icon.dart';
 import '../widgets/track_card.dart';
+import '../widgets/youtube_search_panel.dart';
 import 'player_page.dart';
 
 class RemoteMusicPage extends StatefulWidget {
@@ -116,9 +117,8 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
@@ -132,9 +132,13 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: children,
+        child: Material(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: children,
+          ),
         ),
       ),
     );
@@ -218,54 +222,60 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
                 ),
               ),
 
-              // 1. Pesquisar no Spotify (Primeira opção)
-              _heading(t('Pesquisar no Spotify', 'Search on Spotify')),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  controller: _input,
-                  onSubmitted: (_) => _searchOrOpenSpotify(),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SpotifyIcon(size: 20),
-                    ),
-                    hintText: t(
-                      'Buscar no Spotify ou colar link…',
-                      'Search on Spotify or paste link…',
-                    ),
-                    suffixIcon: IconButton(
-                      tooltip: t('Abrir no Spotify', 'Open in Spotify'),
-                      onPressed: _searchOrOpenSpotify,
-                      icon: const Icon(
-                        CupertinoIcons.arrow_right_circle_fill,
-                        size: 28,
+              // 1. Pesquisar no YouTube / YouTube Music (Opção principal)
+              _heading(t('Pesquisar no YouTube', 'Search on YouTube')),
+              const YouTubeSearchPanel(),
+
+              const SizedBox(height: 12),
+
+              // 2. Pesquisar no Spotify (apenas se conectado)
+              if (_session.connected) ...[
+                _heading(t('Pesquisar no Spotify', 'Search on Spotify')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TextField(
+                    controller: _input,
+                    onSubmitted: (_) => _searchOrOpenSpotify(),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SpotifyIcon(size: 20),
+                      ),
+                      hintText: t(
+                        'Buscar no Spotify ou colar link…',
+                        'Search on Spotify or paste link…',
+                      ),
+                      suffixIcon: IconButton(
+                        tooltip: t('Abrir no Spotify', 'Open in Spotify'),
+                        onPressed: _searchOrOpenSpotify,
+                        icon: const Icon(
+                          CupertinoIcons.arrow_right_circle_fill,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    _error!,
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 13,
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontSF,
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                ),
+                const SizedBox(height: 12),
+              ],
 
-              const SizedBox(height: 12),
-
-              // 2. Pesquisar apenas a letra (Segunda opção)
+              // 3. Pesquisar apenas a letra
               _heading(t('Pesquisar apenas a letra', 'Search lyrics only')),
               const LyricsSearchPanel(),
 

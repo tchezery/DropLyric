@@ -305,6 +305,17 @@ class LanguageService {
     await _setPreference(_keyThemeMode, isLight ? 'light' : 'dark');
   }
 
+  static const _keyOnboardingComplete = 'onboarding_complete';
+
+  Future<bool> isOnboardingComplete() async {
+    return (await _getPreference(_keyOnboardingComplete, defaultValue: 'false')) ==
+        'true';
+  }
+
+  Future<void> setOnboardingComplete(bool value) async {
+    await _setPreference(_keyOnboardingComplete, value ? 'true' : 'false');
+  }
+
   /// Retorna o LanguagePreference correspondente a um código BCP-47.
   LanguagePreference? findByCode(String code) {
     try {

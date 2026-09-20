@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
@@ -7,6 +9,9 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart' as yt;
+
 import '../core/models/lyric_line_model.dart';
 import '../core/models/track_model.dart';
 import '../core/repositories/known_words_repository.dart';
@@ -17,6 +22,7 @@ import '../core/services/lyrics_service.dart';
 import '../core/services/spotify_service.dart';
 import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
+import '../core/services/youtube_service.dart';
 import '../widgets/lyrics/interactive_word.dart';
 import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
@@ -104,6 +110,109 @@ class _PlayerPageState extends State<PlayerPage>
   final ScrollController _lyricsScrollController = ScrollController();
   final Map<int, GlobalKey> _lineKeys = {};
 
+  // YouTube Controller & Estado
+  yt.YoutubePlayerController? _ytController;
+  Timer? _ytProgressTimer;
+  bool _showVideo = false;
+  bool get _isYouTubeTrack =>
+      _currentTrack.id.startsWith('youtube:') ||
+      (_currentTrack.previewAudioUrl?.startsWith('youtube:') == true);
+
+  void _startYouTubeProgressTimer() {
+    _ytProgressTimer?.cancel();
+    _ytProgressTimer = Timer.periodic(const Duration(milliseconds: 200), (_) async {
+      if (!mounted || _ytController == null) return;
+      try {
+        final pos = await _ytController!.currentTime;
+        final dur = await _ytController!.duration;
+        if (mounted && pos >= 0) {
+          _audioService.position.value = Duration(
+            milliseconds: (pos * 1000).round(),
+          );
+        }
+        if (mounted && dur > 0) {
+          final targetDur = Duration(milliseconds: (dur * 1000).round());
+          if (_audioService.duration.value != targetDur) {
+            _audioService.duration.value = targetDur;
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _stopYouTubeProgressTimer() {
+    _ytProgressTimer?.cancel();
+    _ytProgressTimer = null;
+  }
+
+  void _initYouTubeController(String videoId) {
+    _stopYouTubeProgressTimer();
+    _ytController?.close();
+    _audioService.playerState.value = PlayerState(
+      false,
+      ProcessingState.loading,
+    );
+    final controller = yt.YoutubePlayerController(
+      params: const yt.YoutubePlayerParams(
+        showControls: false,
+        showFullscreenButton: false,
+        mute: false,
+        showVideoAnnotations: false,
+        loop: false,
+        enableCaption: false,
+        playsInline: true,
+      ),
+    );
+
+    controller.loadVideoById(videoId: videoId);
+
+    controller.listen((event) async {
+      if (!mounted) return;
+      if (event.playerState == yt.PlayerState.playing) {
+        _audioService.playerState.value = PlayerState(
+          true,
+          ProcessingState.ready,
+        );
+        _startYouTubeProgressTimer();
+      } else if (event.playerState == yt.PlayerState.paused) {
+        _audioService.playerState.value = PlayerState(
+          false,
+          ProcessingState.ready,
+        );
+        _stopYouTubeProgressTimer();
+      } else if (event.playerState == yt.PlayerState.buffering) {
+        _audioService.playerState.value = PlayerState(
+          false,
+          ProcessingState.buffering,
+        );
+      } else if (event.playerState == yt.PlayerState.ended) {
+        _audioService.playerState.value = PlayerState(
+          false,
+          ProcessingState.completed,
+        );
+        _stopYouTubeProgressTimer();
+        _onPlayerStateChanged();
+      }
+
+      final pos = await controller.currentTime;
+      final dur = await controller.duration;
+      if (mounted && pos >= 0) {
+        _audioService.position.value = Duration(
+          milliseconds: (pos * 1000).round(),
+        );
+      }
+      if (dur > 0 && mounted) {
+        _audioService.duration.value = Duration(
+          milliseconds: (dur * 1000).round(),
+        );
+      }
+    });
+
+    setState(() {
+      _ytController = controller;
+    });
+  }
+
   // Offset manual de sincronização em milissegundos
   int _syncOffsetMs = 0;
 
@@ -158,7 +267,13 @@ class _PlayerPageState extends State<PlayerPage>
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || widget.lyricsOnly) return;
-      if (widget.followCurrent) {
+      if (_isYouTubeTrack) {
+        final videoId = YouTubeService.extractVideoId(_currentTrack.id) ??
+            YouTubeService.extractVideoId(_currentTrack.previewAudioUrl ?? '');
+        if (videoId != null && videoId.isNotEmpty) {
+          _initYouTubeController(videoId);
+        }
+      } else if (widget.followCurrent) {
         _audioService.syncSpotifyTrack(_currentTrack.id);
       } else {
         _expectedUri = _currentTrack.id;
@@ -194,6 +309,7 @@ class _PlayerPageState extends State<PlayerPage>
 
   Future<void> _updateSpotifyTrack() async {
     if (widget.lyricsOnly || _requestingTrack) return;
+    if (_currentTrack.id.startsWith('youtube:')) return;
     final session = SpotifySession.instance;
     final uri = session.uri;
     final metadata = session.currentTrack;
@@ -751,13 +867,24 @@ class _PlayerPageState extends State<PlayerPage>
     });
     _loadLyrics();
     _loadAll();
-    _requestingTrack = true;
-    await _audioService.play(
-      _currentTrack.previewAudioUrl ?? '',
-      track: _currentTrack,
-    );
-    _requestingTrack = false;
-    if (mounted) _updateSpotifyTrack();
+
+    if (_isYouTubeTrack) {
+      final videoId = YouTubeService.extractVideoId(_currentTrack.id) ??
+          YouTubeService.extractVideoId(_currentTrack.previewAudioUrl ?? '');
+      if (videoId != null && videoId.isNotEmpty) {
+        _initYouTubeController(videoId);
+      }
+    } else {
+      _ytController?.close();
+      _ytController = null;
+      _requestingTrack = true;
+      await _audioService.play(
+        _currentTrack.previewAudioUrl ?? '',
+        track: _currentTrack,
+      );
+      _requestingTrack = false;
+      if (mounted) _updateSpotifyTrack();
+    }
   }
 
   Future<void> _skipRemote(String action) async {
@@ -782,7 +909,12 @@ class _PlayerPageState extends State<PlayerPage>
     }
     final pos = _audioService.position.value;
     if (pos.inSeconds > 3) {
-      _audioService.seekTo(Duration.zero);
+      if (_isYouTubeTrack && _ytController != null) {
+        _ytController!.seekTo(seconds: 0, allowSeekAhead: true);
+        _audioService.position.value = Duration.zero;
+      } else {
+        _audioService.seekTo(Duration.zero);
+      }
       return;
     }
     if (_playlist.isNotEmpty) {
@@ -791,7 +923,12 @@ class _PlayerPageState extends State<PlayerPage>
           : _playlist.length - 1;
       _changeTrack(prevIndex);
     } else {
-      _audioService.seekTo(Duration.zero);
+      if (_isYouTubeTrack && _ytController != null) {
+        _ytController!.seekTo(seconds: 0, allowSeekAhead: true);
+        _audioService.position.value = Duration.zero;
+      } else {
+        _audioService.seekTo(Duration.zero);
+      }
     }
   }
 
@@ -822,6 +959,8 @@ class _PlayerPageState extends State<PlayerPage>
     SpotifySession.instance.playbackChanges.removeListener(
       _onSpotifyTrackChanged,
     );
+    _stopYouTubeProgressTimer();
+    _ytController?.close();
     _audioService.dispose();
     _lyricsScrollController.dispose();
     _fadeCtrl.dispose();
@@ -845,6 +984,24 @@ class _PlayerPageState extends State<PlayerPage>
           child: Column(
             children: [
               _buildTopBar(),
+              if (_isYouTubeTrack && _ytController != null)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: _showVideo
+                      ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
+                      : EdgeInsets.zero,
+                  height: _showVideo ? 180 : 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Opacity(
+                      opacity: _showVideo ? 1.0 : 0.01,
+                      child: yt.YoutubePlayer(
+                        controller: _ytController!,
+                        aspectRatio: 16 / 9,
+                      ),
+                    ),
+                  ),
+                ),
               if (_knownWordsLoading)
                 const LinearProgressIndicator(minHeight: 2),
               if (!widget.lyricsOnly) _buildModeSelector(),
@@ -943,6 +1100,37 @@ class _PlayerPageState extends State<PlayerPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_isYouTubeTrack) ...[
+                  IconButton(
+                    onPressed: () {
+                      final videoId =
+                          YouTubeService.extractVideoId(_currentTrack.id) ?? '';
+                      if (videoId.isNotEmpty) {
+                        launchUrl(
+                          Uri.parse('https://www.youtube.com/watch?v=$videoId'),
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
+                    icon: const Icon(
+                      CupertinoIcons.play_rectangle_fill,
+                      size: 20,
+                      color: Colors.redAccent,
+                    ),
+                    tooltip: tr(context, "Open in YouTube App"),
+                  ),
+                  IconButton(
+                    onPressed: () => setState(() => _showVideo = !_showVideo),
+                    icon: Icon(
+                      _showVideo ? CupertinoIcons.film_fill : CupertinoIcons.film,
+                      size: 19,
+                      color: _showVideo ? Colors.redAccent : _primaryInk,
+                    ),
+                    tooltip: _showVideo
+                        ? tr(context, "Hide video")
+                        : tr(context, "Show video"),
+                  ),
+                ],
                 if (_lyricsMode == LyricsDisplayMode.synced &&
                     (_lyricsResult?.isSynced ?? false))
                   IconButton(
@@ -1389,9 +1577,19 @@ class _PlayerPageState extends State<PlayerPage>
                             value: value,
                             onChanged: (v) {
                               if (total > 0) {
-                                _audioService.seekTo(
-                                  Duration(milliseconds: (v * total).round()),
-                                );
+                                final targetMs = (v * total).round();
+                                if (_isYouTubeTrack && _ytController != null) {
+                                  _ytController!.seekTo(
+                                    seconds: targetMs / 1000,
+                                    allowSeekAhead: true,
+                                  );
+                                  _audioService.position.value =
+                                      Duration(milliseconds: targetMs);
+                                } else {
+                                  _audioService.seekTo(
+                                    Duration(milliseconds: targetMs),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -1540,10 +1738,28 @@ class _PlayerPageState extends State<PlayerPage>
             state.processingState == ProcessingState.buffering;
 
         return GestureDetector(
-          onTap: () => _audioService.togglePlayPause(
-            _currentTrack.previewAudioUrl ?? '',
-            track: _currentTrack,
-          ),
+          onTap: () async {
+            if (_isYouTubeTrack && _ytController != null) {
+              if (playing) {
+                await _ytController!.pauseVideo();
+                _audioService.playerState.value = PlayerState(
+                  false,
+                  ProcessingState.ready,
+                );
+              } else {
+                await _ytController!.playVideo();
+                _audioService.playerState.value = PlayerState(
+                  true,
+                  ProcessingState.ready,
+                );
+              }
+            } else {
+              _audioService.togglePlayPause(
+                _currentTrack.previewAudioUrl ?? '',
+                track: _currentTrack,
+              );
+            }
+          },
           child: Container(
             width: 58,
             height: 58,
