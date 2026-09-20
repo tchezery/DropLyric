@@ -882,64 +882,71 @@ class _PlayerPageState extends State<PlayerPage>
             children: [
               _buildTopBar(),
               if (_isYouTubeTrack && _ytController != null)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  margin: _showVideo
-                      ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
-                      : EdgeInsets.zero,
-                  height: _showVideo ? 190 : 0.001,
-                  decoration: _showVideo
-                      ? BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: _isLightStyle ? 0.08 : 0.4,
-                              ),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        )
-                      : const BoxDecoration(),
-                  clipBehavior: Clip.antiAliasWithSaveLayer,
-                  child: IgnorePointer(
-                    ignoring: !_showVideo,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          clipBehavior: Clip.antiAliasWithSaveLayer,
-                          child: Opacity(
-                            opacity: _showVideo ? 1.0 : 0.01,
-                            child: yt.YoutubePlayer(
-                              controller: _ytController!,
-                              aspectRatio: 16 / 9,
-                            ),
-                          ),
-                        ),
-                        if (!_showVideo)
-                          Positioned.fill(
-                            child: ColoredBox(color: _canvasColor),
-                          ),
-                        if (_showVideo)
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
+                Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    margin: _showVideo
+                        ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
+                        : EdgeInsets.zero,
+                    height: _showVideo ? 190 : 0.001,
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Container(
+                        decoration: _showVideo
+                            ? BoxDecoration(
+                                color: Colors.black,
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: _isLightStyle
-                                      ? const Color(0x1F000000)
-                                      : const Color(0x33FFFFFF),
-                                  width: 1.5,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: _isLightStyle ? 0.08 : 0.4,
+                                    ),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              )
+                            : const BoxDecoration(),
+                        clipBehavior: Clip.antiAliasWithSaveLayer,
+                        child: IgnorePointer(
+                          ignoring: !_showVideo,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                clipBehavior: Clip.antiAliasWithSaveLayer,
+                                child: Opacity(
+                                  opacity: _showVideo ? 1.0 : 0.01,
+                                  child: yt.YoutubePlayer(
+                                    controller: _ytController!,
+                                    aspectRatio: 16 / 9,
+                                  ),
                                 ),
                               ),
-                            ),
+                              if (!_showVideo)
+                                Positioned.fill(
+                                  child: ColoredBox(color: _canvasColor),
+                                ),
+                              if (_showVideo)
+                                Positioned.fill(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: _isLightStyle
+                                            ? const Color(0x1F000000)
+                                            : const Color(0x33FFFFFF),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
