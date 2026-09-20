@@ -1098,201 +1098,212 @@ class _PlayerPageState extends State<PlayerPage>
     final lang = _languageService.findByCode(_targetLanguage);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 2),
-      child: Stack(
-        alignment: Alignment.center,
+      padding: const EdgeInsets.fromLTRB(4, 4, 10, 2),
+      child: Row(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: () {
-                if (AppRoutes.currentRoute.value == AppRoutes.player) {
-                  AppRoutes.currentRoute.value = AppRoutes.home;
-                }
-                Navigator.of(context).pop();
-              },
-              icon: const Icon(CupertinoIcons.chevron_left, size: 28),
-              color: _primaryInk,
-              tooltip: tr(context, "Back"),
-            ),
+          // 1. Botão voltar
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: () {
+              if (AppRoutes.currentRoute.value == AppRoutes.player) {
+                AppRoutes.currentRoute.value = AppRoutes.home;
+              }
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(CupertinoIcons.chevron_left, size: 26),
+            color: _primaryInk,
+            tooltip: tr(context, "Back"),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 52),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _currentTrack.title.isEmpty
-                      ? (_isYouTubeTrack ? 'YouTube' : 'Spotify')
-                      : _currentTrack.title,
-                  style: TextStyle(
-                    color: _primaryInk,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    decoration: TextDecoration.none,
-                    decorationColor: _primaryInk,
-                    decorationThickness: 1.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    PlaybackSourceBadge(
-                      isYouTube: _isYouTubeTrack,
-                      isSpotify: !_isYouTubeTrack,
-                      iconSize: 13,
+
+          // 2. Informações da música (Expandido com título e artista sem sobreposição)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _currentTrack.title.isEmpty
+                        ? (_isYouTubeTrack ? 'YouTube' : 'Spotify')
+                        : _currentTrack.title,
+                    style: TextStyle(
+                      color: _primaryInk,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                      decoration: TextDecoration.none,
                     ),
-                    if (_currentTrack.artist.isNotEmpty) ...[
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          _currentTrack.artist,
-                          style: TextStyle(
-                            color: _secondaryInk,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      PlaybackSourceBadge(
+                        isYouTube: _isYouTubeTrack,
+                        isSpotify: !_isYouTubeTrack,
+                        iconSize: 12,
                       ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_isYouTubeTrack) ...[
-                  IconButton(
-                    onPressed: () {
-                      final videoId =
-                          YouTubeService.extractVideoId(_currentTrack.id) ?? '';
-                      if (videoId.isNotEmpty) {
-                        launchUrl(
-                          Uri.parse('https://www.youtube.com/watch?v=$videoId'),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    icon: const Icon(
-                      CupertinoIcons.play_rectangle_fill,
-                      size: 20,
-                      color: Colors.redAccent,
-                    ),
-                    tooltip: tr(context, "Open in YouTube App"),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _showVideo = !_showVideo),
-                    icon: Icon(
-                      _showVideo ? CupertinoIcons.film_fill : CupertinoIcons.film,
-                      size: 19,
-                      color: _showVideo ? Colors.redAccent : _primaryInk,
-                    ),
-                    tooltip: _showVideo
-                        ? tr(context, "Hide video")
-                        : tr(context, "Show video"),
-                  ),
-                ] else ...[
-                  IconButton(
-                    onPressed: () {
-                      String? url = _currentTrack.spotifyUrl;
-                      if (url == null || url.isEmpty) {
-                        if (_currentTrack.id.startsWith('spotify:track:')) {
-                          final id = _currentTrack.id.split(':').last;
-                          url = 'https://open.spotify.com/track/$id';
-                        } else if (_currentTrack.title.isNotEmpty) {
-                          url =
-                              'https://open.spotify.com/search/${Uri.encodeComponent("${_currentTrack.title} ${_currentTrack.artist}")}';
-                        }
-                      }
-                      if (url != null && url.isNotEmpty) {
-                        launchUrl(
-                          Uri.parse(url),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    icon: const SpotifyIcon(size: 20),
-                    tooltip: tr(context, "Open in Spotify App"),
-                  ),
-                ],
-                if (_lyricsMode == LyricsDisplayMode.synced &&
-                    (_lyricsResult?.isSynced ?? false))
-                  IconButton(
-                    onPressed: () => _showSyncSheet(context),
-                    icon: const Icon(
-                      CupertinoIcons.slider_horizontal_3,
-                      size: 18,
-                    ),
-                    color: _primaryInk,
-                    tooltip: tr(context, "Adjust sync"),
-                  ),
-                IconButton(
-                  onPressed: () =>
-                      AppThemeMode.instance.setLight(!_isLightStyle),
-                  icon: Icon(
-                    _isLightStyle
-                        ? CupertinoIcons.moon
-                        : CupertinoIcons.sun_max,
-                    size: 18,
-                    color: _primaryInk,
-                  ),
-                  tooltip: _isLightStyle
-                      ? tr(context, "Dark mode")
-                      : tr(context, "Paper mode"),
-                ),
-                GestureDetector(
-                  onTap: () => LanguageSelectorSheet.show(
-                    context,
-                    currentNativeLanguage: _nativeLanguage,
-                    currentTargetLanguage: _targetLanguage,
-                    languageService: _languageService,
-                    onConfirm: _onLanguagesUpdated,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _primaryInk.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          CupertinoIcons.globe,
-                          size: 13,
-                          color: _primaryInk,
-                        ),
+                      if (_currentTrack.artist.isNotEmpty) ...[
                         const SizedBox(width: 4),
-                        Text(
-                          (lang?.code ?? _targetLanguage).toUpperCase(),
-                          style: TextStyle(
-                            color: _primaryInk,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                        Flexible(
+                          child: Text(
+                            _currentTrack.artist,
+                            style: TextStyle(
+                              color: _secondaryInk,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          // 3. Ações do topo direito
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isYouTubeTrack) ...[
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  onPressed: () {
+                    final videoId =
+                        YouTubeService.extractVideoId(_currentTrack.id) ?? '';
+                    if (videoId.isNotEmpty) {
+                      launchUrl(
+                        Uri.parse('https://www.youtube.com/watch?v=$videoId'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  icon: const Icon(
+                    CupertinoIcons.play_rectangle_fill,
+                    size: 19,
+                    color: Colors.redAccent,
+                  ),
+                  tooltip: tr(context, "Open in YouTube App"),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  onPressed: () => setState(() => _showVideo = !_showVideo),
+                  icon: Icon(
+                    _showVideo ? CupertinoIcons.film_fill : CupertinoIcons.film,
+                    size: 18,
+                    color: _showVideo ? Colors.redAccent : _primaryInk,
+                  ),
+                  tooltip: _showVideo
+                      ? tr(context, "Hide video")
+                      : tr(context, "Show video"),
+                ),
+              ] else ...[
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  onPressed: () {
+                    String? url = _currentTrack.spotifyUrl;
+                    if (url == null || url.isEmpty) {
+                      if (_currentTrack.id.startsWith('spotify:track:')) {
+                        final id = _currentTrack.id.split(':').last;
+                        url = 'https://open.spotify.com/track/$id';
+                      } else if (_currentTrack.title.isNotEmpty) {
+                        url =
+                            'https://open.spotify.com/search/${Uri.encodeComponent("${_currentTrack.title} ${_currentTrack.artist}")}';
+                      }
+                    }
+                    if (url != null && url.isNotEmpty) {
+                      launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  icon: const SpotifyIcon(size: 18),
+                  tooltip: tr(context, "Open in Spotify App"),
                 ),
               ],
-            ),
+              if (_lyricsMode == LyricsDisplayMode.synced &&
+                  (_lyricsResult?.isSynced ?? false))
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  onPressed: () => _showSyncSheet(context),
+                  icon: const Icon(
+                    CupertinoIcons.slider_horizontal_3,
+                    size: 17,
+                  ),
+                  color: _primaryInk,
+                  tooltip: tr(context, "Adjust sync"),
+                ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                onPressed: () =>
+                    AppThemeMode.instance.setLight(!_isLightStyle),
+                icon: Icon(
+                  _isLightStyle
+                      ? CupertinoIcons.moon
+                      : CupertinoIcons.sun_max,
+                  size: 17,
+                  color: _primaryInk,
+                ),
+                tooltip: _isLightStyle
+                    ? tr(context, "Dark mode")
+                    : tr(context, "Paper mode"),
+              ),
+              const SizedBox(width: 2),
+              GestureDetector(
+                onTap: () => LanguageSelectorSheet.show(
+                  context,
+                  currentNativeLanguage: _nativeLanguage,
+                  currentTargetLanguage: _targetLanguage,
+                  languageService: _languageService,
+                  onConfirm: _onLanguagesUpdated,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _primaryInk.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.globe,
+                        size: 12,
+                        color: _primaryInk,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        (lang?.code ?? _targetLanguage).toUpperCase(),
+                        style: TextStyle(
+                          color: _primaryInk,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
