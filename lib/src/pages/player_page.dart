@@ -1123,11 +1123,10 @@ class _PlayerPageState extends State<PlayerPage>
                     PlaybackSourceBadge(
                       isYouTube: _isYouTubeTrack,
                       isSpotify: !_isYouTubeTrack,
-                      fontSize: 10,
-                      iconSize: 11,
+                      iconSize: 13,
                     ),
                     if (_currentTrack.artist.isNotEmpty) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Flexible(
                         child: Text(
                           _currentTrack.artist,
