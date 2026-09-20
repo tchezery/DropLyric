@@ -27,7 +27,6 @@ import '../widgets/lyrics/interactive_word.dart';
 import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
 import '../widgets/lyrics/word_action_sheet.dart';
-import '../widgets/playback_source_badge.dart';
 import '../widgets/spotify_icon.dart';
 
 /// Modo de exibição das letras:
@@ -115,7 +114,7 @@ class _PlayerPageState extends State<PlayerPage>
   // YouTube Controller & Estado
   yt.YoutubePlayerController? _ytController;
   Timer? _ytProgressTimer;
-  bool _showVideo = false;
+  bool _showVideo = true;
   bool get _isYouTubeTrack =>
       _currentTrack.id.startsWith('youtube:') ||
       (_currentTrack.previewAudioUrl?.startsWith('youtube:') == true);
@@ -148,6 +147,7 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _initYouTubeController(String videoId) {
+    _showVideo = true;
     _stopYouTubeProgressTimer();
     _ytController?.close();
     _audioService.playerState.value = PlayerState(
@@ -215,8 +215,6 @@ class _PlayerPageState extends State<PlayerPage>
     });
   }
 
-  // Offset manual de sincronização em milissegundos
-  int _syncOffsetMs = 0;
 
   // Idiomas
   String _targetLanguage = 'en';
@@ -521,9 +519,7 @@ class _PlayerPageState extends State<PlayerPage>
   void _onPositionChanged() {
     if (!mounted || _lyricsResult == null || !_lyricsResult!.isSynced) return;
     final lines = _lyricsResult!.lines;
-    // Aplica o offset de sincronização (atrasando a letra para sincronizar perfeitamente com a voz)
-    final pos =
-        _audioService.position.value + Duration(milliseconds: _syncOffsetMs);
+    final pos = _audioService.position.value;
 
     final newActive = LyricParser.activeLineAt(lines, pos);
 
@@ -710,168 +706,6 @@ class _PlayerPageState extends State<PlayerPage>
     return '$m:$s';
   }
 
-  void _showSyncSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: _isLightStyle ? Colors.white : AppTheme.spotifyDarkCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            final textColor = _isLightStyle
-                ? const Color(0xFF1C1C1E)
-                : Colors.white;
-            final subColor = _isLightStyle
-                ? const Color(0xFF8E8E93)
-                : AppTheme.spotifyLightGray;
-            final btnBg = _isLightStyle
-                ? const Color(0xFFF2F2F7)
-                : AppTheme.spotifyMediumGray;
-
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: subColor.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    tr(context, "Calibrate Sync"),
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    tr(
-                      context,
-                      "Adjust to advance (+) or delay (-) the lyrics timing.",
-                    ),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: subColor, fontSize: 12),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _syncButton(
-                        '-200ms',
-                        () {
-                          setState(() => _syncOffsetMs -= 200);
-                          setSheetState(() {});
-                          _onPositionChanged();
-                        },
-                        btnBg,
-                        textColor,
-                      ),
-                      const SizedBox(width: 8),
-                      _syncButton(
-                        '-100ms',
-                        () {
-                          setState(() => _syncOffsetMs -= 100);
-                          setSheetState(() {});
-                          _onPositionChanged();
-                        },
-                        btnBg,
-                        textColor,
-                      ),
-                      const SizedBox(width: 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _isLightStyle ? Colors.black : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_syncOffsetMs >= 0 ? "+" : ""}${_syncOffsetMs}ms',
-                          style: TextStyle(
-                            color: _isLightStyle ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      _syncButton(
-                        '+100ms',
-                        () {
-                          setState(() => _syncOffsetMs += 100);
-                          setSheetState(() {});
-                          _onPositionChanged();
-                        },
-                        btnBg,
-                        textColor,
-                      ),
-                      const SizedBox(width: 8),
-                      _syncButton(
-                        '+200ms',
-                        () {
-                          setState(() => _syncOffsetMs += 200);
-                          setSheetState(() {});
-                          _onPositionChanged();
-                        },
-                        btnBg,
-                        textColor,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      setState(() => _syncOffsetMs = 0);
-                      setSheetState(() {});
-                      _onPositionChanged();
-                    },
-                    child: Text(
-                      tr(context, "Reset (0ms)"),
-                      style: TextStyle(color: subColor, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _syncButton(String label, VoidCallback onTap, Color bg, Color text) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: text,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
 
   Future<void> _changeTrack(int newIndex) async {
     if (newIndex < 0 || newIndex >= _playlist.length) return;
@@ -1041,10 +875,11 @@ class _PlayerPageState extends State<PlayerPage>
               if (_isYouTubeTrack && _ytController != null)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
                   margin: _showVideo
                       ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
                       : EdgeInsets.zero,
-                  height: _showVideo ? 190 : 1,
+                  height: _showVideo ? 190 : 0.001,
                   decoration: _showVideo
                       ? BoxDecoration(
                           color: Colors.black,
@@ -1061,36 +896,42 @@ class _PlayerPageState extends State<PlayerPage>
                         )
                       : const BoxDecoration(),
                   clipBehavior: Clip.antiAliasWithSaveLayer,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        clipBehavior: Clip.antiAliasWithSaveLayer,
-                        child: Opacity(
-                          opacity: _showVideo ? 1.0 : 0.01,
-                          child: yt.YoutubePlayer(
-                            controller: _ytController!,
-                            aspectRatio: 16 / 9,
-                          ),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: _isLightStyle
-                                    ? const Color(0x1F000000)
-                                    : const Color(0x33FFFFFF),
-                                width: 1.5,
-                              ),
+                  child: IgnorePointer(
+                    ignoring: !_showVideo,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          clipBehavior: Clip.antiAliasWithSaveLayer,
+                          child: Opacity(
+                            opacity: _showVideo ? 1.0 : 0.01,
+                            child: yt.YoutubePlayer(
+                              controller: _ytController!,
+                              aspectRatio: 16 / 9,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        if (!_showVideo)
+                          Positioned.fill(
+                            child: ColoredBox(color: _canvasColor),
+                          ),
+                        if (_showVideo)
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: _isLightStyle
+                                      ? const Color(0x1F000000)
+                                      : const Color(0x33FFFFFF),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               if (_knownWordsLoading)
@@ -1172,34 +1013,21 @@ class _PlayerPageState extends State<PlayerPage>
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PlaybackSourceBadge(
-                        isYouTube: _isYouTubeTrack,
-                        isSpotify: !_isYouTubeTrack,
-                        iconSize: 12,
+                  if (_currentTrack.artist.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _currentTrack.artist,
+                      style: TextStyle(
+                        color: _secondaryInk,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.2,
                       ),
-                      if (_currentTrack.artist.isNotEmpty) ...[
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            _currentTrack.artist,
-                            style: TextStyle(
-                              color: _secondaryInk,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1269,19 +1097,6 @@ class _PlayerPageState extends State<PlayerPage>
                   tooltip: tr(context, "Open in Spotify App"),
                 ),
               ],
-              if (_lyricsMode == LyricsDisplayMode.synced &&
-                  (_lyricsResult?.isSynced ?? false))
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                  onPressed: () => _showSyncSheet(context),
-                  icon: const Icon(
-                    CupertinoIcons.slider_horizontal_3,
-                    size: 17,
-                  ),
-                  color: _primaryInk,
-                  tooltip: tr(context, "Adjust sync"),
-                ),
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -1521,7 +1336,7 @@ class _PlayerPageState extends State<PlayerPage>
     return InkWell(
       onTap: () {
         if (hasTimestamp) {
-          final target = line.timestamp - Duration(milliseconds: _syncOffsetMs);
+          final target = line.timestamp;
           final seekTarget = target.isNegative ? Duration.zero : target;
           if (_isYouTubeTrack && _ytController != null) {
             _ytController!.seekTo(

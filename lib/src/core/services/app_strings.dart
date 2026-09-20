@@ -81,14 +81,9 @@ const portugueseStrings = <String, String>{
   "No tracks found.": "Nenhuma música encontrada.",
   "It was not possible to open the track. Try searching for it.":
       "Não foi possível abrir a música. Tente buscá-la.",
-  "Calibrate Sync": "Ajustar sincronização",
-  "Adjust to advance (+) or delay (-) the lyrics timing.":
-      "Ajuste para adiantar (+) ou atrasar (-) a letra.",
-  "Reset (0ms)": "Redefinir (0ms)",
   "Could not change the Spotify track.":
       "Não foi possível trocar a música no Spotify.",
   "Back": "Voltar",
-  "Adjust sync": "Ajustar sincronização",
   "Dark mode": "Modo escuro",
   "Paper mode": "Modo papel",
     "Use this theme throughout the app": "Usar este tema em todo o app",
