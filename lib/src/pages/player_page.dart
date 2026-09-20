@@ -1024,9 +1024,32 @@ class _PlayerPageState extends State<PlayerPage>
                   margin: _showVideo
                       ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
                       : EdgeInsets.zero,
-                  height: _showVideo ? 180 : 1,
+                  height: _showVideo ? 190 : 1,
+                  decoration: _showVideo
+                      ? BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: _isLightStyle
+                                ? const Color(0x1F000000)
+                                : const Color(0x33FFFFFF),
+                            width: 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: _isLightStyle ? 0.08 : 0.4,
+                              ),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        )
+                      : const BoxDecoration(),
+                  clipBehavior: Clip.antiAliasWithSaveLayer,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
+                    clipBehavior: Clip.antiAliasWithSaveLayer,
                     child: Opacity(
                       opacity: _showVideo ? 1.0 : 0.01,
                       child: yt.YoutubePlayer(
