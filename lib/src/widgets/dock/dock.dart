@@ -180,7 +180,7 @@ class _NowPlayingItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: DecoratedBox(
             decoration: const BoxDecoration(
-              color: AppTheme.spotifyGreen,
+              color: AppTheme.appleBlue,
               shape: BoxShape.circle,
             ),
             child: Padding(
