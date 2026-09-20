@@ -389,10 +389,26 @@ class _PlayerPageState extends State<PlayerPage>
     }
   }
 
+  bool get _isFluentLanguage =>
+      FluentLanguages.instance.isFluent(_targetLanguage);
+
   Future<void> _loadKnownWords() async {
     final generation = ++_knownWordsGeneration;
     final language = _targetLanguage;
     final track = _currentTrack.id;
+    if (_isFluentLanguage) {
+      if (mounted &&
+          generation == _knownWordsGeneration &&
+          language == _targetLanguage &&
+          track == _currentTrack.id) {
+        setState(() {
+          _knownWords = {};
+          _knownWordsLoading = false;
+        });
+        _updateStats();
+      }
+      return;
+    }
     if (mounted) setState(() => _knownWordsLoading = true);
     try {
       await _wordWrites;
@@ -484,7 +500,11 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _updateStats() {
-    _knownUniqueInLyrics = _uniqueLyricWords.intersection(_knownWords).length;
+    if (_isFluentLanguage) {
+      _knownUniqueInLyrics = _totalUniqueWords;
+    } else {
+      _knownUniqueInLyrics = _uniqueLyricWords.intersection(_knownWords).length;
+    }
     if (mounted) setState(() {});
   }
 
@@ -549,7 +569,7 @@ class _PlayerPageState extends State<PlayerPage>
   final Map<String, bool> _savedWordStates = {};
 
   Future<void> _toggleWord(String word, String normalized) async {
-    if (_knownWordsLoading || _lyricsLoading) return;
+    if (_knownWordsLoading || _lyricsLoading || _isFluentLanguage) return;
     final language = _targetLanguage;
     final key = '$language:$normalized';
     final previous = _knownWords.contains(normalized);
@@ -596,7 +616,7 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   Future<void> _markSentenceWordsKnown(List<String> words) async {
-    if (_knownWordsLoading || _lyricsLoading || words.isEmpty) return;
+    if (_knownWordsLoading || _lyricsLoading || words.isEmpty || _isFluentLanguage) return;
     final language = _targetLanguage;
     final trackName = _currentTrack.title;
     final artistName = _currentTrack.artist;
@@ -1062,7 +1082,7 @@ class _PlayerPageState extends State<PlayerPage>
               if (_knownWordsLoading)
                 const LinearProgressIndicator(minHeight: 2),
               if (!widget.lyricsOnly) _buildModeSelector(),
-              if (_totalUniqueWords > 0)
+              if (!_isFluentLanguage && _totalUniqueWords > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -1569,7 +1589,8 @@ class _PlayerPageState extends State<PlayerPage>
                   }
                   return InteractiveWord(
                     word: token.displayText,
-                    isKnown: _knownWords.contains(token.normalizedWord),
+                    isKnown: _isFluentLanguage ||
+                        _knownWords.contains(token.normalizedWord),
                     isActiveLine: isActive,
                     isLightMode: _isLightStyle,
                     isManualMode: isManual,

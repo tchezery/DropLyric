@@ -8,6 +8,7 @@ import '../core/services/language_service.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/language_flag.dart';
 import '../widgets/about_modal.dart';
+import '../widgets/fluent_languages_sheet.dart';
 
 /// Perfil com design Apple Settings & Health stats.
 class ProfilePage extends StatefulWidget {
@@ -68,6 +69,27 @@ class _ProfilePageState extends State<ProfilePage> {
     if (selected == null) return;
     await AppLanguage.instance.set(selected);
     if (mounted) setState(() => _appLanguage = selected);
+  }
+
+  String _fluentSummary() {
+    final fluent = FluentLanguages.instance.languages;
+    if (fluent.isEmpty) return t('Nenhum', 'None');
+    final names = fluent.map((code) {
+      final found = supportedLanguages.where((l) => l.code == code);
+      return found.isNotEmpty ? found.first.name : code.toUpperCase();
+    }).toList();
+    return names.join(', ');
+  }
+
+  Future<void> _chooseFluentLanguages() async {
+    await FluentLanguagesSheet.show(
+      context,
+      initialLanguages: FluentLanguages.instance.languages,
+      onConfirm: (langs) async {
+        await FluentLanguages.instance.setLanguages(langs);
+        if (mounted) setState(() {});
+      },
+    );
   }
 
   Future<void> _removeAllWordHistory() async {
@@ -286,6 +308,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   title: tr(context, "App language"),
                   value: _appLanguage == 'pt' ? 'Português' : 'English',
                   onTap: _chooseAppLanguage,
+                ),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
+                _SettingsRow(
+                  icon: CupertinoIcons.checkmark_seal_fill,
+                  iconColor: AppTheme.spotifyGreen,
+                  title: t('Idiomas que já domino', 'Mastered languages'),
+                  value: _fluentSummary(),
+                  onTap: _chooseFluentLanguages,
                 ),
                 Divider(color: Theme.of(context).dividerColor, height: 1),
                 _SettingsRow(

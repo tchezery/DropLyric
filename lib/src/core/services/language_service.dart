@@ -316,6 +316,26 @@ class LanguageService {
     await _setPreference(_keyOnboardingComplete, value ? 'true' : 'false');
   }
 
+  static const _keyFluentLanguages = 'fluent_languages';
+
+  Future<Set<String>> getFluentLanguages() async {
+    final raw = await _getPreference(_keyFluentLanguages, defaultValue: 'pt');
+    if (raw.trim().isEmpty) return <String>{};
+    return raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+  }
+
+  Future<void> setFluentLanguages(Set<String> languages) async {
+    final raw = languages
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .join(',');
+    await _setPreference(_keyFluentLanguages, raw);
+  }
+
   /// Retorna o LanguagePreference correspondente a um código BCP-47.
   LanguagePreference? findByCode(String code) {
     try {
@@ -388,5 +408,31 @@ class AppThemeMode extends ChangeNotifier {
     await LanguageService().setThemeMode(value);
     isLight = value;
     notifyListeners();
+  }
+}
+
+class FluentLanguages extends ChangeNotifier {
+  static final instance = FluentLanguages._();
+  FluentLanguages._();
+
+  Set<String> languages = {'pt'};
+  bool loaded = false;
+
+  Future<void> load() async {
+    languages = await LanguageService().getFluentLanguages();
+    loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setLanguages(Set<String> next) async {
+    await LanguageService().setFluentLanguages(next);
+    languages = next;
+    notifyListeners();
+  }
+
+  bool isFluent(String languageCode) {
+    if (languageCode.isEmpty) return false;
+    final code = languageCode.toLowerCase().split('-').first;
+    return languages.contains(code);
   }
 }

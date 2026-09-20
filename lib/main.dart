@@ -13,6 +13,7 @@ void main() async {
     await AppDatabase().database;
     await AppLanguage.instance.load();
     await AppThemeMode.instance.load();
+    await FluentLanguages.instance.load();
   } catch (e) {
     debugPrint('AppDatabase init error (non-fatal): $e');
   }
