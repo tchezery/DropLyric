@@ -21,12 +21,14 @@ class AudioPlayerService {
   final ValueNotifier<bool> shuffleMode = ValueNotifier(false);
   final ValueNotifier<String?> error = ValueNotifier(null);
 
-  bool get _isSpotify => currentUrl.value?.startsWith('spotify:track:') == true;
-  bool get _isDirectAudio =>
+  bool get isSpotify => currentUrl.value?.startsWith('spotify:track:') == true;
+  bool get isDirectAudio =>
       currentUrl.value != null &&
       (currentUrl.value!.startsWith('youtube:') ||
           currentUrl.value!.startsWith('http://') ||
           currentUrl.value!.startsWith('https://'));
+  bool get _isSpotify => isSpotify;
+  bool get _isDirectAudio => isDirectAudio;
 
   bool _disposed = false;
   final List<StreamSubscription> _subscriptions = [];

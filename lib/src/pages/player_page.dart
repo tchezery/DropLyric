@@ -902,6 +902,33 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _onPrevious() {
+    if (_isYouTubeTrack && _ytController != null) {
+      final pos = _audioService.position.value;
+      if (pos.inSeconds > 3 || _playlist.isEmpty) {
+        _ytController!.seekTo(seconds: 0, allowSeekAhead: true);
+        _audioService.position.value = Duration.zero;
+      } else {
+        final prevIndex = _currentIndex > 0
+            ? _currentIndex - 1
+            : _playlist.length - 1;
+        _changeTrack(prevIndex);
+      }
+      return;
+    }
+
+    if (_audioService.isDirectAudio) {
+      final pos = _audioService.position.value;
+      if (pos.inSeconds > 3 || _playlist.isEmpty) {
+        _audioService.seekTo(Duration.zero);
+      } else {
+        final prevIndex = _currentIndex > 0
+            ? _currentIndex - 1
+            : _playlist.length - 1;
+        _changeTrack(prevIndex);
+      }
+      return;
+    }
+
     if (SpotifySession.instance.remoteOnly) {
       _expectedUri = null;
       _skipRemote('previous');
@@ -909,12 +936,7 @@ class _PlayerPageState extends State<PlayerPage>
     }
     final pos = _audioService.position.value;
     if (pos.inSeconds > 3) {
-      if (_isYouTubeTrack && _ytController != null) {
-        _ytController!.seekTo(seconds: 0, allowSeekAhead: true);
-        _audioService.position.value = Duration.zero;
-      } else {
-        _audioService.seekTo(Duration.zero);
-      }
+      _audioService.seekTo(Duration.zero);
       return;
     }
     if (_playlist.isNotEmpty) {
@@ -923,16 +945,26 @@ class _PlayerPageState extends State<PlayerPage>
           : _playlist.length - 1;
       _changeTrack(prevIndex);
     } else {
-      if (_isYouTubeTrack && _ytController != null) {
-        _ytController!.seekTo(seconds: 0, allowSeekAhead: true);
-        _audioService.position.value = Duration.zero;
-      } else {
-        _audioService.seekTo(Duration.zero);
-      }
+      _audioService.seekTo(Duration.zero);
     }
   }
 
   void _onNext() {
+    if (_isYouTubeTrack || _audioService.isDirectAudio) {
+      if (_playlist.isEmpty) return;
+      if (_audioService.shuffleMode.value && _playlist.length > 1) {
+        int nextIndex;
+        do {
+          nextIndex = (DateTime.now().millisecondsSinceEpoch % _playlist.length);
+        } while (nextIndex == _currentIndex);
+        _changeTrack(nextIndex);
+      } else {
+        final nextIndex = (_currentIndex + 1) % _playlist.length;
+        _changeTrack(nextIndex);
+      }
+      return;
+    }
+
     if (SpotifySession.instance.remoteOnly) {
       _expectedUri = null;
       _skipRemote('next');
@@ -1380,7 +1412,16 @@ class _PlayerPageState extends State<PlayerPage>
       onTap: () {
         if (hasTimestamp) {
           final target = line.timestamp - Duration(milliseconds: _syncOffsetMs);
-          _audioService.seekTo(target.isNegative ? Duration.zero : target);
+          final seekTarget = target.isNegative ? Duration.zero : target;
+          if (_isYouTubeTrack && _ytController != null) {
+            _ytController!.seekTo(
+              seconds: seekTarget.inMilliseconds / 1000.0,
+              allowSeekAhead: true,
+            );
+            _audioService.position.value = seekTarget;
+          } else {
+            _audioService.seekTo(seekTarget);
+          }
         }
       },
       splashColor: Colors.transparent,
