@@ -40,6 +40,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _saving = true;
     });
     await AppLanguage.instance.set(code);
+    await TranslationLanguage.instance.set(code);
     if (mounted) setState(() => _saving = false);
   }
 

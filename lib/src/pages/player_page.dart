@@ -224,7 +224,7 @@ class _PlayerPageState extends State<PlayerPage>
   int _knownWordsGeneration = 0;
   bool _knownWordsLoading = false;
   String _nativeLanguage = 'pt';
-  String _translationLanguage = 'en';
+  String _translationLanguage = 'pt';
 
   // Tema: false = Dark Minimal com texto branco (padrão solicitado), true = Sage Paper minimalista
   bool _isLightStyle = true;
@@ -238,6 +238,7 @@ class _PlayerPageState extends State<PlayerPage>
     super.initState();
     _isLightStyle = AppThemeMode.instance.isLight;
     AppThemeMode.instance.addListener(_onThemeChanged);
+    TranslationLanguage.instance.addListener(_onTranslationLanguageChanged);
     AppRoutes.currentRoute.value = AppRoutes.player;
     _currentTrack = widget.track;
     _targetLanguage = _currentTrack.language.isEmpty
@@ -366,17 +367,24 @@ class _PlayerPageState extends State<PlayerPage>
           ? _currentTrack.language
           : _preferredTargetLanguage);
 
+  void _onTranslationLanguageChanged() {
+    if (!mounted) return;
+    setState(() {
+      _translationLanguage = TranslationLanguage.instance.code;
+    });
+  }
+
   Future<void> _loadAll() async {
     final generation = _lyricsGeneration;
     try {
       final native = await _languageService.getNativeLanguage();
       final preferred = await _languageService.getTargetLanguage();
-      final appLanguage = await _languageService.getAppLanguage();
+      final translationLang = await _languageService.getTranslationLanguage();
       if (!mounted || generation != _lyricsGeneration) return;
       setState(() {
         _nativeLanguage = native;
         _preferredTargetLanguage = preferred;
-        _translationLanguage = appLanguage;
+        _translationLanguage = translationLang;
         // Resolve after all awaits: a lyric/manual choice may have arrived meanwhile.
         _targetLanguage = _resolveTargetLanguage();
         if (_lyricsResult != null) _buildUniqueWords(_lyricsResult!.lines);
@@ -842,6 +850,7 @@ class _PlayerPageState extends State<PlayerPage>
   @override
   void dispose() {
     AppThemeMode.instance.removeListener(_onThemeChanged);
+    TranslationLanguage.instance.removeListener(_onTranslationLanguageChanged);
     _audioService.position.removeListener(_onPositionChanged);
     _audioService.playerState.removeListener(_onPlayerStateChanged);
     SpotifySession.instance.playbackChanges.removeListener(

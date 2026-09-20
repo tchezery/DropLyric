@@ -8,7 +8,6 @@ import '../core/services/language_service.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/language_flag.dart';
 import '../widgets/about_modal.dart';
-import '../widgets/fluent_languages_sheet.dart';
 
 /// Perfil com design Apple Settings & Health stats.
 class ProfilePage extends StatefulWidget {
@@ -71,25 +70,47 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) setState(() => _appLanguage = selected);
   }
 
-  String _fluentSummary() {
-    final fluent = FluentLanguages.instance.languages;
-    if (fluent.isEmpty) return t('Nenhum', 'None');
-    final names = fluent.map((code) {
-      final found = supportedLanguages.where((l) => l.code == code);
-      return found.isNotEmpty ? found.first.name : code.toUpperCase();
-    }).toList();
-    return names.join(', ');
-  }
-
-  Future<void> _chooseFluentLanguages() async {
-    await FluentLanguagesSheet.show(
-      context,
-      initialLanguages: FluentLanguages.instance.languages,
-      onConfirm: (langs) async {
-        await FluentLanguages.instance.setLanguages(langs);
-        if (mounted) setState(() {});
-      },
+  Future<void> _chooseTranslationLanguage() async {
+    final selected = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(t('Idioma de tradução', 'Translation language')),
+        message: Text(
+          t(
+            'Escolha o idioma para o qual as letras e palavras serão traduzidas',
+            'Choose the language that lyrics and words will be translated to',
+          ),
+        ),
+        actions: supportedLanguages.map((lang) {
+          final isCurrent = lang.code == TranslationLanguage.instance.code;
+          return CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, lang.code),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                LanguageFlag(countryCode: lang.flagCode, width: 22),
+                const SizedBox(width: 8),
+                Text(
+                  lang.name,
+                  style: TextStyle(
+                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.normal,
+                    color: isCurrent ? AppTheme.spotifyGreen : null,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: Text(tr(context, "Cancel")),
+        ),
+      ),
     );
+    if (selected == null) return;
+    await TranslationLanguage.instance.set(selected);
+    if (mounted) setState(() {});
   }
 
   Future<void> _removeAllWordHistory() async {
@@ -311,11 +332,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 Divider(color: Theme.of(context).dividerColor, height: 1),
                 _SettingsRow(
-                  icon: CupertinoIcons.checkmark_seal_fill,
+                  icon: CupertinoIcons.chat_bubble_2_fill,
                   iconColor: AppTheme.spotifyGreen,
-                  title: t('Idiomas que já domino', 'Mastered languages'),
-                  value: _fluentSummary(),
-                  onTap: _chooseFluentLanguages,
+                  title: t('Idioma de tradução', 'Translation language'),
+                  value: TranslationLanguage.instance.displayName,
+                  onTap: _chooseTranslationLanguage,
                 ),
                 Divider(color: Theme.of(context).dividerColor, height: 1),
                 _SettingsRow(

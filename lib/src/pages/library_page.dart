@@ -295,7 +295,7 @@ class _LibraryPageState extends State<LibraryPage> {
   bool _loading = true;
   String _selectedLetter = 'ALL';
   String _selectedLanguage = 'ALL';
-  String _translationLanguage = 'en';
+  String _translationLanguage = 'pt';
   String? _error;
 
   @override
@@ -320,11 +320,11 @@ class _LibraryPageState extends State<LibraryPage> {
         await _repository.moveWord(word.normalizedWord, 'en', 'es');
       }
       final migratedWords = await _repository.getKnownWordsList();
-      final appLanguage = await _languageService.getAppLanguage();
+      final translationLanguage = await _languageService.getTranslationLanguage();
       if (!mounted) return;
       setState(() {
         _knownWords = migratedWords;
-        _translationLanguage = appLanguage;
+        _translationLanguage = translationLanguage;
         _loading = false;
         _error = null;
       });

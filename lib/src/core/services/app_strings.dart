@@ -32,6 +32,8 @@ const portugueseStrings = <String, String>{
   "By language": "Por idioma",
   "Settings": "Configurações",
   "App language": "Idioma do app",
+  "Translation language": "Idioma de tradução",
+  "Choose the language that lyrics and words will be translated to": "Escolha o idioma para o qual as letras e palavras serão traduzidas",
   "Remove all word history": "Remover histórico de palavras",
   "Delete every saved word": "Excluir todas as palavras salvas",
   "About DropLyric": "Sobre o DropLyric",

@@ -12,6 +12,7 @@ void main() async {
   try {
     await AppDatabase().database;
     await AppLanguage.instance.load();
+    await TranslationLanguage.instance.load();
     await AppThemeMode.instance.load();
     await FluentLanguages.instance.load();
   } catch (e) {

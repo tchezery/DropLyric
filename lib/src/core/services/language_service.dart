@@ -336,6 +336,16 @@ class LanguageService {
     await _setPreference(_keyFluentLanguages, raw);
   }
 
+  static const _keyTranslationLanguage = 'translation_language';
+
+  Future<String> getTranslationLanguage() async {
+    return _getPreference(_keyTranslationLanguage, defaultValue: 'pt');
+  }
+
+  Future<void> setTranslationLanguage(String languageCode) async {
+    await _setPreference(_keyTranslationLanguage, languageCode);
+  }
+
   /// Retorna o LanguagePreference correspondente a um código BCP-47.
   LanguagePreference? findByCode(String code) {
     try {
@@ -389,6 +399,31 @@ class AppLanguage extends ChangeNotifier {
   }
 
   bool get isPortuguese => code == 'pt';
+}
+
+class TranslationLanguage extends ChangeNotifier {
+  static final instance = TranslationLanguage._();
+  TranslationLanguage._();
+
+  String code = 'pt';
+  bool loaded = false;
+
+  Future<void> load() async {
+    code = await LanguageService().getTranslationLanguage();
+    loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> set(String next) async {
+    await LanguageService().setTranslationLanguage(next);
+    code = next;
+    notifyListeners();
+  }
+
+  String get displayName {
+    final found = supportedLanguages.where((l) => l.code == code);
+    return found.isNotEmpty ? found.first.name : code.toUpperCase();
+  }
 }
 
 class AppThemeMode extends ChangeNotifier {
