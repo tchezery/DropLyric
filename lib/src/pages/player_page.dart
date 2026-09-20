@@ -1049,12 +1049,6 @@ class _PlayerPageState extends State<PlayerPage>
                       ? BoxDecoration(
                           color: Colors.black,
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: _isLightStyle
-                                ? const Color(0x1F000000)
-                                : const Color(0x33FFFFFF),
-                            width: 1.0,
-                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(
@@ -1067,16 +1061,36 @@ class _PlayerPageState extends State<PlayerPage>
                         )
                       : const BoxDecoration(),
                   clipBehavior: Clip.antiAliasWithSaveLayer,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    clipBehavior: Clip.antiAliasWithSaveLayer,
-                    child: Opacity(
-                      opacity: _showVideo ? 1.0 : 0.01,
-                      child: yt.YoutubePlayer(
-                        controller: _ytController!,
-                        aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        clipBehavior: Clip.antiAliasWithSaveLayer,
+                        child: Opacity(
+                          opacity: _showVideo ? 1.0 : 0.01,
+                          child: yt.YoutubePlayer(
+                            controller: _ytController!,
+                            aspectRatio: 16 / 9,
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: _isLightStyle
+                                    ? const Color(0x1F000000)
+                                    : const Color(0x33FFFFFF),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (_knownWordsLoading)
