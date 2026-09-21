@@ -105,7 +105,7 @@ class _AboutAppModalState extends State<AboutAppModal> {
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Image.asset(
-                'assets/logo.jpg',
+                'assets/logo.png',
                 width: 72,
                 height: 72,
                 fit: BoxFit.cover,
@@ -357,7 +357,7 @@ class _AboutAppModalState extends State<AboutAppModal> {
                   applicationIcon: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
-                      'assets/logo.jpg',
+                      'assets/logo.png',
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,

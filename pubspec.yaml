@@ -40,7 +40,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/spotify.svg
-    - assets/logo.jpg
+    - assets/logo.png
     - assets/creator.png
 
 flutter_launcher_icons:
@@ -48,6 +48,6 @@ flutter_launcher_icons:
   ios: true
   macos:
     generate: true
-  image_path: "assets/logo.jpeg"
+  image_path: "assets/logo.png"
 
  
