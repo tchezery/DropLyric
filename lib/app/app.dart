@@ -33,9 +33,10 @@ class _MyAppState extends State<MyApp> {
     AppThemeMode.instance.addListener(_refreshOnboarding);
     SpotifySession.instance.addListener(_refreshOnboarding);
     _loadOnboarding();
-    // Remove the native splash only after the first Flutter frame is fully painted,
-    // preventing any blank-screen flash between the native splash and the app.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Remove o splash nativo apenas após o primeiro frame renderizado + um pequeno
+    // delay proposital (estilo Spotify) para a logo "pousar" na tela.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(milliseconds: 1500));
       FlutterNativeSplash.remove();
     });
   }
