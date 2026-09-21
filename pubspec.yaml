@@ -30,6 +30,8 @@ dependencies:
   youtube_explode_dart: ^2.2.1
   youtube_player_iframe: ^6.0.2
 
+  flutter_native_splash: ^2.4.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -50,4 +52,12 @@ flutter_launcher_icons:
     generate: true
   image_path: "assets/logo.png"
 
- 
+flutter_native_splash:
+  color: "#000000"
+  image: assets/logo.png
+  android_12:
+    image: assets/logo.png
+    color: "#000000"
+    icon_background_color: "#000000"
+  ios: true
+  android: true

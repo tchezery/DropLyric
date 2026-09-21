@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../src/widgets/dock/dock.dart';
+import '../src/widgets/splash_screen.dart';
 import '../src/core/services/spotify_session.dart';
 import '../src/core/services/language_service.dart';
 import '../src/pages/onboarding_page.dart';
@@ -24,6 +25,7 @@ class _MyAppState extends State<MyApp> {
   bool _onboardingLoading = true;
   bool _languageSelected = false;
   bool _onboardingFinished = false;
+  bool _splashComplete = false;
 
   @override
   void initState() {
@@ -197,6 +199,20 @@ class _MyAppState extends State<MyApp> {
                   child: OnboardingPage(
                     languageSelected: _languageSelected,
                     onFinished: _refreshOnboarding,
+                  ),
+                ),
+
+              if (!_splashComplete)
+                Positioned.fill(
+                  child: SpotifySplashScreen(
+                    isReady: !_onboardingLoading,
+                    onFinish: () {
+                      if (mounted) {
+                        setState(() {
+                          _splashComplete = true;
+                        });
+                      }
+                    },
                   ),
                 ),
             ],
