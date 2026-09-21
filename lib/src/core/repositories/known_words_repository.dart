@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 import '../models/known_word_model.dart';
+import '../services/sync_service.dart';
 
 /// Repositório responsável por All as operações CRUD de palavras conhecidas no SQLite.
 class KnownWordsRepository {
@@ -36,6 +37,16 @@ class KnownWordsRepository {
       ).toMap(),
       conflictAlgorithm: ConflictAlgorithm.ignore,
     );
+    // Sincroniza com a nuvem (silencioso, sem bloquear a UI)
+    final model = KnownWordModel(
+      word: word.trim(),
+      normalizedWord: normalized,
+      language: language,
+      trackName: trackName,
+      artistName: artistName,
+      createdAt: DateTime.now(),
+    );
+    SyncService.instance.pushWord(model).ignore();
   }
 
   /// Grava o estado de conhecimento de múltiplas palavras de uma só vez (ex: frase inteira).
@@ -195,6 +206,7 @@ class KnownWordsRepository {
       where: 'normalized_word = ? AND language = ?',
       whereArgs: [normalizedWord, language],
     );
+    SyncService.instance.deleteWord(normalizedWord, language).ignore();
   }
 
   Future<void> moveWord(String normalizedWord, String from, String to) async {

@@ -34,6 +34,18 @@
 					<string>droplyric</string>
 				</array>
 			</dict>
+			<!-- Google Sign-In: substitua pelo REVERSED_CLIENT_ID do seu GoogleService-Info.plist -->
+			<!-- Exemplo: com.googleusercontent.apps.123456789-abcdefg -->
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>google-signin</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>YOUR_REVERSED_CLIENT_ID</string>
+				</array>
+			</dict>
 		</array>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
