@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
@@ -32,6 +33,11 @@ class _MyAppState extends State<MyApp> {
     AppThemeMode.instance.addListener(_refreshOnboarding);
     SpotifySession.instance.addListener(_refreshOnboarding);
     _loadOnboarding();
+    // Remove the native splash only after the first Flutter frame is fully painted,
+    // preventing any blank-screen flash between the native splash and the app.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
   }
 
   @override

@@ -21,7 +21,5 @@ void main() async {
     debugPrint('AppDatabase init error (non-fatal): $e');
   }
 
-  FlutterNativeSplash.remove();
-
   runApp(const MyApp());
 }
