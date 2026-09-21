@@ -1,5 +1,4 @@
 import '../core/services/app_strings.dart';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -12,7 +11,6 @@ import '../core/repositories/known_words_repository.dart';
 import '../core/services/language_service.dart';
 import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
-import '../widgets/spotify_access_gate.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/track_card.dart';
 import '../widgets/language_flag.dart';
@@ -83,35 +81,69 @@ class _HomePageState extends State<HomePage> with RouteAware {
   }
 
   Widget _heading(String text) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 28, 24, 14),
+    padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+      style: const TextStyle(
+        fontFamily: AppTheme.fontSF,
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
+      ),
     ),
   );
 
-  Widget _card(BuildContext context, Widget child) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 24),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
+  Widget _card(BuildContext context, Widget child) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: child,
       ),
-      child: child,
-    ),
-  );
+    );
+  }
 
   Widget _languageCard(BuildContext context, MapEntry<String, int> language) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final preference = LanguageService().findByCode(language.key);
+
     return Container(
-      width: 280,
-      padding: const EdgeInsets.all(20),
+      width: 220,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,35 +152,44 @@ class _HomePageState extends State<HomePage> with RouteAware {
             children: [
               LanguageFlag(
                 countryCode: preference?.flagCode ?? language.key,
-                width: 30,
+                width: 26,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  t('Idioma', 'Language'),
-                  style: TextStyle(color: colors.onSurfaceVariant),
+                  localizedLanguageName(context, language.key),
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontSF,
+                    color: colors.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           const Spacer(),
           Text(
-            localizedLanguageName(context, language.key),
+            '${language.value}',
             style: TextStyle(
-              color: colors.onSurface,
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
+              fontFamily: AppTheme.fontSF,
+              color: colors.primary,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
           Text(
-            t(
-              '${language.value} palavras conhecidas',
-              '${language.value} known words',
+            t('palavras conhecidas', 'known words'),
+            style: TextStyle(
+              fontFamily: AppTheme.fontSF,
+              color: colors.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
-            style: TextStyle(color: colors.onSurfaceVariant),
           ),
         ],
       ),
@@ -165,6 +206,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
     builder: (context, _) {
       final tracks = _saved.tracks.take(20).toList();
       final summary = LearningSummary(_words, _saved.tracks);
+      final colors = Theme.of(context).colorScheme;
+
       return Scaffold(
         body: SafeArea(
           child: RefreshIndicator(
@@ -173,52 +216,62 @@ class _HomePageState extends State<HomePage> with RouteAware {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 110),
               children: [
-                const Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 20, 6),
-                  child: const Row(
-                    children: const [
-                      Expanded(
-                        child: const Text(
+                // Apple Large Title Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
                           'DropLyric',
-                          style: const TextStyle(
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
                             fontSize: 34,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -1,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.2,
                           ),
                         ),
                       ),
-                      SpotifyConnectButton(compact: true),
+                      const SpotifyConnectButton(compact: true),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    t(
-                      'Seu vocabulário, uma música de cada vez.',
-                      'Your vocabulary, one song at a time.',
-                    ),
-                    style: const TextStyle(color: AppTheme.muted),
-                  ),
-                ),
+
+                // Recent tracks
                 _heading(t('Músicas recentes', 'Recent songs')),
                 if (tracks.isEmpty)
                   _card(
                     context,
-                    Text(
-                      t(
-                        'Abra uma música para começar seu histórico.',
-                        'Open a song to start your history.',
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.music_note_list,
+                            color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+                            size: 28,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              t('Nenhuma música recente', 'No recent songs'),
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontSF,
+                                color: colors.onSurfaceVariant,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      style: const TextStyle(color: AppTheme.muted),
                     ),
                   )
                 else
                   SizedBox(
-                    height:
-                        230 + (MediaQuery.textScalerOf(context).scale(24) - 24),
+                    height: 220,
                     child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       scrollDirection: Axis.horizontal,
                       itemCount: tracks.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 14),
@@ -228,9 +281,16 @@ class _HomePageState extends State<HomePage> with RouteAware {
                       ),
                     ),
                   ),
-                _heading(t('Seu aprendizado', 'Your learning')),
+
+                // Learning summary
+                _heading(t('Progresso', 'Progress')),
                 if (_loading)
-                  const Center(child: const CircularProgressIndicator())
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
                 else if (_failed)
                   _card(
                     context,
@@ -238,10 +298,12 @@ class _HomePageState extends State<HomePage> with RouteAware {
                       children: [
                         Text(
                           t(
-                            'Não foi possível carregar seu progresso.',
-                            'Could not load your progress.',
+                            'Erro ao carregar progresso',
+                            'Could not load progress',
                           ),
+                          style: TextStyle(color: colors.onSurface),
                         ),
+                        const SizedBox(height: 8),
                         TextButton(
                           onPressed: _load,
                           child: Text(
@@ -255,19 +317,39 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   if (summary.languages.isEmpty)
                     _card(
                       context,
-                      Text(
-                        t(
-                          'Salve palavras nas letras para acompanhar seu progresso.',
-                          'Save words in lyrics to track your progress.',
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.chart_bar_alt_fill,
+                              color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+                              size: 28,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                t(
+                                  'Seu progresso aparecerá aqui',
+                                  'Your progress will appear here',
+                                ),
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontSF,
+                                  color: colors.onSurfaceVariant,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        style: const TextStyle(color: AppTheme.muted),
                       ),
                     )
                   else
                     SizedBox(
-                      height: 150,
+                      height: 140,
                       child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         scrollDirection: Axis.horizontal,
                         itemCount: summary.languages.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 14),
@@ -275,41 +357,37 @@ class _HomePageState extends State<HomePage> with RouteAware {
                             _languageCard(context, summary.languages[index]),
                       ),
                     ),
-                  _heading(t('Top 3 artistas', 'Top 3 artists')),
-                  _card(
-                    context,
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t(
-                            'Quem mais ensinou palavras a você',
-                            'Who taught you the most words',
-                          ),
-                          style: const TextStyle(color: AppTheme.muted),
-                        ),
-                        const SizedBox(height: 12),
-                        if (summary.artists.isEmpty)
-                          Text(
-                            t(
-                              'Salve palavras nas músicas para descobrir seus artistas aqui.',
-                              'Save words from songs to discover your artists here.',
-                            ),
-                          ),
-                        for (var i = 0; i < summary.artists.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Row(
+
+                  if (summary.artists.isNotEmpty) ...[
+                    _heading(t('Top Artistas', 'Top Artists')),
+                    _card(
+                      context,
+                      Column(
+                        children: [
+                          for (var i = 0; i < summary.artists.length; i++) ...[
+                            if (i > 0)
+                              Divider(
+                                color: Theme.of(context).dividerColor,
+                                height: 16,
+                              ),
+                            Row(
                               children: [
-                                CircleAvatar(
-                                  backgroundColor: AppTheme.yellow.withValues(
-                                    alpha: 0.15,
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: colors.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Text(
-                                    '${i + 1}',
-                                    style: const TextStyle(
-                                      color: AppTheme.yellow,
-                                      fontWeight: FontWeight.bold,
+                                  child: Center(
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: TextStyle(
+                                        fontFamily: AppTheme.fontSF,
+                                        color: colors.primary,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -317,25 +395,30 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                 Expanded(
                                   child: Text(
                                     summary.artists[i].key,
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                      fontFamily: AppTheme.fontSF,
+                                      color: colors.onSurface,
                                       fontWeight: FontWeight.w600,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
                                 Text(
-                                  t(
-                                    '${summary.artists[i].value} palavras',
-                                    '${summary.artists[i].value} words',
+                                  '${summary.artists[i].value} ${t('palavras', 'words')}',
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    color: colors.onSurfaceVariant,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  style: const TextStyle(color: AppTheme.muted),
                                 ),
                               ],
                             ),
-                          ),
-                      ],
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ],
             ),
@@ -375,9 +458,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: AppRoutes.player),
-        builder: (_) => SpotifyAccessGate(
-          child: PlayerPage(track: track, lyricsOnly: lyricsOnly),
-        ),
+        builder: (_) => PlayerPage(track: track, lyricsOnly: lyricsOnly),
       ),
     );
     AppRoutes.currentRoute.value = previous;

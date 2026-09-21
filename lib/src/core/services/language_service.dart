@@ -305,6 +305,47 @@ class LanguageService {
     await _setPreference(_keyThemeMode, isLight ? 'light' : 'dark');
   }
 
+  static const _keyOnboardingComplete = 'onboarding_complete';
+
+  Future<bool> isOnboardingComplete() async {
+    return (await _getPreference(_keyOnboardingComplete, defaultValue: 'false')) ==
+        'true';
+  }
+
+  Future<void> setOnboardingComplete(bool value) async {
+    await _setPreference(_keyOnboardingComplete, value ? 'true' : 'false');
+  }
+
+  static const _keyFluentLanguages = 'fluent_languages';
+
+  Future<Set<String>> getFluentLanguages() async {
+    final raw = await _getPreference(_keyFluentLanguages, defaultValue: 'pt');
+    if (raw.trim().isEmpty) return <String>{};
+    return raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+  }
+
+  Future<void> setFluentLanguages(Set<String> languages) async {
+    final raw = languages
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty)
+        .join(',');
+    await _setPreference(_keyFluentLanguages, raw);
+  }
+
+  static const _keyTranslationLanguage = 'translation_language';
+
+  Future<String> getTranslationLanguage() async {
+    return _getPreference(_keyTranslationLanguage, defaultValue: 'pt');
+  }
+
+  Future<void> setTranslationLanguage(String languageCode) async {
+    await _setPreference(_keyTranslationLanguage, languageCode);
+  }
+
   /// Retorna o LanguagePreference correspondente a um código BCP-47.
   LanguagePreference? findByCode(String code) {
     try {
@@ -360,6 +401,31 @@ class AppLanguage extends ChangeNotifier {
   bool get isPortuguese => code == 'pt';
 }
 
+class TranslationLanguage extends ChangeNotifier {
+  static final instance = TranslationLanguage._();
+  TranslationLanguage._();
+
+  String code = 'pt';
+  bool loaded = false;
+
+  Future<void> load() async {
+    code = await LanguageService().getTranslationLanguage();
+    loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> set(String next) async {
+    await LanguageService().setTranslationLanguage(next);
+    code = next;
+    notifyListeners();
+  }
+
+  String get displayName {
+    final found = supportedLanguages.where((l) => l.code == code);
+    return found.isNotEmpty ? found.first.name : code.toUpperCase();
+  }
+}
+
 class AppThemeMode extends ChangeNotifier {
   static final instance = AppThemeMode._();
   AppThemeMode._();
@@ -377,5 +443,31 @@ class AppThemeMode extends ChangeNotifier {
     await LanguageService().setThemeMode(value);
     isLight = value;
     notifyListeners();
+  }
+}
+
+class FluentLanguages extends ChangeNotifier {
+  static final instance = FluentLanguages._();
+  FluentLanguages._();
+
+  Set<String> languages = {'pt'};
+  bool loaded = false;
+
+  Future<void> load() async {
+    languages = await LanguageService().getFluentLanguages();
+    loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setLanguages(Set<String> next) async {
+    await LanguageService().setFluentLanguages(next);
+    languages = next;
+    notifyListeners();
+  }
+
+  bool isFluent(String languageCode) {
+    if (languageCode.isEmpty) return false;
+    final code = languageCode.toLowerCase().split('-').first;
+    return languages.contains(code);
   }
 }

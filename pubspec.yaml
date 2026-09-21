@@ -26,6 +26,9 @@ dependencies:
   app_links: ^6.3.2
   crypto: ^3.0.6
   shared_preferences: ^2.5.3
+  flutter_svg: ^2.0.17
+  youtube_explode_dart: ^2.2.1
+  youtube_player_iframe: ^6.0.2
 
 dev_dependencies:
   flutter_test:
@@ -35,12 +38,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/spotify.svg
+    - assets/logo.png
+    - assets/creator.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   macos:
     generate: true
-  image_path: "assets/logo.jpg"
+  image_path: "assets/logo.png"
 
  

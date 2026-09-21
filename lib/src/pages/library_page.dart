@@ -295,7 +295,7 @@ class _LibraryPageState extends State<LibraryPage> {
   bool _loading = true;
   String _selectedLetter = 'ALL';
   String _selectedLanguage = 'ALL';
-  String _translationLanguage = 'en';
+  String _translationLanguage = 'pt';
   String? _error;
 
   @override
@@ -320,11 +320,11 @@ class _LibraryPageState extends State<LibraryPage> {
         await _repository.moveWord(word.normalizedWord, 'en', 'es');
       }
       final migratedWords = await _repository.getKnownWordsList();
-      final appLanguage = await _languageService.getAppLanguage();
+      final translationLanguage = await _languageService.getTranslationLanguage();
       if (!mounted) return;
       setState(() {
         _knownWords = migratedWords;
-        _translationLanguage = appLanguage;
+        _translationLanguage = translationLanguage;
         _loading = false;
         _error = null;
       });
@@ -491,8 +491,9 @@ class _LibraryPageState extends State<LibraryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Large Title Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 12, 4),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
               child: Row(
                 children: [
                   Expanded(
@@ -502,18 +503,23 @@ class _LibraryPageState extends State<LibraryPage> {
                         Text(
                           tr(context, "Dictionary"),
                           style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
                             fontSize: 34,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -1,
+                            letterSpacing: -0.8,
+                            color: colors.onSurface,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           Localizations.localeOf(context).languageCode == 'pt'
                               ? '$totalWords ${totalWords == 1 ? 'palavra salva' : 'palavras salvas'}'
                               : '$totalWords saved ${totalWords == 1 ? 'word' : 'words'}',
                           style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
                             color: colors.onSurfaceVariant,
                             fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -522,15 +528,15 @@ class _LibraryPageState extends State<LibraryPage> {
                   IconButton(
                     onPressed: _load,
                     tooltip: tr(context, "Refresh words"),
-                    icon: const Icon(CupertinoIcons.refresh),
+                    icon: const Icon(CupertinoIcons.arrow_clockwise, size: 20),
                   ),
                 ],
               ),
             ),
 
-            // Campo de busca
+            // Search Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: TextField(
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
@@ -539,12 +545,13 @@ class _LibraryPageState extends State<LibraryPage> {
                   prefixIcon: Icon(
                     CupertinoIcons.search,
                     color: colors.onSurfaceVariant,
+                    size: 20,
                   ),
                   suffixIcon: query.isEmpty
                       ? null
                       : IconButton(
                           tooltip: tr(context, "Clear search"),
-                          icon: const Icon(CupertinoIcons.clear, size: 18),
+                          icon: const Icon(CupertinoIcons.clear_circled_solid, size: 18),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {});
@@ -554,64 +561,73 @@ class _LibraryPageState extends State<LibraryPage> {
               ),
             ),
 
+            // Language Filter Pill
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Row(
                 children: [
-                  Text(
-                    tr(context, 'Language'),
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container (
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: colors.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-
                     child: DropdownButton<String>(
-                    value: [
-                      'ALL',
-                      ...languageCodes,
-                    ].contains(_selectedLanguage)
-                        ? _selectedLanguage
-                        : 'ALL',
-                    isDense: true,
-                    isExpanded: false,
-                    underline: const SizedBox.shrink(),
-                    borderRadius: BorderRadius.circular(4),
-                    items: [
-                      const DropdownMenuItem(value: 'ALL', child: Text('All')),
-                      ...languageCodes.map(
-                        (code) => DropdownMenuItem(
-                          value: code,
-                          child: Text(localizedLanguageName(context, code)),
+                      value: [
+                        'ALL',
+                        ...languageCodes,
+                      ].contains(_selectedLanguage)
+                          ? _selectedLanguage
+                          : 'ALL',
+                      isDense: true,
+                      isExpanded: false,
+                      underline: const SizedBox.shrink(),
+                      borderRadius: BorderRadius.circular(16),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'ALL',
+                          child: Text(
+                            tr(context, 'All Languages'),
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontSF,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _selectedLanguage = value;
-                        _selectedLetter = 'ALL';
-                      });
-                    },
-                  ),
+                        ...languageCodes.map(
+                          (code) => DropdownMenuItem(
+                            value: code,
+                            child: Text(
+                              localizedLanguageName(context, code),
+                              style: const TextStyle(
+                                fontFamily: AppTheme.fontSF,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _selectedLanguage = value;
+                          _selectedLetter = 'ALL';
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Barra Seletora A-Z com contagem de palavras por letra
+            // A-Z selector with Apple rounded pill chips
             SizedBox(
-              height: 42,
+              height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: alphabetList.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (context, index) {
@@ -619,53 +635,40 @@ class _LibraryPageState extends State<LibraryPage> {
                   final count = letterCounts[letter] ?? 0;
                   final isSelected = _selectedLetter == letter;
 
-                  return ChoiceChip(
-                    showCheckmark: false,
-                    label: Text(
-                      letter == 'ALL'
-                          ? '${tr(context, 'ALL')} ($count)'
-                          : '$letter ($count)',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: isSelected
-                            ? colors.onSurface
-                            : (count > 0
-                                  ? colors.onSurface
-                                  : colors.onSurfaceVariant),
+                  return Material(
+                    color: isSelected ? colors.primary : colors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(19),
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedLetter = letter),
+                      borderRadius: BorderRadius.circular(19),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        alignment: Alignment.center,
+                        child: Text(
+                          letter == 'ALL'
+                              ? '${tr(context, 'ALL')} ($count)'
+                              : '$letter ($count)',
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected
+                                ? colors.onPrimary
+                                : (count > 0 ? colors.onSurface : colors.onSurfaceVariant),
+                          ),
+                        ),
                       ),
                     ),
-                    selected: isSelected,
-                    selectedColor: colors.primaryContainer,
-                    backgroundColor: count > 0
-                        ? colors.surface
-                        : colors.surfaceContainerHighest,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: isSelected
-                            ? colors.primary
-                            : colors.outlineVariant,
-                        width: isSelected ? 1.5 : 0.5,
-                      ),
-                    ),
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedLetter = letter;
-                      });
-                    },
                   );
                 },
               ),
             ),
             const SizedBox(height: 12),
 
-            // Lista de palavras filtradas
+            // Word List
             Expanded(
               child: _loading
-                  ? const Center(child: const CircularProgressIndicator())
+                  ? const Center(child: CupertinoActivityIndicator())
                   : _error != null
                   ? Center(
                       child: TextButton(
@@ -682,41 +685,24 @@ class _LibraryPageState extends State<LibraryPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               CupertinoIcons.book,
-                              size: 46,
-                              color: AppTheme.yellow,
+                              size: 44,
+                              color: colors.onSurfaceVariant.withValues(alpha: 0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               dictionaryItems.isEmpty
                                   ? tr(context, "No saved words yet")
-                                  : Localizations.localeOf(context)
-                                            .languageCode ==
-                                        'pt'
-                                  ? 'Nenhuma palavra começa com "$_selectedLetter"'
-                                  : 'No words starting with "$_selectedLetter"',
+                                  : (Localizations.localeOf(context).languageCode == 'pt'
+                                      ? 'Nenhuma palavra em "$_selectedLetter"'
+                                      : 'No words in "$_selectedLetter"'),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 18,
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontSF,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              dictionaryItems.isEmpty
-                                  ? tr(
-                                      context,
-                                      "Tap words in lyrics while playing songs to save them!",
-                                    )
-                                  : tr(
-                                      context,
-                                      "Select another letter from the A–Z bar above.",
-                                    ),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppTheme.muted,
-                                height: 1.4,
+                                color: colors.onSurface,
                               ),
                             ),
                           ],
@@ -724,7 +710,7 @@ class _LibraryPageState extends State<LibraryPage> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
                       itemCount: filteredItems.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (_, i) {
@@ -791,9 +777,24 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
         ? '${tr(context, 'Saved on')} ${item.createdAt!.day.toString().padLeft(2, '0')}/${item.createdAt!.month.toString().padLeft(2, '0')}/${item.createdAt!.year} · '
         : '';
 
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(14),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
         shape: const Border(),
@@ -809,21 +810,22 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
               child: Text(
                 item.word,
                 style: TextStyle(
+                  fontFamily: AppTheme.fontSF,
                   color: colors.onSurface,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: -0.4,
                 ),
               ),
             ),
-            // Marca visível da palavra conhecida / aprendendo (Known badge)
+            // Known Badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
                 color: item.isKnown
-                    ? colors.primaryContainer
+                    ? AppTheme.appleBlue.withValues(alpha: 0.12)
                     : colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -834,7 +836,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                         : CupertinoIcons.circle,
                     size: 13,
                     color: item.isKnown
-                        ? colors.primary
+                        ? AppTheme.appleBlue
                         : colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
@@ -843,10 +845,11 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                         ? tr(context, "Known")
                         : tr(context, "Learning"),
                     style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: item.isKnown
-                          ? colors.onPrimaryContainer
+                          ? AppTheme.appleBlue
                           : colors.onSurfaceVariant,
                     ),
                   ),
@@ -865,31 +868,39 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                   '${tr(context, 'From:')} ${item.trackName!}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontSF,
+                    color: colors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
             ],
           ),
         ),
         children: [
-          const Divider(height: 20),
+          Divider(color: Theme.of(context).dividerColor, height: 16),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
               dateStr.endsWith(' · ')
                   ? dateStr.substring(0, dateStr.length - 3)
                   : dateStr,
-              style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+              style: TextStyle(
+                fontFamily: AppTheme.fontSF,
+                color: colors.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           if (_definition != null)
             FutureBuilder<WordDefinition?>(
               future: _definition,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: const LinearProgressIndicator(),
+                    padding: EdgeInsets.all(12),
+                    child: CupertinoActivityIndicator(),
                   );
                 }
                 final data = snapshot.data;
@@ -898,7 +909,7 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                     (data.meanings.isEmpty && data.translation == null)) {
                   return TextButton.icon(
                     onPressed: _lookup,
-                    icon: const Icon(CupertinoIcons.refresh, size: 16),
+                    icon: const Icon(CupertinoIcons.arrow_clockwise, size: 16),
                     label: Text(
                       tr(context, "Definition unavailable. Try again"),
                     ),
@@ -910,25 +921,27 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                     if (data.phonetic?.isNotEmpty == true)
                       Text(
                         data.phonetic!,
-                        style: const TextStyle(
-                          color: AppTheme.muted,
-                          fontSize: 15,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontSF,
+                          color: colors.onSurfaceVariant,
+                          fontSize: 14,
                         ),
                       ),
                     if (data.translation?.isNotEmpty == true)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                           data.translation!,
                           style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
+                            fontFamily: AppTheme.fontSF,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     for (final meaning in data.meanings)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.only(bottom: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -936,24 +949,30 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
                               Text(
                                 tr(context, meaning.partOfSpeech),
                                 style: const TextStyle(
-                                  color: AppTheme.yellow,
+                                  fontFamily: AppTheme.fontSF,
+                                  color: AppTheme.appleBlue,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               meaning.definition,
-                              style: const TextStyle(fontSize: 15, height: 1.5),
+                              style: const TextStyle(
+                                fontFamily: AppTheme.fontSF,
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
                             ),
                             if (meaning.example?.isNotEmpty == true)
                               Padding(
-                                padding: const EdgeInsets.only(top: 6),
+                                padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   '“${meaning.example}”',
-                                  style: const TextStyle(
-                                    color: AppTheme.muted,
-                                    height: 1.5,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    color: colors.onSurfaceVariant,
+                                    fontSize: 13,
                                     fontStyle: FontStyle.italic,
                                   ),
                                 ),
@@ -971,9 +990,9 @@ class _DictionaryEntryState extends State<_DictionaryEntry> {
               onPressed: widget.onToggleKnown,
               icon: Icon(
                 item.isKnown
-                    ? CupertinoIcons.bookmark_solid
+                    ? CupertinoIcons.bookmark_fill
                     : CupertinoIcons.bookmark,
-                size: 17,
+                size: 16,
               ),
               label: Text(
                 item.isKnown

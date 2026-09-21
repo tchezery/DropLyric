@@ -1,6 +1,7 @@
 import '../src/core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -43,18 +44,23 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadOnboarding() async {
     final selected = await LanguageService().hasAppLanguage();
+    final completed = await LanguageService().isOnboardingComplete();
     if (!mounted) return;
     setState(() {
       _languageSelected = selected;
       _onboardingLoading = false;
-      _onboardingFinished = selected && SpotifySession.instance.connected;
+      _onboardingFinished =
+          selected && (completed || SpotifySession.instance.connected);
     });
   }
 
-  void _refreshOnboarding() {
+  void _refreshOnboarding() async {
     if (_onboardingLoading || !mounted) return;
     final selected = _languageSelected || AppLanguage.instance.loaded;
-    final finished = selected && SpotifySession.instance.connected;
+    final completed = await LanguageService().isOnboardingComplete();
+    final finished =
+        selected && (completed || SpotifySession.instance.connected);
+    if (!mounted) return;
     if (selected != _languageSelected || finished != _onboardingFinished) {
       setState(() {
         _languageSelected = selected;
@@ -71,7 +77,7 @@ class _MyAppState extends State<MyApp> {
         AppThemeMode.instance,
       ]),
       builder: (context, _) => MaterialApp(
-        title: 'Droplyric',
+        title: 'DropLyric',
         locale: Locale(AppLanguage.instance.code),
         supportedLocales: const [Locale('en'), Locale('pt')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -87,6 +93,20 @@ class _MyAppState extends State<MyApp> {
         initialRoute: AppRoutes.home,
         onGenerateRoute: AppRoutes.generateRoute,
         builder: (context, child) {
+          final isNativeMacOS =
+              !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
+          final mediaQuery = MediaQuery.of(context);
+          final updatedMediaQuery = isNativeMacOS
+              ? mediaQuery.copyWith(
+                  padding: mediaQuery.padding.copyWith(
+                    top: mediaQuery.padding.top + 28.0,
+                  ),
+                  viewPadding: mediaQuery.viewPadding.copyWith(
+                    top: mediaQuery.viewPadding.top + 28.0,
+                  ),
+                )
+              : mediaQuery;
+
           // Define a cor da status bar para o tema dark
           SystemChrome.setSystemUIOverlayStyle(
             const SystemUiOverlayStyle(
@@ -96,131 +116,82 @@ class _MyAppState extends State<MyApp> {
             ),
           );
 
-          return Stack(
-            children: [
-              // O Navigator ocupa toda a tela
-              Positioned.fill(child: child ?? const SizedBox.shrink()),
-              // O Dock flutua sobre o conteúdo (oculto no modo player)
-              ValueListenableBuilder<String>(
-                valueListenable: AppRoutes.currentRoute,
-                builder: (context, route, _) {
-                  final selectedIndex = _getRouteIndex(route);
+          return MediaQuery(
+            data: updatedMediaQuery,
+            child: Stack(
+              children: [
+                // O Navigator ocupa toda a tela
+                Positioned.fill(child: child ?? const SizedBox.shrink()),
+              // O Dock flutua sobre o conteúdo (oculto no modo player ou quando há popups/modais abertos)
+              ValueListenableBuilder<int>(
+                valueListenable: AppRouteObserver.popupRouteCount,
+                builder: (context, popupCount, _) {
+                  if (popupCount > 0) {
+                    return const SizedBox.shrink();
+                  }
 
-                  return ListenableBuilder(
-                    listenable: SpotifySession.instance,
-                    builder: (context, _) {
-                      final spotify = SpotifySession.instance;
-                      final hasCurrentTrack = RegExp(
-                        r'^spotify:track:[a-zA-Z0-9]{22}$',
-                      ).hasMatch(spotify.uri);
-                      if (!AppRoutes.shouldShowDock(route) &&
-                          spotify.connected) {
-                        return const SizedBox.shrink();
-                      }
-                      final items = <DockItem>[
-                        DockItem(
-                          icon: CupertinoIcons.music_note_list,
-                          activeIcon: CupertinoIcons.music_note_list,
-                          label: tr(context, "Home"),
-                        ),
-                        DockItem(
-                          icon: CupertinoIcons.search,
-                          activeIcon: CupertinoIcons.search,
-                          label: AppLanguage.instance.isPortuguese
-                              ? 'Buscar'
-                              : 'Search',
-                        ),
-                        DockItem(
-                          icon: CupertinoIcons.book,
-                          activeIcon: CupertinoIcons.book,
-                          label: tr(context, "Dictionary"),
-                        ),
-                        DockItem(
-                          icon: Icons.person_outline_rounded,
-                          activeIcon: CupertinoIcons.person,
-                          label: tr(context, "Profile"),
-                        ),
-                      ];
-                      return Dock(
-                        selectedIndex: selectedIndex,
-                        onItemSelected: (index) {
-                          AppRoutes.navigateTo(_getRouteByIndex(index));
+                  return ValueListenableBuilder<String>(
+                    valueListenable: AppRoutes.currentRoute,
+                    builder: (context, route, _) {
+                      final selectedIndex = _getRouteIndex(route);
+
+                      return ListenableBuilder(
+                        listenable: SpotifySession.instance,
+                        builder: (context, _) {
+                          final spotify = SpotifySession.instance;
+                          final hasCurrentTrack = RegExp(
+                            r'^spotify:track:[a-zA-Z0-9]{22}$',
+                          ).hasMatch(spotify.uri);
+                          if (!AppRoutes.shouldShowDock(route)) {
+                            return const SizedBox.shrink();
+                          }
+                          final items = <DockItem>[
+                            DockItem(
+                              icon: CupertinoIcons.music_note_list,
+                              activeIcon: CupertinoIcons.music_note_list,
+                              label: tr(context, "Home"),
+                            ),
+                            DockItem(
+                              icon: CupertinoIcons.search,
+                              activeIcon: CupertinoIcons.search,
+                              label: AppLanguage.instance.isPortuguese
+                                  ? 'Buscar'
+                                  : 'Search',
+                            ),
+                            DockItem(
+                              icon: CupertinoIcons.book,
+                              activeIcon: CupertinoIcons.book,
+                              label: tr(context, "Dictionary"),
+                            ),
+                            DockItem(
+                              icon: Icons.person_outline_rounded,
+                              activeIcon: CupertinoIcons.person,
+                              label: tr(context, "Profile"),
+                            ),
+                          ];
+                          return Dock(
+                            selectedIndex: selectedIndex,
+                            onItemSelected: (index) {
+                              AppRoutes.navigateTo(_getRouteByIndex(index));
+                            },
+                            items: items,
+                            nowPlayingItem: hasCurrentTrack
+                                ? DockItem(
+                                    icon: CupertinoIcons.music_note_2,
+                                    label: tr(context, "Lyrics"),
+                                  )
+                                : null,
+                            onNowPlaying: hasCurrentTrack
+                                ? AppRoutes.openCurrentTrack
+                                : null,
+                          );
                         },
-                        items: items,
-                        nowPlayingItem: hasCurrentTrack
-                            ? DockItem(
-                                icon: CupertinoIcons.music_note_2,
-                                label: tr(context, "Lyrics"),
-                              )
-                            : null,
-                        onNowPlaying: hasCurrentTrack
-                            ? AppRoutes.openCurrentTrack
-                            : null,
                       );
                     },
                   );
                 },
               ),
-              ListenableBuilder(
-                listenable: SpotifySession.instance,
-                builder: (context, _) {
-                  final spotify = SpotifySession.instance;
-                  final colors = Theme.of(context).colorScheme;
-                  if (spotify.error.isEmpty || spotify.connected) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned.fill(
-                    child: ColoredBox(
-                      color: Colors.black54,
-                      child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.all(28),
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                CupertinoIcons.wifi_exclamationmark,
-                                color: AppTheme.yellow,
-                                size: 42,
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                tr(context, "Spotify connection required"),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                spotify.error,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              FilledButton.icon(
-                                icon: const Icon(CupertinoIcons.refresh),
-                                label: Text(tr(context, "Reconnect Spotify")),
-                                onPressed: spotify.connecting
-                                    ? null
-                                    : () => spotify.command('loginWeb'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+
               if (!_onboardingLoading && !_onboardingFinished)
                 Positioned.fill(
                   child: OnboardingPage(
@@ -229,8 +200,9 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
             ],
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }

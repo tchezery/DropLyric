@@ -86,33 +86,65 @@ class LyricsService {
     String? albumName,
     double? duration,
   }) async {
+    final cleanTrack = trackName.trim();
+    final cleanArtist = artistName.trim();
+    if (cleanTrack.isEmpty) return null;
+
     final cacheKey =
-        '${artistName.toLowerCase()}|${trackName.toLowerCase()}|${albumName?.toLowerCase()}|$duration';
+        '${cleanArtist.toLowerCase()}|${cleanTrack.toLowerCase()}|${albumName?.toLowerCase()}|$duration';
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey];
 
-    // Tenta o endpoint direto (/get) para letras sincronizadas com mais precisão
-    final result = await _fetchFromGet(
-      trackName: trackName,
-      artistName: artistName,
-      albumName: albumName,
+    // 1. Tenta o endpoint direto (/get) com todos os metadados
+    final validAlbum = (albumName != null &&
+            albumName.isNotEmpty &&
+            albumName != 'YouTube Music')
+        ? albumName
+        : null;
+
+    var result = await _fetchFromGet(
+      trackName: cleanTrack,
+      artistName: cleanArtist,
+      albumName: validAlbum,
       duration: duration,
+    );
+
+    // 2. Tenta /get sem álbum e sem duração (caso duração tenha divergência de segundos)
+    if (result == null && (validAlbum != null || duration != null)) {
+      result = await _fetchFromGet(
+        trackName: cleanTrack,
+        artistName: cleanArtist,
+      );
+    }
+
+    // 3. Fallback: busca via /search com "Artista Faixa"
+    if (result == null && cleanArtist.isNotEmpty) {
+      result = await _fetchFromSearch(
+        query: '$cleanArtist $cleanTrack',
+      );
+    }
+
+    // 4. Se o artista tiver múltiplos nomes (vírgula, feat, &), tenta apenas o primeiro artista
+    if (result == null && cleanArtist.isNotEmpty) {
+      final primaryArtist = cleanArtist
+          .split(RegExp(r'[,&]|\s+(feat\.?|ft\.?)\s+', caseSensitive: false))[0]
+          .trim();
+      if (primaryArtist.isNotEmpty && primaryArtist != cleanArtist) {
+        result = await _fetchFromSearch(
+          query: '$primaryArtist $cleanTrack',
+        );
+      }
+    }
+
+    // 5. Fallback final: busca via /search apenas pelo nome da faixa
+    result ??= await _fetchFromSearch(
+      query: cleanTrack,
     );
 
     if (result != null) {
       _cache[cacheKey] = result;
-      return result;
     }
 
-    // Fallback: busca via /search (retorna lista, pega o primeiro)
-    final searchResult = await _fetchFromSearch(
-      query: '$artistName $trackName',
-    );
-
-    if (searchResult != null) {
-      _cache[cacheKey] = searchResult;
-    }
-
-    return searchResult;
+    return result;
   }
 
   Future<LyricsResult?> _fetchFromGet({
@@ -133,7 +165,8 @@ class LyricsService {
       final uri = Uri.parse('$_baseUrl/get')
           .replace(queryParameters: queryParams);
 
-      final response = await http.get(uri).timeout(_timeout);
+      final response = await (client?.get(uri) ?? http.get(uri))
+          .timeout(_timeout);
 
       if (response.statusCode != 200) return null;
 
@@ -149,15 +182,26 @@ class LyricsService {
       final uri = Uri.parse('$_baseUrl/search')
           .replace(queryParameters: {'q': query});
 
-      final response = await http.get(uri).timeout(_timeout);
+      final response = await (client?.get(uri) ?? http.get(uri))
+          .timeout(_timeout);
 
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);
       if (data is! List || data.isEmpty) return null;
 
-      // Pega o primeiro resultado
-      return _parseResponse(data.first as Map<String, dynamic>);
+      LyricsResult? firstPlain;
+
+      for (final item in data.whereType<Map<String, dynamic>>()) {
+        final parsed = _parseResponse(item);
+        if (parsed != null) {
+          // Preferência por letras sincronizadas
+          if (parsed.isSynced) return parsed;
+          firstPlain ??= parsed;
+        }
+      }
+
+      return firstPlain;
     } catch (_) {
       return null;
     }
@@ -167,7 +211,7 @@ class LyricsService {
     final syncedLyrics = data['syncedLyrics'] as String?;
     final plainLyrics = data['plainLyrics'] as String?;
 
-    if (syncedLyrics != null && syncedLyrics.isNotEmpty) {
+    if (syncedLyrics != null && syncedLyrics.trim().isNotEmpty) {
       final lines = LyricParser.parseLrc(syncedLyrics);
       if (lines.isNotEmpty) {
         return LyricsResult(
@@ -178,12 +222,15 @@ class LyricsService {
       }
     }
 
-    if (plainLyrics != null && plainLyrics.isNotEmpty) {
-      return LyricsResult(
-        lines: LyricParser.parsePlain(plainLyrics),
-        isSynced: false,
-        plainText: plainLyrics,
-      );
+    if (plainLyrics != null && plainLyrics.trim().isNotEmpty) {
+      final lines = LyricParser.parsePlain(plainLyrics);
+      if (lines.isNotEmpty) {
+        return LyricsResult(
+          lines: lines,
+          isSynced: false,
+          plainText: plainLyrics,
+        );
+      }
     }
 
     return null;

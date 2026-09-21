@@ -1,156 +1,310 @@
 import 'package:flutter/material.dart';
 
-
+/// Apple Design System & Tokens
 class AppTheme {
-  static const paper = Color(0xFFF7F5EF);
-  static const sheet = Color(0xFFFFFEFA);
-  static const ink = Color(0xFF242320);
-  static const muted = Color(0xFF74716A);
-  static const yellow = Color(0xFF936800);
-  static const marker = Color(0xFFFFE89A);
-  static const separator = Color(0xFFE4E0D6);
-  // Compatibility aliases for existing screens.
-    static const spotifyGreen = yellow;
-    static const spotifyGreenLight = marker;
-      static const spotifyBlack = paper;
-      static const spotifyDarkCard = sheet;
-      static const spotifyMediumGray = separator;
-      static const spotifyLightGray = muted;
-      static const spotifyWhite = ink;
-  static const primaryColor = yellow;
-  static const backgroundColor = paper;
-  static const cardColor = sheet;
-  static const surfaceColor = separator;
-  static const textPrimary = ink;
-  static const textSecondary = muted;
+  // Apple iOS Light Palette
+  static const white = Color(0xFFFFFFFF);
+  static const groupedBackgroundLight = Color(0xFFF2F2F7);
+  static const secondaryGroupedLight = Color(0xFFFFFFFF);
+  static const labelLight = Color(0xFF000000);
+  static const secondaryLabelLight = Color(0xFF8E8E93);
+  static const separatorLight = Color(0xFFE5E5EA);
+  static const fillLight = Color(0xFFE9E9EB);
+
+  // Apple iOS Dark Palette
+  static const black = Color(0xFF000000);
+  static const groupedBackgroundDark = Color(0xFF000000);
+  static const secondaryGroupedDark = Color(0xFF1C1C1E);
+  static const labelDark = Color(0xFFFFFFFF);
+  static const secondaryLabelDark = Color(0xFF8E8E93);
+  static const separatorDark = Color(0xFF2C2C2E);
+  static const fillDark = Color(0xFF2C2C2E);
+
+  // Accents
+  static const appleBlue = Color(0xFF007AFF);
+  static const spotifyGreen = Color(0xFF1DB954);
+  static const spotifyGreenLight = Color(0xFF1ED760);
+  static const appleRed = Color(0xFFFF3B30);
+
+  // Aliases for compatibility
+  static const paper = white;
+  static const sheet = secondaryGroupedLight;
+  static const ink = labelLight;
+  static const muted = secondaryLabelLight;
+  static const yellow = appleBlue;
+  static const marker = Color(0xFFD0E8FF);
+  static const separator = separatorLight;
+
+  static const spotifyBlack = black;
+  static const spotifyDarkCard = secondaryGroupedDark;
+  static const spotifyMediumGray = separatorDark;
+  static const spotifyLightGray = secondaryLabelDark;
+  static const spotifyWhite = labelDark;
+
+  static const primaryColor = appleBlue;
+  static const backgroundColor = white;
+  static const cardColor = secondaryGroupedLight;
+  static const surfaceColor = separatorLight;
+  static const textPrimary = labelLight;
+  static const textSecondary = secondaryLabelLight;
+
+  static const String fontSF = '.SF Pro Text';
 
   static ThemeData get notesTheme {
     final scheme = ColorScheme.fromSeed(
-      seedColor: yellow,
+      seedColor: appleBlue,
       brightness: Brightness.light,
-      surface: sheet,
-      primary: yellow,
+      surface: white,
+      surfaceContainerHighest: groupedBackgroundLight,
+      primary: appleBlue,
       onPrimary: Colors.white,
-      onSurface: ink,
-      secondary: yellow,
+      onSurface: labelLight,
+      onSurfaceVariant: secondaryLabelLight,
+      outline: separatorLight,
+      secondary: appleBlue,
     );
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontSF,
       brightness: Brightness.light,
       colorScheme: scheme,
-      scaffoldBackgroundColor: paper,
+      scaffoldBackgroundColor: white,
       appBarTheme: const AppBarTheme(
-        backgroundColor: paper,
-        foregroundColor: ink,
+        backgroundColor: white,
+        foregroundColor: labelLight,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: ink,
-          fontSize: 32,
+          fontFamily: fontSF,
+          color: labelLight,
+          fontSize: 28,
           fontWeight: FontWeight.w700,
-          letterSpacing: -1,
+          letterSpacing: -0.5,
         ),
       ),
       textTheme: ThemeData.light().textTheme.apply(
-        bodyColor: ink,
-        displayColor: ink,
+        fontFamily: fontSF,
+        bodyColor: labelLight,
+        displayColor: labelLight,
       ),
       cardTheme: CardThemeData(
-        color: sheet,
+        color: white,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: separatorLight, width: 0.8),
+        ),
       ),
-      dividerTheme: const DividerThemeData(color: separator, thickness: 0.5),
-      iconTheme: const IconThemeData(color: yellow),
-      listTileTheme: const ListTileThemeData(textColor: ink, iconColor: yellow),
+      dividerTheme: const DividerThemeData(color: separatorLight, thickness: 0.6),
+      iconTheme: const IconThemeData(color: labelLight),
+      listTileTheme: const ListTileThemeData(
+        textColor: labelLight,
+        iconColor: secondaryLabelLight,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: separator,
-        hintStyle: const TextStyle(color: muted),
+        fillColor: groupedBackgroundLight,
+        hintStyle: const TextStyle(color: secondaryLabelLight, fontSize: 15),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: appleBlue, width: 1.5),
         ),
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: yellow,
-        thumbColor: yellow,
-        inactiveTrackColor: separator,
-        trackHeight: 3,
+        activeTrackColor: labelLight,
+        thumbColor: labelLight,
+        inactiveTrackColor: separatorLight,
+        trackHeight: 4,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: yellow,
-        linearTrackColor: separator,
+        color: labelLight,
+        linearTrackColor: separatorLight,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: marker,
-          foregroundColor: ink,
+          backgroundColor: labelLight,
+          foregroundColor: white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: fontSF,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: yellow,
-          side: const BorderSide(color: separator),
+          foregroundColor: labelLight,
+          side: const BorderSide(color: separatorLight, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: fontSF,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: sheet,
+        backgroundColor: white,
+        surfaceTintColor: Colors.transparent,
         showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
       ),
     );
   }
 
   static ThemeData get darkTheme {
     final scheme = ColorScheme.fromSeed(
-      seedColor: yellow,
+      seedColor: appleBlue,
       brightness: Brightness.dark,
-      surface: const Color(0xFF1C1B19),
-      primary: marker,
-      onPrimary: ink,
-      secondary: yellow,
+      surface: secondaryGroupedDark,
+      surfaceContainerHighest: separatorDark,
+      primary: white,
+      onPrimary: black,
+      onSurface: labelDark,
+      onSurfaceVariant: secondaryLabelDark,
+      outline: separatorDark,
+      secondary: appleBlue,
     );
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontSF,
       brightness: Brightness.dark,
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF121210),
+      scaffoldBackgroundColor: black,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF121210),
-        foregroundColor: Colors.white,
+        backgroundColor: black,
+        foregroundColor: labelDark,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: fontSF,
+          color: labelDark,
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+      ),
+      textTheme: ThemeData.dark().textTheme.apply(
+        fontFamily: fontSF,
+        bodyColor: labelDark,
+        displayColor: labelDark,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF1C1B19),
+        color: secondaryGroupedDark,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFF3A3935)),
-      iconTheme: const IconThemeData(color: marker),
+      dividerTheme: const DividerThemeData(color: separatorDark, thickness: 0.6),
+      iconTheme: const IconThemeData(color: labelDark),
+      listTileTheme: const ListTileThemeData(
+        textColor: labelDark,
+        iconColor: secondaryLabelDark,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF302F2B),
-        hintStyle: const TextStyle(color: Color(0xFFB5B1A8)),
+        fillColor: secondaryGroupedDark,
+        hintStyle: const TextStyle(color: secondaryLabelDark, fontSize: 15),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: white, width: 1.5),
+        ),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: white,
+        thumbColor: white,
+        inactiveTrackColor: separatorDark,
+        trackHeight: 4,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: white,
+        linearTrackColor: separatorDark,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: white,
+          foregroundColor: black,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: fontSF,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: labelDark,
+          side: const BorderSide(color: separatorDark, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: fontSF,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: Color(0xFF1C1B19),
+        backgroundColor: secondaryGroupedDark,
+        surfaceTintColor: Colors.transparent,
         showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
       ),
     );
   }
 
   static LinearGradient get greenGradient =>
-      const LinearGradient(colors: [marker, paper]);
+      const LinearGradient(colors: [spotifyGreen, spotifyGreenLight]);
   static LinearGradient playerBackgroundGradient(Color dominantColor) =>
-      const LinearGradient(colors: [sheet, paper]);
+      LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [dominantColor.withValues(alpha: 0.15), white],
+      );
 }

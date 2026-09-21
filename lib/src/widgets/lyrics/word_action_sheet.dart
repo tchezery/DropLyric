@@ -4,50 +4,61 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
+import '../../core/repositories/known_words_repository.dart';
 import '../../core/services/dictionary_service.dart';
 
 /// Modal de ações ao pressionar uma palavra da letra:
 /// - Ícone de Livrinho (📖 Dicionário) para ver significado completo, fonética e tradução.
 /// - Botão para alternar status no vocabulário (Conhecida / Estudo).
 /// - Botão para copiar a palavra.
+/// - Botão para marcar todas as palavras da frase como conhecidas.
 class WordActionSheet extends StatefulWidget {
   final String rawWord;
   final String normalized;
+  final String? sentence;
   final bool isInitiallyKnown;
   final String sourceLanguage;
   final String targetLanguage;
   final Future<void> Function() onToggleWord;
+  final Future<void> Function(List<String> words)? onMarkSentenceKnown;
 
   const WordActionSheet({
     super.key,
     required this.rawWord,
     required this.normalized,
+    this.sentence,
     required this.isInitiallyKnown,
     required this.sourceLanguage,
     required this.targetLanguage,
     required this.onToggleWord,
+    this.onMarkSentenceKnown,
   });
 
   static Future<void> show(
     BuildContext context, {
     required String rawWord,
     required String normalized,
+    String? sentence,
     required bool isInitiallyKnown,
     required String sourceLanguage,
     required String targetLanguage,
     required Future<void> Function() onToggleWord,
+    Future<void> Function(List<String> words)? onMarkSentenceKnown,
   }) {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      showDragHandle: false,
       isScrollControlled: true,
       builder: (ctx) => WordActionSheet(
         rawWord: rawWord,
         normalized: normalized,
+        sentence: sentence,
         isInitiallyKnown: isInitiallyKnown,
         sourceLanguage: sourceLanguage,
         targetLanguage: targetLanguage,
         onToggleWord: onToggleWord,
+        onMarkSentenceKnown: onMarkSentenceKnown,
       ),
     );
   }
@@ -63,12 +74,89 @@ class _WordActionSheetState extends State<WordActionSheet> {
   bool _loading = true;
   WordDefinition? _definition;
   String? _errorMessage;
+  bool _sentenceKnownLoading = false;
+  bool _sentenceAllKnown = false;
 
   @override
   void initState() {
     super.initState();
     _isKnown = widget.isInitiallyKnown;
     _lookup();
+  }
+
+  List<String> _extractWords(String sentence) {
+    final matches = RegExp(
+      r"[a-zA-ZÀ-ÿ\u0100-\u017F]+(?:['’][a-zA-ZÀ-ÿ\u0100-\u017F]+)*",
+    ).allMatches(sentence);
+    return matches
+        .map((m) => m.group(0)!)
+        .where((w) => w.trim().isNotEmpty)
+        .toList();
+  }
+
+  Future<void> _handleMarkSentenceKnown(String sentenceText) async {
+    final words = _extractWords(sentenceText);
+    if (words.isEmpty) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _sentenceKnownLoading = true;
+    });
+
+    try {
+      if (widget.onMarkSentenceKnown != null) {
+        await widget.onMarkSentenceKnown!(words);
+      } else {
+        await KnownWordsRepository().setWordsKnown(
+          words,
+          widget.sourceLanguage,
+          true,
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _sentenceKnownLoading = false;
+          _sentenceAllKnown = true;
+          _isKnown = true;
+        });
+
+        final isPt = Localizations.localeOf(context).languageCode == 'pt';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  CupertinoIcons.checkmark_seal_fill,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isPt
+                        ? 'Todas as ${words.length} palavras da frase foram marcadas como conhecidas!'
+                        : 'All ${words.length} words in sentence marked as known!',
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.spotifyGreen,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _sentenceKnownLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr(context, "Could not save the word. Try again.")),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _lookup() async {
@@ -80,6 +168,7 @@ class _WordActionSheetState extends State<WordActionSheet> {
     try {
       final res = await _dictionaryService.lookupWord(
         widget.normalized,
+        sentence: widget.sentence,
         sourceLang: widget.sourceLanguage,
         targetLang: widget.targetLanguage,
       );
@@ -138,17 +227,28 @@ class _WordActionSheetState extends State<WordActionSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1C1C1E) : AppTheme.white;
+    final cardColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    final primaryTextColor = isDark ? AppTheme.labelDark : AppTheme.labelLight;
+    final secondaryTextColor = isDark ? AppTheme.secondaryLabelDark : AppTheme.secondaryLabelLight;
+    final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
 
     return Container(
-      constraints: BoxConstraints(maxHeight: media.size.height * 0.78),
-      decoration: const BoxDecoration(
-        color: const Color(0xFFFFFEFA),
-        borderRadius: const BorderRadius.vertical(top: const Radius.circular(22)),
-        border: const Border(
-          top: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
-          left: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
-          right: const BorderSide(color: const Color(0xFFE4E0D6), width: 1.2),
-        ),
+      constraints: BoxConstraints(
+        maxHeight: media.size.height * 0.80,
+        maxWidth: 640,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -156,18 +256,18 @@ class _WordActionSheetState extends State<WordActionSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Handle de arrastar
+            // iOS drag indicator
             Container(
-              width: 38,
-              height: 4,
+              width: 36,
+              height: 5,
               decoration: BoxDecoration(
-                color: AppTheme.separator,
-                borderRadius: BorderRadius.circular(2),
+                color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFD1D1D6),
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // Cabeçalho da palavra
+            // Word Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -177,51 +277,53 @@ class _WordActionSheetState extends State<WordActionSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.rawWord.toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.ink,
-                            letterSpacing: 1.0,
+                          widget.rawWord,
+                          style: TextStyle(
+                            fontFamily: '.SF Pro Display',
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: primaryTextColor,
+                            letterSpacing: -0.5,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
                                 color: _isKnown
-                                    ? AppTheme.spotifyGreen.withValues(
-                                        alpha: 0.20,
-                                      )
-                                    : const Color(0xFFFDE68A)
-                                          .withValues(alpha: 0.20),
-                                borderRadius: BorderRadius.circular(4),
+                                    ? AppTheme.spotifyGreen.withValues(alpha: 0.15)
+                                    : AppTheme.appleBlue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                _isKnown ? tr(context, "KNOWN") : tr(context, "LEARNING"),
+                                _isKnown
+                                    ? (isPortuguese ? 'CONHECIDA' : 'KNOWN')
+                                    : (isPortuguese ? 'ESTUDANDO' : 'LEARNING'),
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontFamily: '.SF Pro Text',
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: _isKnown
                                       ? AppTheme.spotifyGreen
-                                      : const Color(0xFFFDE68A),
-                                  letterSpacing: 0.5,
+                                      : AppTheme.appleBlue,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               widget.sourceLanguage.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: const Color(0xFF74716A),
+                              style: TextStyle(
+                                fontFamily: '.SF Pro Text',
+                                fontSize: 12,
+                                color: secondaryTextColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -230,101 +332,70 @@ class _WordActionSheetState extends State<WordActionSheet> {
                       ],
                     ),
                   ),
-                  IconButton(
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      CupertinoIcons.clear,
-                      color: AppTheme.muted,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        CupertinoIcons.xmark,
+                        size: 14,
+                        color: secondaryTextColor,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // Barra de ações (Livrinho de Dicionário, Vocabulário, Copiar)
+            // Action Row
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  // 1. O Livrinho do Dicionário (Destacado conforme solicitado)
+                  // 1. Toggle Vocabulary Status Button
                   Expanded(
                     flex: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFDE68A), // Amarelo marca-texto
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            CupertinoIcons.book, // Livrinho solicitado!
-                            size: 19,
-                            color: const Color(0xFF141F17),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            tr(context, "Dictionary"),
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF141F17),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // 2. Botão de alternar vocabulário
-                  Expanded(
-                    flex: 3,
-                    child: InkWell(
-                      onTap: _handleToggle,
-                      borderRadius: BorderRadius.circular(10),
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _handleToggle,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
+                          vertical: 11,
+                          horizontal: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0EDE5),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _isKnown
-                                ? AppTheme.spotifyGreen.withValues(alpha: 0.5)
-                                : AppTheme.separator,
-                          ),
+                          color: _isKnown
+                              ? AppTheme.spotifyGreen
+                              : AppTheme.appleBlue,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               _isKnown
-                                  ? CupertinoIcons.bookmark_solid
-                                  : CupertinoIcons.bookmark,
-                              size: 18,
-                              color: _isKnown
-                                  ? AppTheme.spotifyGreen
-                                  : AppTheme.muted,
+                                  ? CupertinoIcons.checkmark_alt
+                                  : CupertinoIcons.bookmark_fill,
+                              size: 16,
+                              color: AppTheme.white,
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: 6),
                             Text(
-                              _isKnown ? tr(context, "Unmark") : tr(context, "Mark as known"),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: _isKnown
-                                    ? AppTheme.spotifyGreen
-                                    : AppTheme.ink,
+                              _isKnown
+                                  ? (isPortuguese ? 'Conhecida' : 'Known')
+                                  : (isPortuguese ? 'Marcar como conhecida' : 'Mark as known'),
+                              style: const TextStyle(
+                                fontFamily: '.SF Pro Text',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.white,
                               ),
                             ),
                           ],
@@ -332,26 +403,22 @@ class _WordActionSheetState extends State<WordActionSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
 
-                  // 3. Botão Copiar
-                  InkWell(
-                    onTap: _copyToClipboard,
-                    borderRadius: BorderRadius.circular(10),
+                  // 2. Copy Button
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _copyToClipboard,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 10,
-                      ),
+                      padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0EDE5),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.separator),
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.doc_on_clipboard,
                         size: 18,
-                        color: AppTheme.muted,
+                        color: primaryTextColor,
                       ),
                     ),
                   ),
@@ -359,18 +426,21 @@ class _WordActionSheetState extends State<WordActionSheet> {
               ),
             ),
 
-            const SizedBox(height: 12),
-            const Divider(color: const Color(0xFFE4E0D6), height: 1),
+            const SizedBox(height: 16),
+            Divider(
+              color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E5EA),
+              height: 1,
+            ),
 
-            // Área de conteúdo do Dicionário
-            Expanded(child: _buildDictionaryBody()),
+            // Dictionary content area
+            Expanded(child: _buildDictionaryBody(cardColor, primaryTextColor, secondaryTextColor, isDark)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDictionaryBody() {
+  Widget _buildDictionaryBody(Color cardColor, Color primaryTextColor, Color secondaryTextColor, bool isDark) {
     if (_loading) {
       return Center(
         child: Padding(
@@ -378,14 +448,15 @@ class _WordActionSheetState extends State<WordActionSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(
-                color: const Color(0xFFFDE68A),
-                strokeWidth: 2.2,
-              ),
+              const CupertinoActivityIndicator(radius: 12),
               const SizedBox(height: 14),
               Text(
                 tr(context, "Searching for meaning in dictionary..."),
-                style: const TextStyle(fontSize: 12, color: const Color(0xFF74716A)),
+                style: TextStyle(
+                  fontFamily: '.SF Pro Text',
+                  fontSize: 13,
+                  color: secondaryTextColor,
+                ),
               ),
             ],
           ),
@@ -400,24 +471,35 @@ class _WordActionSheetState extends State<WordActionSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 CupertinoIcons.wifi_slash,
-                size: 40,
-                color: AppTheme.muted,
+                size: 36,
+                color: secondaryTextColor,
               ),
               const SizedBox(height: 12),
               Text(
                 tr(context, _errorMessage!),
-                style: const TextStyle(fontSize: 13, color: AppTheme.muted),
+                style: TextStyle(
+                  fontFamily: '.SF Pro Text',
+                  fontSize: 14,
+                  color: secondaryTextColor,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
-              TextButton.icon(
+              const SizedBox(height: 14),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: cardColor,
+                borderRadius: BorderRadius.circular(10),
                 onPressed: _lookup,
-                icon: const Icon(CupertinoIcons.refresh, size: 16),
-                label: Text(tr(context, "Try again")),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFFDE68A),
+                child: Text(
+                  tr(context, "Try again"),
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Text',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.appleBlue,
+                  ),
                 ),
               ),
             ],
@@ -427,18 +509,27 @@ class _WordActionSheetState extends State<WordActionSheet> {
     }
 
     final def = _definition;
-    if (def == null || (def.meanings.isEmpty && def.translation == null)) {
+    if (def == null ||
+        (def.meanings.isEmpty &&
+            def.translation == null &&
+            def.sentenceTranslation == null)) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(CupertinoIcons.book, size: 44, color: AppTheme.muted),
+              Icon(CupertinoIcons.book, size: 40, color: secondaryTextColor),
               const SizedBox(height: 12),
               Text(
-                Localizations.localeOf(context).languageCode == 'pt' ? 'Nenhum significado detalhado encontrado\npara "${widget.rawWord}".' : 'No detailed meaning found\nfor "${widget.rawWord}".',
-                style: const TextStyle(fontSize: 13, color: AppTheme.muted),
+                Localizations.localeOf(context).languageCode == 'pt'
+                    ? 'Nenhum significado encontrado\npara "${widget.rawWord}".'
+                    : 'No detailed meaning found\nfor "${widget.rawWord}".',
+                style: TextStyle(
+                  fontFamily: '.SF Pro Text',
+                  fontSize: 14,
+                  color: secondaryTextColor,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -447,144 +538,280 @@ class _WordActionSheetState extends State<WordActionSheet> {
       );
     }
 
+    final isPortuguese =
+        Localizations.localeOf(context).languageCode == 'pt';
+    final sentenceToShow =
+        (def.sentenceText != null && def.sentenceText!.isNotEmpty)
+            ? def.sentenceText!
+            : widget.sentence;
+    final hasSentenceTranslation =
+        def.sentenceTranslation != null && def.sentenceTranslation!.isNotEmpty;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
-        // Pronúncia fonética se disponível
+        // Phonetic pronunciation
         if (def.phonetic != null && def.phonetic!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 14),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   CupertinoIcons.volume_up,
                   size: 16,
-                  color: const Color(0xFF74716A),
+                  color: secondaryTextColor,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
                   def.phonetic!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF74716A),
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Text',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: secondaryTextColor,
                   ),
                 ),
               ],
             ),
           ),
 
-        // Card de Tradução em Português
+        // 1. Literal Word Translation Card
         if (def.translation != null && def.translation!.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0EDE5),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFFDE68A).withValues(alpha: 0.35),
-              ),
+              color: cardColor,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      CupertinoIcons.globe,
-                      size: 15,
-                      color: const Color(0xFFFDE68A),
+                    Icon(
+                      CupertinoIcons.textformat_abc,
+                      size: 16,
+                      color: AppTheme.appleBlue,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      tr(context, "TRANSLATION"),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFFFDE68A).withValues(alpha: 0.9),
-                        letterSpacing: 0.8,
+                      tr(context, "LITERAL TRANSLATION"),
+                      style: const TextStyle(
+                        fontFamily: '.SF Pro Text',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.appleBlue,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   def.translation!,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.ink,
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Display',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: primaryTextColor,
                   ),
                 ),
               ],
             ),
           ),
 
-        // Lista de Significados e Definições
+        // 2. Full Sentence Translation Card
+        if (hasSentenceTranslation || (sentenceToShow != null && sentenceToShow.isNotEmpty))
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.text_quote,
+                      size: 16,
+                      color: AppTheme.spotifyGreen,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      tr(context, "FULL SENTENCE"),
+                      style: const TextStyle(
+                        fontFamily: '.SF Pro Text',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.spotifyGreen,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                if (hasSentenceTranslation) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    def.sentenceTranslation!,
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Display',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: primaryTextColor,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+                if (sentenceToShow != null && sentenceToShow.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '“$sentenceToShow”',
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                      color: secondaryTextColor,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: _sentenceKnownLoading
+                      ? null
+                      : () => _handleMarkSentenceKnown(sentenceToShow ?? ''),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _sentenceAllKnown
+                          ? AppTheme.spotifyGreen.withValues(alpha: 0.15)
+                          : (isDark
+                              ? const Color(0xFF3A3A3C)
+                              : const Color(0xFFE5E5EA)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _sentenceAllKnown
+                            ? AppTheme.spotifyGreen.withValues(alpha: 0.4)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_sentenceKnownLoading)
+                          const CupertinoActivityIndicator(radius: 8)
+                        else
+                          Icon(
+                            _sentenceAllKnown
+                                ? CupertinoIcons.checkmark_seal_fill
+                                : CupertinoIcons.checkmark_alt_circle,
+                            size: 16,
+                            color: _sentenceAllKnown
+                                ? AppTheme.spotifyGreen
+                                : (isDark ? Colors.white : AppTheme.labelLight),
+                          ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _sentenceAllKnown
+                              ? (isPortuguese
+                                  ? 'Todas as palavras aprendidas!'
+                                  : 'All sentence words known!')
+                              : (isPortuguese
+                                  ? 'Sei todas as palavras da frase'
+                                  : 'I know all words in this sentence'),
+                          style: TextStyle(
+                            fontFamily: '.SF Pro Text',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _sentenceAllKnown
+                                ? AppTheme.spotifyGreen
+                                : primaryTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Definitions list
         if (def.meanings.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 10, left: 4),
             child: Text(
               tr(context, "DICTIONARY DEFINITIONS"),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF74716A),
-                letterSpacing: 0.8,
+              style: TextStyle(
+                fontFamily: '.SF Pro Text',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: secondaryTextColor,
+                letterSpacing: 0.4,
               ),
             ),
           ),
           ...def.meanings.map((meaning) {
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0EDE5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppTheme.separator),
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (meaning.partOfSpeech.isNotEmpty)
                     Container(
-                      margin: const EdgeInsets.only(bottom: 6),
+                      margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
+                        horizontal: 8,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.separator,
-                        borderRadius: BorderRadius.circular(4),
+                        color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFE5E5EA),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         tr(context, meaning.partOfSpeech.toLowerCase()),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFDE68A),
+                        style: TextStyle(
+                          fontFamily: '.SF Pro Text',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: primaryTextColor,
                         ),
                       ),
                     ),
                   Text(
                     meaning.definition,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: const Color(0xFF242320),
+                    style: TextStyle(
+                      fontFamily: '.SF Pro Text',
+                      fontSize: 14,
+                      height: 1.4,
+                      color: primaryTextColor,
                     ),
                   ),
-                  if (meaning.example != null &&
-                      meaning.example!.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                  if (meaning.example != null && meaning.example!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Text(
                       '“${meaning.example}”',
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: TextStyle(
+                        fontFamily: '.SF Pro Text',
+                        fontSize: 13,
                         fontStyle: FontStyle.italic,
-                        color: const Color(0xFF74716A),
-                        height: 1.4,
+                        color: secondaryTextColor,
+                        height: 1.35,
                       ),
                     ),
                   ],

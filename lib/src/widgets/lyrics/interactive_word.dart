@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Palavra interativa sem background:
+import '../../../app/theme.dart';
+
+/// Palavra interativa estilo Apple Music:
 ///
-/// **Desconhecida** → texto normal, 100% visível/nítido para aprender.
-/// **Conhecida** → apenas opaco (baixa opacidade/esmaecido), indicando domínio.
-/// **Linha ativa** → tipografia maior e destacada.
+/// **Desconhecida** → 100% nítida para aprendizado.
+/// **Conhecida** → esmaecida (baixa opacidade), indicando domínio.
+/// **Linha ativa** → tipografia Apple SF Pro destacada.
 class InteractiveWord extends StatelessWidget {
   final String word;
   final bool isKnown;
@@ -14,6 +16,7 @@ class InteractiveWord extends StatelessWidget {
   final bool isActiveLine;
   final bool isLightMode;
   final bool isManualMode;
+  final bool isFluentMode;
   final Color? customColor;
   final String fontFamily;
 
@@ -26,30 +29,46 @@ class InteractiveWord extends StatelessWidget {
     this.isActiveLine = false,
     this.isLightMode = false,
     this.isManualMode = false,
+    this.isFluentMode = false,
     this.customColor,
-    this.fontFamily = 'monospace',
+    this.fontFamily = AppTheme.fontSF,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Quando a linha está ativa com o marca-texto amarelo, a cor do texto é tinta escura
-    // Quando inativa, o texto é branco conforme solicitado pelo usuário
+    // Quando a linha está ativa com fundo amarelo, a cor do texto deve ser sempre escura (Colors.black)
+    // para garantir contraste perfeito tanto no Dark Mode quanto no Light Mode.
     final Color textColor;
     if (isActiveLine) {
-      textColor = const Color(0xFF141F17);
+      textColor = customColor ?? Colors.black;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
     final double opacity;
-    if (isKnown) {
-      opacity = isActiveLine ? 0.40 : 0.30;
+    if (isActiveLine) {
+      if (isFluentMode) {
+        opacity = 1.0;
+      } else {
+        // Na linha amarela ativa:
+        // - Já clicada (conhecida): 0.38 (perfeitamente legível sobre o amarelo, mas visivelmente esmaecida)
+        // - Não clicada (desconhecida): 1.0 (preto sólido intenso)
+        opacity = isKnown ? 0.38 : 1.0;
+      }
     } else {
-      opacity = 1.0;
+      if (isFluentMode) {
+        opacity = isLightMode ? 0.60 : 0.55;
+      } else {
+        opacity = isKnown
+            ? (isLightMode ? 0.38 : 0.32)
+            : (isLightMode ? 0.95 : 0.90);
+      }
     }
 
-    final fontSize = isActiveLine ? 16.5 : 15.0;
-    final fontWeight = isActiveLine ? FontWeight.w800 : FontWeight.w500;
+    final fontSize = isActiveLine ? 18.0 : 16.0;
+    final fontWeight = isActiveLine
+        ? (isKnown && !isFluentMode ? FontWeight.w500 : FontWeight.w800)
+        : (isKnown && !isFluentMode ? FontWeight.w400 : FontWeight.w600);
 
     TapDownDetails? tapDetails;
 
@@ -67,7 +86,7 @@ class InteractiveWord extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 1.0),
+        padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.5),
         child: Text(
           word,
           style: TextStyle(
@@ -75,7 +94,8 @@ class InteractiveWord extends StatelessWidget {
             fontSize: fontSize,
             fontWeight: fontWeight,
             color: textColor.withValues(alpha: opacity),
-            height: 1.45,
+            letterSpacing: -0.3,
+            height: 1.4,
           ),
         ),
       ),
@@ -83,12 +103,13 @@ class InteractiveWord extends StatelessWidget {
   }
 }
 
-/// Token de pontuação ou espaço, sempre exibido como conteúdo já dominado.
+/// Token de pontuação ou espaço.
 class PunctuationSpan extends StatelessWidget {
   final String text;
   final bool isActiveLine;
   final bool isLightMode;
   final bool isManualMode;
+  final bool isFluentMode;
   final Color? customColor;
   final String fontFamily;
 
@@ -98,32 +119,41 @@ class PunctuationSpan extends StatelessWidget {
     this.isActiveLine = false,
     this.isLightMode = false,
     this.isManualMode = false,
+    this.isFluentMode = false,
     this.customColor,
-    this.fontFamily = 'monospace',
+    this.fontFamily = AppTheme.fontSF,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color textColor;
     if (isActiveLine) {
-      textColor = const Color(0xFF141F17);
+      textColor = customColor ?? Colors.black;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
-    final fontSize = isActiveLine ? 16.5 : 15.0;
-    final fontWeight = isActiveLine ? FontWeight.w800 : FontWeight.w500;
+    final double opacity;
+    if (isActiveLine) {
+      opacity = 1.0;
+    } else {
+      opacity = isFluentMode
+          ? (isLightMode ? 0.60 : 0.55)
+          : (isLightMode ? 0.40 : 0.35);
+    }
+    final fontSize = isActiveLine ? 18.0 : 16.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.0),
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Text(
         text,
         style: TextStyle(
           fontFamily: fontFamily,
           fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: textColor.withValues(alpha: isActiveLine ? 0.40 : 0.30),
-          height: 1.45,
+          fontWeight: isActiveLine ? FontWeight.w600 : FontWeight.w400,
+          color: textColor.withValues(alpha: opacity),
+          letterSpacing: -0.3,
+          height: 1.4,
         ),
       ),
     );

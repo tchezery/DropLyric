@@ -57,7 +57,7 @@ class _FlagPainter extends CustomPainter {
       case 'de':
         _horizontal(canvas, size, const [
           Colors.black,
-          Color(0xFFD00),
+          Color(0xFFFF0000),
           Color(0xFFFFCE00),
         ]);
       case 'jp':

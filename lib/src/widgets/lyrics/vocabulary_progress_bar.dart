@@ -41,22 +41,28 @@ class _VocabularyProgressBarState extends State<VocabularyProgressBar> {
   Widget build(BuildContext context) {
     final knownCount = widget.knownCount;
     final totalCount = widget.totalCount;
-    final progress = totalCount == 0 ? 0.0 : knownCount / totalCount;
+    final progress = totalCount == 0 ? 0.0 : (knownCount / totalCount).clamp(0.0, 1.0);
     final percentage = (progress * 100).round();
     final isComplete = totalCount > 0 && knownCount >= totalCount;
 
-    final labelColor = widget.isLightMode ? const Color(0xFF8E8E93) : AppTheme.spotifyLightGray;
-    final badgeBg = isComplete
-        ? const Color(0xFF2E9B55)
-        : (widget.isLightMode ? Colors.black : AppTheme.spotifyGreen);
-    final badgeText = isComplete || !widget.isLightMode ? Colors.white : Colors.white;
-    final trackColor = widget.isLightMode ? const Color(0xFFE5E5EA) : AppTheme.spotifyMediumGray;
+    final labelColor = widget.isLightMode
+        ? AppTheme.secondaryLabelLight
+        : AppTheme.secondaryLabelDark;
+    final trackColor = widget.isLightMode
+        ? const Color(0xFFE5E5EA)
+        : const Color(0xFF2C2C2E);
     final fillColor = isComplete
-        ? const Color(0xFF2E9B55)
-        : (widget.isLightMode ? Colors.black : AppTheme.spotifyGreen);
+        ? AppTheme.spotifyGreen
+        : (widget.isLightMode ? Colors.black : Colors.white);
+    final badgeBg = isComplete
+        ? AppTheme.spotifyGreen
+        : (widget.isLightMode ? const Color(0xFFE9E9EB) : const Color(0xFF2C2C2E));
+    final badgeText = isComplete
+        ? Colors.black
+        : (widget.isLightMode ? Colors.black : Colors.white);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -66,17 +72,18 @@ class _VocabularyProgressBarState extends State<VocabularyProgressBar> {
               Text(
                 tr(context, "Vocabulary"),
                 style: TextStyle(
+                  fontFamily: AppTheme.fontSF,
                   color: labelColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
+                  letterSpacing: -0.2,
                 ),
               ),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 250),
                 child: Container(
                   key: ValueKey('$knownCount/$totalCount'),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(12),
@@ -85,31 +92,32 @@ class _VocabularyProgressBarState extends State<VocabularyProgressBar> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_celebrating) ...[
-                        const Icon(Icons.check_circle, color: Colors.white, size: 14),
+                        const Icon(Icons.check_circle, color: Colors.black, size: 13),
                         const SizedBox(width: 4),
                       ],
-                      Text('$knownCount/$totalCount · $percentage%', style: TextStyle(
-                        color: badgeText, fontSize: 11, fontWeight: FontWeight.w700,
-                      )),
+                      Text(
+                        '$knownCount/$totalCount · $percentage%',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontSF,
+                          color: badgeText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: progress),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) => LinearProgressIndicator(
-                value: value,
-                minHeight: 4,
-                backgroundColor: trackColor,
-                valueColor: AlwaysStoppedAnimation<Color>(fillColor),
-              ),
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 4,
+              backgroundColor: trackColor,
+              valueColor: AlwaysStoppedAnimation<Color>(fillColor),
             ),
           ),
         ],

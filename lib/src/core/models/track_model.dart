@@ -23,6 +23,14 @@ class TrackModel {
     this.language = '',
   });
 
+  bool get isYouTube =>
+      id.startsWith('youtube:') ||
+      (previewAudioUrl?.startsWith('youtube:') == true);
+
+  bool get isSpotify =>
+      id.startsWith('spotify:track:') ||
+      (spotifyUrl?.isNotEmpty == true);
+
   TrackModel copyWith({
     String? id,
     String? title,

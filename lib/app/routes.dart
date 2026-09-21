@@ -11,11 +11,47 @@ import '../src/pages/player_page.dart';
 import '../src/core/models/track_model.dart';
 import '../src/core/services/spotify_session.dart';
 
+class AppRouteObserver extends RouteObserver<PageRoute> {
+  static final ValueNotifier<int> popupRouteCount = ValueNotifier<int>(0);
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route is PopupRoute) {
+      popupRouteCount.value++;
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (route is PopupRoute && popupRouteCount.value > 0) {
+      popupRouteCount.value--;
+    }
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    if (route is PopupRoute && popupRouteCount.value > 0) {
+      popupRouteCount.value--;
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    var count = popupRouteCount.value;
+    if (oldRoute is PopupRoute && count > 0) count--;
+    if (newRoute is PopupRoute) count++;
+    popupRouteCount.value = count;
+  }
+}
+
 class AppRoutes {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
-  static final RouteObserver<PageRoute> routeObserver =
-      RouteObserver<PageRoute>();
+  static final AppRouteObserver routeObserver = AppRouteObserver();
   static final ValueNotifier<String> currentRoute = ValueNotifier<String>(home);
   static String _lastContentRoute = home;
 

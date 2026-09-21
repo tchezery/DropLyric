@@ -2,6 +2,7 @@ import '../../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/theme.dart';
 import '../../core/services/language_service.dart';
 
 /// Bottom sheet para selecionar idioma nativo e idioma da música/tradução.
@@ -30,6 +31,7 @@ class LanguageSelectorSheet extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (_) => LanguageSelectorSheet(
         currentNativeLanguage: currentNativeLanguage,
@@ -57,106 +59,148 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1C1C1E) : AppTheme.white;
+    final cardColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    final primaryTextColor = isDark ? AppTheme.labelDark : AppTheme.labelLight;
+    final secondaryTextColor = isDark ? AppTheme.secondaryLabelDark : AppTheme.secondaryLabelLight;
+    final isPortuguese = Localizations.localeOf(context).languageCode == 'pt';
 
     return Container(
+      constraints: const BoxConstraints(maxWidth: 640),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: const Radius.circular(24)),
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 16,
+        left: 20,
+        right: 20,
+        top: 12,
         bottom: MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
+          // iOS Drag Handle
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 36,
+              height: 5,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+                color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFD1D1D6),
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Row(
             children: [
               Icon(
                 CupertinoIcons.globe,
-                color: theme.colorScheme.primary,
-                size: 24,
+                color: AppTheme.appleBlue,
+                size: 22,
               ),
               const SizedBox(width: 8),
               Text(
                 tr(context, "Study languages"),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(
+                  fontFamily: '.SF Pro Display',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: primaryTextColor,
+                  letterSpacing: -0.4,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            "Configure your native language and the track's language to personalize your learning.",
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Idioma nativow
-          _SectionLabel(label: tr(context, "My native language")),
-          const SizedBox(height: 8),
-          _LanguageGrid(
-            selectedCode: _selectedNative,
-            onSelect: (code) => setState(() => _selectedNative = code),
-          ),
           const SizedBox(height: 20),
 
-          // Idioma da música
-          _SectionLabel(label: tr(context, "Track language / I want to learn")),
-          const SizedBox(height: 8),
+          // Native Language Section
+          _SectionLabel(
+            label: isPortuguese ? 'Meu idioma nativo' : 'My native language',
+            textColor: secondaryTextColor,
+          ),
+          const SizedBox(height: 10),
+          _LanguageGrid(
+            selectedCode: _selectedNative,
+            cardColor: cardColor,
+            primaryTextColor: primaryTextColor,
+            secondaryTextColor: secondaryTextColor,
+            onSelect: (code) => setState(() => _selectedNative = code),
+          ),
+          const SizedBox(height: 22),
+
+          // Track / Target Language Section
+          _SectionLabel(
+            label: isPortuguese ? 'Idioma que quero aprender' : 'Language to learn',
+            textColor: secondaryTextColor,
+          ),
+          const SizedBox(height: 10),
           _LanguageGrid(
             selectedCode: _selectedTarget,
+            cardColor: cardColor,
+            primaryTextColor: primaryTextColor,
+            secondaryTextColor: secondaryTextColor,
             onSelect: (code) => setState(() => _selectedTarget = code),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 26),
 
-          // Botão confirmar
+          // Confirm Button
           SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
               onPressed: _selectedNative != _selectedTarget
                   ? () {
                       widget.onConfirm(_selectedNative, _selectedTarget);
                       Navigator.of(context).pop();
                     }
                   : null,
-              icon: const Icon(CupertinoIcons.checkmark),
-              label: Text(tr(context, "Confirm")),
-              style: FilledButton.styleFrom(
+              child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                decoration: BoxDecoration(
+                  color: _selectedNative != _selectedTarget
+                      ? AppTheme.appleBlue
+                      : (_selectedNative == _selectedTarget
+                          ? AppTheme.appleBlue.withValues(alpha: 0.4)
+                          : AppTheme.appleBlue),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      CupertinoIcons.checkmark_alt,
+                      color: AppTheme.white,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      tr(context, "Confirm"),
+                      style: const TextStyle(
+                        fontFamily: '.SF Pro Text',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
 
           if (_selectedNative == _selectedTarget) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Center(
               child: Text(
                 tr(context, "The native and study languages must be different."),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.error,
+                style: const TextStyle(
+                  fontFamily: '.SF Pro Text',
+                  fontSize: 12,
+                  color: Colors.redAccent,
                 ),
               ),
             ),
@@ -169,17 +213,19 @@ class _LanguageSelectorSheetState extends State<LanguageSelectorSheet> {
 
 class _SectionLabel extends StatelessWidget {
   final String label;
-  const _SectionLabel({required this.label});
+  final Color textColor;
+  const _SectionLabel({required this.label, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Text(
-      label,
-      style: theme.textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.primary,
-        letterSpacing: 0.3,
+      label.toUpperCase(),
+      style: TextStyle(
+        fontFamily: '.SF Pro Text',
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+        letterSpacing: 0.6,
       ),
     );
   }
@@ -187,16 +233,21 @@ class _SectionLabel extends StatelessWidget {
 
 class _LanguageGrid extends StatelessWidget {
   final String selectedCode;
+  final Color cardColor;
+  final Color primaryTextColor;
+  final Color secondaryTextColor;
   final ValueChanged<String> onSelect;
 
   const _LanguageGrid({
     required this.selectedCode,
+    required this.cardColor,
+    required this.primaryTextColor,
+    required this.secondaryTextColor,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -206,51 +257,35 @@ class _LanguageGrid extends StatelessWidget {
           onTap: () => onSelect(lang.code),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.surfaceContainerHighest,
+              color: isSelected ? AppTheme.appleBlue : cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outline.withValues(alpha: 0.2),
-              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: BoxDecoration(
+                Text(
+                  lang.code.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Text',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                     color: isSelected
-                        ? Colors.white.withValues(alpha: 0.25)
-                        : theme.colorScheme.outline.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    lang.code.toUpperCase(),
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected
-                          ? Colors.white
-                          : theme.colorScheme.onSurface,
-                    ),
+                        ? AppTheme.white
+                        : secondaryTextColor,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   localizedLanguageName(context, lang.code),
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: TextStyle(
+                    fontFamily: '.SF Pro Text',
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
-                        ? Colors.white
-                        : theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                        ? AppTheme.white
+                        : primaryTextColor,
                   ),
                 ),
               ],

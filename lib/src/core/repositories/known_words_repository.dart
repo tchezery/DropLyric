@@ -38,6 +38,43 @@ class KnownWordsRepository {
     );
   }
 
+  /// Grava o estado de conhecimento de múltiplas palavras de uma só vez (ex: frase inteira).
+  Future<void> setWordsKnown(
+    Iterable<String> words,
+    String language,
+    bool known, {
+    String? trackName,
+    String? artistName,
+  }) async {
+    final db = await _appDatabase.database;
+    final batch = db.batch();
+    for (final word in words) {
+      final normalized = word.toLowerCase().trim();
+      if (normalized.isEmpty) continue;
+      if (!known) {
+        batch.delete(
+          AppDatabase.tableKnownWords,
+          where: 'normalized_word = ? AND language = ?',
+          whereArgs: [normalized, language],
+        );
+      } else {
+        batch.insert(
+          AppDatabase.tableKnownWords,
+          KnownWordModel(
+            word: word.trim(),
+            normalizedWord: normalized,
+            language: language,
+            trackName: trackName,
+            artistName: artistName,
+            createdAt: DateTime.now(),
+          ).toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
   /// Alterna o estado de conhecimento de uma palavra:
   /// - Se já existir no banco, remove (desconhece).
   /// - Se não existir, insere (marca como conhecida).

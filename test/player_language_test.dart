@@ -146,4 +146,78 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.linux),
   );
+
+  testWidgets('InteractiveWord renders legible high contrast and distinguishes known/unknown on active line', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              InteractiveWord(
+                word: 'KnownWord',
+                isKnown: true,
+                isActiveLine: true,
+                isLightMode: false,
+                onToggle: () {},
+              ),
+              InteractiveWord(
+                word: 'UnknownWord',
+                isKnown: false,
+                isActiveLine: true,
+                isLightMode: false,
+                onToggle: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final knownText = tester.widget<Text>(find.text('KnownWord'));
+    final unknownText = tester.widget<Text>(find.text('UnknownWord'));
+
+    // Both must use black text over yellow background
+    expect(knownText.style?.color?.r, equals(0.0));
+    expect(unknownText.style?.color?.r, equals(0.0));
+
+    // Unknown word is solid black (1.0) and bold (w800), while known is dimmed (0.38) and regular (w500)
+    expect(unknownText.style?.color?.a, equals(1.0));
+    expect(unknownText.style?.fontWeight, equals(FontWeight.w800));
+    expect(knownText.style?.color?.a, closeTo(0.38, 0.01));
+    expect(knownText.style?.fontWeight, equals(FontWeight.w500));
+  });
+
+  testWidgets('InteractiveWord renders full opacity in fluent mode on active line and readable in inactive line', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              InteractiveWord(
+                word: 'ActiveWord',
+                isKnown: true,
+                isActiveLine: true,
+                isFluentMode: true,
+                onToggle: () {},
+              ),
+              InteractiveWord(
+                word: 'InactiveWord',
+                isKnown: true,
+                isActiveLine: false,
+                isFluentMode: true,
+                onToggle: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final activeText = tester.widget<Text>(find.text('ActiveWord'));
+    final inactiveText = tester.widget<Text>(find.text('InactiveWord'));
+
+    expect(activeText.style?.color?.a, equals(1.0));
+    expect(inactiveText.style?.color?.a, greaterThanOrEqualTo(0.50));
+  });
 }
+
