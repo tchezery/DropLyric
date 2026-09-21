@@ -179,8 +179,8 @@ class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: appleBlue,
       brightness: Brightness.dark,
-      surface: black,
-      surfaceContainerHighest: secondaryGroupedDark,
+      surface: secondaryGroupedDark,
+      surfaceContainerHighest: separatorDark,
       primary: white,
       onPrimary: black,
       onSurface: labelDark,

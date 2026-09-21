@@ -185,7 +185,7 @@ class _NowPlayingItem extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(9),
-              child: Icon(item.icon, color: Colors.black, size: 20),
+              child: Icon(item.icon, color: Colors.white, size: 20),
             ),
           ),
         ),

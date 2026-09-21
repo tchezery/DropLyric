@@ -1397,7 +1397,7 @@ class _PlayerPageState extends State<PlayerPage>
                   fontSize: 13,
                   fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                   color: isActive
-                      ? (_isLightStyle ? Colors.black : Colors.white)
+                      ? Colors.black
                       : _secondaryInk.withValues(alpha: 0.75),
                   letterSpacing: 0.5,
                 ),
@@ -1415,9 +1415,8 @@ class _PlayerPageState extends State<PlayerPage>
                       isActiveLine: isActive,
                       isLightMode: _isLightStyle,
                       isManualMode: isManual,
-                      customColor: isActive
-                          ? (_isLightStyle ? Colors.black : Colors.white)
-                          : null,
+                      isFluentMode: _isFluentLanguage,
+                      customColor: isActive ? Colors.black : null,
                     );
                   }
                   final isStudyWord = _isStudyWord(token);
@@ -1427,9 +1426,8 @@ class _PlayerPageState extends State<PlayerPage>
                       isActiveLine: isActive,
                       isLightMode: _isLightStyle,
                       isManualMode: isManual,
-                      customColor: isActive
-                          ? (_isLightStyle ? Colors.black : Colors.white)
-                          : null,
+                      isFluentMode: _isFluentLanguage,
+                      customColor: isActive ? Colors.black : null,
                     );
                   }
                   return InteractiveWord(
@@ -1439,9 +1437,8 @@ class _PlayerPageState extends State<PlayerPage>
                     isActiveLine: isActive,
                     isLightMode: _isLightStyle,
                     isManualMode: isManual,
-                    customColor: isActive
-                        ? (_isLightStyle ? Colors.black : Colors.white)
-                        : null,
+                    isFluentMode: _isFluentLanguage,
+                    customColor: isActive ? Colors.black : null,
                     onToggle: () async {
                       try {
                         await _toggleWord(

@@ -269,7 +269,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   )
                 else
                   SizedBox(
-                    height: 236,
+                    height: 220,
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       scrollDirection: Axis.horizontal,

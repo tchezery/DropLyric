@@ -16,6 +16,7 @@ class InteractiveWord extends StatelessWidget {
   final bool isActiveLine;
   final bool isLightMode;
   final bool isManualMode;
+  final bool isFluentMode;
   final Color? customColor;
   final String fontFamily;
 
@@ -28,28 +29,46 @@ class InteractiveWord extends StatelessWidget {
     this.isActiveLine = false,
     this.isLightMode = false,
     this.isManualMode = false,
+    this.isFluentMode = false,
     this.customColor,
     this.fontFamily = AppTheme.fontSF,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Quando a linha está ativa com fundo amarelo, a cor do texto deve ser sempre escura (Colors.black)
+    // para garantir contraste perfeito tanto no Dark Mode quanto no Light Mode.
     final Color textColor;
     if (isActiveLine) {
-      textColor = isLightMode ? Colors.black : Colors.white;
+      textColor = customColor ?? Colors.black;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
     final double opacity;
-    if (isKnown) {
-      opacity = isActiveLine ? 0.40 : 0.25;
+    if (isActiveLine) {
+      if (isFluentMode) {
+        opacity = 1.0;
+      } else {
+        // Na linha amarela ativa:
+        // - Já clicada (conhecida): 0.38 (perfeitamente legível sobre o amarelo, mas visivelmente esmaecida)
+        // - Não clicada (desconhecida): 1.0 (preto sólido intenso)
+        opacity = isKnown ? 0.38 : 1.0;
+      }
     } else {
-      opacity = isActiveLine ? 1.0 : (isLightMode ? 0.70 : 0.65);
+      if (isFluentMode) {
+        opacity = isLightMode ? 0.60 : 0.55;
+      } else {
+        opacity = isKnown
+            ? (isLightMode ? 0.38 : 0.32)
+            : (isLightMode ? 0.95 : 0.90);
+      }
     }
 
     final fontSize = isActiveLine ? 18.0 : 16.0;
-    final fontWeight = isActiveLine ? FontWeight.w700 : FontWeight.w500;
+    final fontWeight = isActiveLine
+        ? (isKnown && !isFluentMode ? FontWeight.w500 : FontWeight.w800)
+        : (isKnown && !isFluentMode ? FontWeight.w400 : FontWeight.w600);
 
     TapDownDetails? tapDetails;
 
@@ -90,6 +109,7 @@ class PunctuationSpan extends StatelessWidget {
   final bool isActiveLine;
   final bool isLightMode;
   final bool isManualMode;
+  final bool isFluentMode;
   final Color? customColor;
   final String fontFamily;
 
@@ -99,6 +119,7 @@ class PunctuationSpan extends StatelessWidget {
     this.isActiveLine = false,
     this.isLightMode = false,
     this.isManualMode = false,
+    this.isFluentMode = false,
     this.customColor,
     this.fontFamily = AppTheme.fontSF,
   });
@@ -107,12 +128,19 @@ class PunctuationSpan extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor;
     if (isActiveLine) {
-      textColor = isLightMode ? Colors.black : Colors.white;
+      textColor = customColor ?? Colors.black;
     } else {
       textColor = customColor ?? (isLightMode ? Colors.black : Colors.white);
     }
 
-    final opacity = isActiveLine ? 0.45 : (isLightMode ? 0.35 : 0.30);
+    final double opacity;
+    if (isActiveLine) {
+      opacity = 1.0;
+    } else {
+      opacity = isFluentMode
+          ? (isLightMode ? 0.60 : 0.55)
+          : (isLightMode ? 0.40 : 0.35);
+    }
     final fontSize = isActiveLine ? 18.0 : 16.0;
 
     return Padding(

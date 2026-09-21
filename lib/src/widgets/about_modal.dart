@@ -371,7 +371,7 @@ class _AboutAppModalState extends State<AboutAppModal> {
                 );
               },
               child: Text(
-                _t('Licenças de Código Aberto', 'Open Source Licenses'),
+                _t('Nota: Espero que estejam gostando!', 'Note: I hope you are enjoying!'),
                 style: TextStyle(
                   fontFamily: AppTheme.fontSF,
                   fontSize: 13,

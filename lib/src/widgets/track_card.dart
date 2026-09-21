@@ -39,29 +39,35 @@ class TrackCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Album artwork with Apple squircle top corners & source badge
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(17),
+            // Album artwork with Apple squircle top corners & source badge (quadrado 1:1)
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(17),
+                    ),
+                    child: AlbumArtImage(
+                      track: track,
+                      url: track.albumArtUrl,
+                      size: 156,
+                      width: 156,
+                      height: 156,
+                    ),
                   ),
-                  child: AlbumArtImage(
-                    track: track,
-                    url: track.albumArtUrl,
-                    size: 156,
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: PlaybackSourceBadge(
+                      track: track,
+                      compact: true,
+                      iconSize: 12,
+                    ),
                   ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: PlaybackSourceBadge(
-                    track: track,
-                    compact: true,
-                    iconSize: 12,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             // Track info
