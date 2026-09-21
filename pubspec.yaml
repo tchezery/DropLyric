@@ -43,6 +43,7 @@ flutter:
   assets:
     - assets/spotify.svg
     - assets/logo.png
+    - assets/splash_logo.png
     - assets/creator.png
 
 flutter_launcher_icons:
@@ -54,9 +55,9 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#000000"
-  image: assets/logo.png
+  image: assets/splash_logo.png
   android_12:
-    image: assets/logo.png
+    image: assets/splash_logo.png
     color: "#000000"
     icon_background_color: "#000000"
   ios: true
