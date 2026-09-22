@@ -60,6 +60,9 @@ SUPABASE_ANON_KEY=test-key
     expect(auth.isSignedIn, isTrue);
     expect(auth.currentUser?.id, 'restored-user');
     expect(Supabase.instance.client.getChannels(), hasLength(2));
+    final channels = Supabase.instance.client.getChannels().toList();
+    SyncService.instance.startRealtime();
+    expect(Supabase.instance.client.getChannels(), orderedEquals(channels));
     expect(
       messages.where(
         (message) =>

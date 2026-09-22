@@ -381,12 +381,18 @@ class SyncService {
 
   RealtimeChannel? _realtimeWordsChannel;
   RealtimeChannel? _realtimeFavoritesChannel;
+  String? _realtimeUserId;
 
   /// Inicia os listeners em tempo real para sincronização instantânea.
   void startRealtime() {
     if (!_canSync) return;
     final uid = _uid;
     if (uid == null) return;
+    if (_realtimeUserId == uid &&
+        _realtimeWordsChannel != null &&
+        _realtimeFavoritesChannel != null) {
+      return;
+    }
 
     stopRealtime();
 
@@ -406,7 +412,6 @@ class SyncService {
               value: uid,
             ),
             callback: (payload) async {
-              debugPrint('[SyncService Realtime] Evento recebido em known_words: ${payload.eventType}');
               await _handleRealtimeWordEvent(payload);
             },
           )
@@ -425,11 +430,11 @@ class SyncService {
               value: uid,
             ),
             callback: (payload) async {
-              debugPrint('[SyncService Realtime] Evento recebido em favorites: ${payload.eventType}');
               await _handleRealtimeFavoriteEvent(payload);
             },
           )
           .subscribe();
+      _realtimeUserId = uid;
     } catch (e) {
       debugPrint('[SyncService Realtime] Erro ao iniciar realtime: $e');
     }
@@ -437,6 +442,7 @@ class SyncService {
 
   /// Cancela os canais em tempo real.
   void stopRealtime() {
+    _realtimeUserId = null;
     try {
       if (_realtimeWordsChannel != null) {
         _client.removeChannel(_realtimeWordsChannel!);
@@ -487,19 +493,16 @@ class SyncService {
             epochMs = rawDate;
           }
 
-          await db.insert(
-            AppDatabase.tableKnownWords,
-            {
-              'word': word,
-              'normalized_word': normalized,
-              'language': language,
-              'track_name': trackName,
-              'artist_name': artistName,
-              'created_at': epochMs,
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
+          await KnownWordsRepository().applyRemoteWord(
+            KnownWordModel(
+              word: word,
+              normalizedWord: normalized,
+              language: language,
+              trackName: trackName,
+              artistName: artistName,
+              createdAt: DateTime.fromMillisecondsSinceEpoch(epochMs),
+            ),
           );
-          KnownWordsRepository.notifyChanges();
         }
       }
     } catch (e) {

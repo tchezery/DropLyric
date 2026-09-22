@@ -3,9 +3,44 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:droplyric/src/core/database/app_database.dart';
+import 'package:droplyric/src/core/models/known_word_model.dart';
 import 'package:droplyric/src/core/repositories/known_words_repository.dart';
 
 void main() {
+  test('realtime echoes do not rewrite words or notify views', () async {
+    sqfliteFfiInit();
+    final database = AppDatabase.forTesting(
+      (options) => databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: options,
+      ),
+    );
+    addTearDown(database.close);
+    final repository = KnownWordsRepository(appDatabase: database);
+    KnownWordModel word({String? artist}) => KnownWordModel(
+      word: 'Hello',
+      normalizedWord: 'hello',
+      language: 'en',
+      artistName: artist,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1234),
+    );
+    expect(await repository.applyRemoteWord(word()), isTrue);
+    final original = (await repository.getKnownWordsList()).single;
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final revision = KnownWordsRepository.changes.value;
+    for (var i = 0; i < 20; i++) {
+      expect(await repository.applyRemoteWord(word()), isFalse);
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(KnownWordsRepository.changes.value, revision);
+    expect(await repository.applyRemoteWord(word(artist: 'Artist')), isTrue);
+    final updated = (await repository.getKnownWordsList()).single;
+    expect(updated.id, original.id);
+    expect(updated.artistName, 'Artist');
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(KnownWordsRepository.changes.value, revision + 1);
+  });
+
   test('known words and removals persist after reopening SQLite', () async {
     sqfliteFfiInit();
     final directory = await Directory.systemTemp.createTemp('droplyric-words-');

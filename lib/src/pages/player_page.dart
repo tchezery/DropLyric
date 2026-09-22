@@ -3,6 +3,7 @@ import 'dart:async';
 import '../core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -399,7 +400,7 @@ class _PlayerPageState extends State<PlayerPage>
   bool get _isFluentLanguage =>
       FluentLanguages.instance.isFluent(_targetLanguage);
 
-  Future<void> _loadKnownWords() async {
+  Future<void> _loadKnownWords({bool background = false}) async {
     final generation = ++_knownWordsGeneration;
     final language = _targetLanguage;
     final track = _currentTrack.id;
@@ -416,7 +417,7 @@ class _PlayerPageState extends State<PlayerPage>
       }
       return;
     }
-    if (mounted) setState(() => _knownWordsLoading = true);
+    if (mounted && !background) setState(() => _knownWordsLoading = true);
     try {
       await _wordWrites;
       final words = await _wordsRepo.getKnownWordsSet(language);
@@ -424,13 +425,15 @@ class _PlayerPageState extends State<PlayerPage>
           generation == _knownWordsGeneration &&
           language == _targetLanguage &&
           track == _currentTrack.id) {
-        setState(() => _knownWords = words);
-        _updateStats();
+        if (!background || !setEquals(_knownWords, words)) {
+          _knownWords = words;
+          _updateStats();
+        }
       }
     } catch (e) {
       debugPrint('Error loading known words: $e');
     } finally {
-      if (mounted && generation == _knownWordsGeneration) {
+      if (mounted && generation == _knownWordsGeneration && _knownWordsLoading) {
         setState(() => _knownWordsLoading = false);
       }
     }
@@ -850,7 +853,7 @@ class _PlayerPageState extends State<PlayerPage>
 
   void _onKnownWordsRepositoryChanged() {
     if (mounted) {
-      _loadKnownWords();
+      _loadKnownWords(background: true);
     }
   }
 

@@ -24,6 +24,38 @@ class KnownWordsRepository {
   KnownWordsRepository({AppDatabase? appDatabase})
     : _appDatabase = appDatabase ?? AppDatabase();
 
+  /// Ignore realtime echoes of local writes; only refresh views for new data.
+  Future<bool> applyRemoteWord(KnownWordModel word) async {
+    final db = await _appDatabase.database;
+    final values = word.toMap()..remove('id');
+    final changed = await db.transaction((txn) async {
+      final existing = await txn.query(
+        AppDatabase.tableKnownWords,
+        where: 'normalized_word = ? AND language = ?',
+        whereArgs: [word.normalizedWord, word.language],
+        limit: 1,
+      );
+      if (existing.isEmpty) {
+        await txn.insert(AppDatabase.tableKnownWords, values);
+        return true;
+      }
+      if (values.entries.every(
+        (entry) => existing.single[entry.key] == entry.value,
+      )) {
+        return false;
+      }
+      await txn.update(
+        AppDatabase.tableKnownWords,
+        values,
+        where: 'id = ?',
+        whereArgs: [existing.single['id']],
+      );
+      return true;
+    });
+    if (changed) notifyChanges();
+    return changed;
+  }
+
   /// Grava o estado desejado, inclusive quando há vários toques em sequência.
   Future<void> setWordKnown(
     String word,
