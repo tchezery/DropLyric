@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   void initState() {
     super.initState();
     _load();
+    KnownWordsRepository.changes.addListener(_load);
   }
 
   @override
@@ -55,11 +56,16 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_load);
     AppRoutes.routeObserver.unsubscribe(this);
     super.dispose();
   }
 
+  bool _isLoading = false;
+
   Future<void> _load() async {
+    if (_isLoading) return;
+    _isLoading = true;
     try {
       await _saved.ready;
       final words = await _repository.getKnownWordsList();
@@ -77,6 +83,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
           _failed = true;
         });
       }
+    } finally {
+      _isLoading = false;
     }
   }
 

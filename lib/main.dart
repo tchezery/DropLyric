@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
@@ -8,16 +8,24 @@ import 'src/core/services/language_service.dart';
 import 'src/core/services/supabase_config.dart';
 
 void main() async {
-  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o banco de dados SQLite antes de rodar o app.
+  // Carrega variáveis de ambiente do .env
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('.env load warning (using defaults): $e');
+  }
+
+  // Inicializa o Supabase e banco de dados SQLite antes de rodar o app.
   // O try/catch garante que um erro de DB não impeça o app de iniciar.
   try {
-    await Supabase.initialize(
-      url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey, // ignore: deprecated_member_use
-    );
+    if (SupabaseConfig.isConfigured) {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey, // ignore: deprecated_member_use
+      );
+    }
     await AppDatabase().database;
     await AppLanguage.instance.load();
     await TranslationLanguage.instance.load();

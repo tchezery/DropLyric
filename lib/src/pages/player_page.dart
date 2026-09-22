@@ -239,6 +239,7 @@ class _PlayerPageState extends State<PlayerPage>
     _isLightStyle = AppThemeMode.instance.isLight;
     AppThemeMode.instance.addListener(_onThemeChanged);
     TranslationLanguage.instance.addListener(_onTranslationLanguageChanged);
+    KnownWordsRepository.changes.addListener(_onKnownWordsRepositoryChanged);
     AppRoutes.currentRoute.value = AppRoutes.player;
     _currentTrack = widget.track;
     _targetLanguage = _currentTrack.language.isEmpty
@@ -847,8 +848,15 @@ class _PlayerPageState extends State<PlayerPage>
     }
   }
 
+  void _onKnownWordsRepositoryChanged() {
+    if (mounted) {
+      _loadKnownWords();
+    }
+  }
+
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_onKnownWordsRepositoryChanged);
     AppThemeMode.instance.removeListener(_onThemeChanged);
     TranslationLanguage.instance.removeListener(_onTranslationLanguageChanged);
     _audioService.position.removeListener(_onPositionChanged);

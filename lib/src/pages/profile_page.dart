@@ -1,11 +1,13 @@
 import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/theme.dart';
 import '../core/repositories/known_words_repository.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/language_service.dart';
+import '../core/services/sync_service.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/language_flag.dart';
 import '../widgets/about_modal.dart';
@@ -34,26 +36,47 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _loadData();
     AuthService.instance.addListener(_onAuthChanged);
+    KnownWordsRepository.changes.addListener(_onWordsChanged);
   }
 
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_onWordsChanged);
     AuthService.instance.removeListener(_onAuthChanged);
     super.dispose();
   }
 
-  void _onAuthChanged() {
-    if (mounted) setState(() {});
+  void _onWordsChanged() {
+    if (mounted) {
+      _loadData();
+    }
   }
 
-  Future<void> _loadData() async {
-    final appLanguage = await _languageService.getAppLanguage();
-    final stats = await _wordsRepo.getVocabularyStats();
+  void _onAuthChanged() {
     if (mounted) {
-      setState(() {
-        _appLanguage = appLanguage;
-        _stats = stats;
-      });
+      setState(() {});
+      _loadData();
+    }
+  }
+
+  bool _isLoadingStats = false;
+
+  Future<void> _loadData() async {
+    if (_isLoadingStats) return;
+    _isLoadingStats = true;
+    try {
+      final appLanguage = await _languageService.getAppLanguage();
+      final stats = await _wordsRepo.getVocabularyStats();
+      if (mounted) {
+        setState(() {
+          _appLanguage = appLanguage;
+          _stats = stats;
+        });
+      }
+    } catch (e) {
+      debugPrint('[ProfilePage] Erro ao carregar dados: $e');
+    } finally {
+      _isLoadingStats = false;
     }
   }
 
@@ -198,6 +221,40 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _signIn() async {
+    setState(() => _signingIn = true);
+    final success = await AuthService.instance.signInWithGoogle();
+    if (!mounted) return;
+    setState(() => _signingIn = false);
+    if (success) {
+      SyncService.instance.syncAll(onComplete: () {
+        if (mounted) _loadData();
+      }).ignore();
+      await _loadData();
+    } else if (AuthService.instance.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erro ao conectar: ${AuthService.instance.lastError}',
+            style: const TextStyle(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent.shade700,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  Future<void> _signOut() async {
+    await AuthService.instance.signOut();
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -229,17 +286,11 @@ class _ProfilePageState extends State<ProfilePage> {
               child: _AccountCard(
                 auth: AuthService.instance,
                 signingIn: _signingIn,
-                onSignIn: () async {
-                  setState(() => _signingIn = true);
-                  await AuthService.instance.signInWithGoogle();
-                  if (mounted) setState(() => _signingIn = false);
-                },
-                onSignOut: () async {
-                  await AuthService.instance.signOut();
-                  if (mounted) setState(() {});
-                },
+                onSignIn: _signIn,
+                onSignOut: _signOut,
               ),
             ),
+            const SizedBox(height: 16),
 
             // Vocabulary Metrics
             Padding(
@@ -618,6 +669,8 @@ class _SignedInCard extends StatelessWidget {
             backgroundColor: AppTheme.appleBlue.withValues(alpha: 0.15),
             backgroundImage:
                 avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            onBackgroundImageError:
+                avatarUrl != null ? (exception, stackTrace) {} : null,
             child: avatarUrl == null
                 ? const Icon(
                     CupertinoIcons.person_fill,
@@ -832,80 +885,25 @@ class _GoogleSignInButton extends StatelessWidget {
   }
 }
 
-/// Logo do Google desenhado com CustomPainter (sem depender de assets externos).
+const String _googleLogoSvg =
+    '<svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">'
+    '<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>'
+    '<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>'
+    '<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>'
+    '<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>'
+    '</svg>';
+
+/// Logo oficial do Google em vetor SVG nítido.
 class _GoogleLogo extends StatelessWidget {
-  const _GoogleLogo({this.size = 24});
+  const _GoogleLogo({this.size = 20});
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _GoogleLogoPainter(),
+    return SvgPicture.string(
+      _googleLogoSvg,
+      width: size,
+      height: size,
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final cx = s / 2;
-    final cy = s / 2;
-    final r = s * 0.46;
-
-    // Blue arc (top)
-    _drawArc(canvas, cx, cy, r, -0.52, 1.62, const Color(0xFF4285F4), s);
-    // Red arc (left)
-    _drawArc(canvas, cx, cy, r, -2.17, 1.04, const Color(0xFFEA4335), s);
-    // Yellow arc (bottom)
-    _drawArc(canvas, cx, cy, r, 0.97, 1.23, const Color(0xFFFBBC05), s);
-    // Green arc (right)
-    _drawArc(canvas, cx, cy, r, -0.52, 1.52, const Color(0xFF34A853), s);
-
-    // White center cutout
-    canvas.drawCircle(
-      Offset(cx, cy),
-      r * 0.62,
-      Paint()..color = Colors.white,
-    );
-
-    // Blue right bar
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx, cy - r * 0.22, r + s * 0.04, r * 0.44),
-        Radius.circular(r * 0.1),
-      ),
-      barPaint,
-    );
-
-    // White center again
-    canvas.drawCircle(
-      Offset(cx, cy),
-      r * 0.58,
-      Paint()..color = Colors.white,
-    );
-  }
-
-  void _drawArc(Canvas canvas, double cx, double cy, double r, double start,
-      double sweep, Color color, double s) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = s * 0.19
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCircle(center: Offset(cx, cy), radius: r),
-      start,
-      sweep,
-      false,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

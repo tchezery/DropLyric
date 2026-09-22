@@ -302,10 +302,12 @@ class _LibraryPageState extends State<LibraryPage> {
   void initState() {
     super.initState();
     _load();
+    KnownWordsRepository.changes.addListener(_load);
   }
 
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_load);
     _searchController.dispose();
     super.dispose();
   }
@@ -313,17 +315,10 @@ class _LibraryPageState extends State<LibraryPage> {
   Future<void> _load() async {
     try {
       final words = await _repository.getKnownWordsList();
-      for (final word in words.where(
-        (word) =>
-            word.language == 'en' && !isLikelyEnglishWord(word.normalizedWord),
-      )) {
-        await _repository.moveWord(word.normalizedWord, 'en', 'es');
-      }
-      final migratedWords = await _repository.getKnownWordsList();
       final translationLanguage = await _languageService.getTranslationLanguage();
       if (!mounted) return;
       setState(() {
-        _knownWords = migratedWords;
+        _knownWords = words;
         _translationLanguage = translationLanguage;
         _loading = false;
         _error = null;

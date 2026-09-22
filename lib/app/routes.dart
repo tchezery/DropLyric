@@ -71,7 +71,13 @@ class AppRoutes {
 
     if (settings.name != null && !isCallback) {
       _lastContentRoute = settings.name!;
-      currentRoute.value = settings.name!;
+      if (currentRoute.value != settings.name!) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (currentRoute.value != settings.name!) {
+            currentRoute.value = settings.name!;
+          }
+        });
+      }
     }
 
     // Trata retornos do Safari / Spotify Deep Links (ex: droplyric://callback?code=...)
@@ -139,6 +145,7 @@ class AppRoutes {
 
   static void navigateTo(String route) {
     if (currentRoute.value == route) return;
+    currentRoute.value = route;
     navigatorKey.currentState?.pushReplacementNamed(route);
   }
 

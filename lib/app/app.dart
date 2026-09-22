@@ -5,10 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
+import '../src/core/services/auth_service.dart';
+import '../src/core/services/sync_service.dart';
 import '../src/core/services/language_service.dart';
 import '../src/pages/onboarding_page.dart';
 import 'routes.dart';
@@ -21,7 +22,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _onboardingLoading = true;
   bool _languageSelected = false;
   bool _onboardingFinished = false;
@@ -29,24 +30,28 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AppLanguage.instance.addListener(_refreshOnboarding);
     AppThemeMode.instance.addListener(_refreshOnboarding);
     SpotifySession.instance.addListener(_refreshOnboarding);
     _loadOnboarding();
-    // Remove o splash nativo apenas após o primeiro frame renderizado + um pequeno
-    // delay proposital (estilo Spotify) para a logo "pousar" na tela.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      FlutterNativeSplash.remove();
-    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     AppLanguage.instance.removeListener(_refreshOnboarding);
     AppThemeMode.instance.removeListener(_refreshOnboarding);
     SpotifySession.instance.removeListener(_refreshOnboarding);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        AuthService.instance.isSignedIn) {
+      SyncService.instance.syncAll().ignore();
+    }
   }
 
   Future<void> _loadOnboarding() async {

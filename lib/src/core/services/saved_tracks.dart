@@ -73,6 +73,39 @@ class SavedTracks extends ChangeNotifier {
         .ignore();
   }
 
+  /// Atualiza o estado de favorito vindo de sincronização em tempo real.
+  Future<void> setFavoriteRemote(String trackId, bool isFavorite) async {
+    await ready;
+    final changed =
+        isFavorite ? _favorites.add(trackId) : _favorites.remove(trackId);
+    if (changed) {
+      await _save();
+    }
+  }
+
+  /// Mescla dados vindos da nuvem de uma só vez sem disparar loops de notificação.
+  Future<void> mergeFromCloud(
+    List<TrackModel> newTracks,
+    Set<String> cloudFavorites,
+  ) async {
+    await ready;
+    var changed = false;
+    for (final favId in cloudFavorites) {
+      if (_favorites.add(favId)) {
+        changed = true;
+      }
+    }
+    for (final track in newTracks) {
+      if (!_tracks.any((t) => t.id == track.id)) {
+        _tracks.add(track);
+        changed = true;
+      }
+    }
+    if (changed) {
+      await _save();
+    }
+  }
+
   Future<void> _save() {
     notifyListeners();
     final tracks = _tracks

@@ -60,10 +60,11 @@ class AppDatabase {
         ),
       );
     }
+    sqflite_native.Database db;
     if (kIsWeb) {
       // Web: IndexedDB via sqflite_common_ffi_web
       databaseFactory = databaseFactoryFfiWeb;
-      return databaseFactory.openDatabase(
+      db = await databaseFactory.openDatabase(
         _dbName,
         options: sqflite_native.OpenDatabaseOptions(
           version: _dbVersion,
@@ -71,17 +72,15 @@ class AppDatabase {
           onUpgrade: _onUpgrade,
         ),
       );
-    }
-
-    // Desktop (macOS, Linux, Windows)
-    if (defaultTargetPlatform == TargetPlatform.macOS ||
+    } else if (defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.linux ||
         defaultTargetPlatform == TargetPlatform.windows) {
+      // Desktop (macOS, Linux, Windows)
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
       final directory = await getApplicationDocumentsDirectory();
       final path = join(directory.path, _dbName);
-      return databaseFactory.openDatabase(
+      db = await databaseFactory.openDatabase(
         path,
         options: sqflite_native.OpenDatabaseOptions(
           version: _dbVersion,
@@ -89,17 +88,50 @@ class AppDatabase {
           onUpgrade: _onUpgrade,
         ),
       );
+    } else {
+      // Mobile (iOS / Android): sqflite nativo
+      final directory = await sqflite_native.getDatabasesPath();
+      final path = join(directory, _dbName);
+      db = await sqflite_native.openDatabase(
+        path,
+        version: _dbVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
     }
 
-    // Mobile (iOS / Android): sqflite nativo
-    final directory = await sqflite_native.getDatabasesPath();
-    final path = join(directory, _dbName);
-    return sqflite_native.openDatabase(
-      path,
-      version: _dbVersion,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+    await _fixLegacyCreatedAt(db);
+    return db;
+  }
+
+  Future<void> _fixLegacyCreatedAt(sqflite_native.Database db) async {
+    try {
+      final rows = await db.rawQuery(
+        "SELECT id, created_at FROM $tableKnownWords WHERE typeof(created_at) = 'text'",
+      );
+      if (rows.isNotEmpty) {
+        final batch = db.batch();
+        for (final row in rows) {
+          final id = row['id'];
+          final rawStr = row['created_at'] as String?;
+          if (id != null && rawStr != null) {
+            final parsed = DateTime.tryParse(rawStr);
+            if (parsed != null) {
+              batch.rawUpdate(
+                "UPDATE $tableKnownWords SET created_at = ? WHERE id = ?",
+                [parsed.millisecondsSinceEpoch, id],
+              );
+            }
+          }
+        }
+        await batch.commit(noResult: true);
+        debugPrint(
+          '[AppDatabase] Corrigidos ${rows.length} timestamps legados para int.',
+        );
+      }
+    } catch (e) {
+      debugPrint('[AppDatabase] Erro ao corrigir created_at legado: $e');
+    }
   }
 
   Future<void> _onCreate(sqflite_native.Database db, int version) async {
