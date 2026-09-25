@@ -102,24 +102,30 @@ class _SearchPageState extends State<SearchPage> {
       if (!mounted) return;
     }
 
-    final prevRoute = AppRoutes.currentRoute.value;
+    final prevRoute = AppRoutes.isTabRoute(AppRoutes.currentRoute.value)
+        ? AppRoutes.currentRoute.value
+        : AppRoutes.search;
     AppRoutes.currentRoute.value = AppRoutes.player;
-    await Navigator.of(context).push(
-      PageRouteBuilder(
-        settings: const RouteSettings(name: AppRoutes.player),
-        pageBuilder: (ctx, animation, _) =>
-            PlayerPage(track: track),
-        transitionDuration: const Duration(milliseconds: 350),
-        transitionsBuilder: (ctx, animation, _, child) => SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-              .animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              ),
-          child: child,
+    try {
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          settings: const RouteSettings(name: AppRoutes.player),
+          pageBuilder: (ctx, animation, _) =>
+              PlayerPage(track: track),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (ctx, animation, _, child) => SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                ),
+            child: child,
+          ),
         ),
-      ),
-    );
-    AppRoutes.currentRoute.value = prevRoute;
+      );
+    } finally {
+      AppRoutes.currentRoute.value = prevRoute;
+      AppRoutes.lastContentRoute = prevRoute;
+    }
   }
 
   @override

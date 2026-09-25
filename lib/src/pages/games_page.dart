@@ -380,7 +380,10 @@ class _GamesPageState extends State<GamesPage> {
                         ],
                       ),
                     ),
-                    WeeklyConsistencyBadge(words: _words),
+                    WeeklyConsistencyBadge(
+                      words: _words,
+                      languageFilter: _selectedLanguage,
+                    ),
                   ],
                 ),
               ),
@@ -574,36 +577,75 @@ class _GamesPageState extends State<GamesPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Botão ver roadmap CEFR completo
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            side: BorderSide(
-                              color: isDark ? const Color(0x33FFFFFF) : const Color(0x1F000000),
-                            ),
-                          ),
-                          onPressed: () => _showCefrRoadmapModal(context),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(CupertinoIcons.map, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                _t('Ver todos os marcos CEFR (A1 a C2)', 'View all CEFR milestones (A1-C2)'),
-                                style: const TextStyle(
-                                  fontFamily: AppTheme.fontSF,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                      // Ações: Ver frequência no idioma & Roadmap CEFR
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                side: BorderSide(
+                                  color: isDark ? const Color(0x33FFFFFF) : const Color(0x1F000000),
                                 ),
                               ),
-                            ],
+                              onPressed: () {
+                                WeeklyConsistencyBadge.showConsistencyModal(
+                                  context,
+                                  words: _words,
+                                  initialLanguage: _selectedLanguage,
+                                );
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(CupertinoIcons.calendar, size: 15, color: Color(0xFF007AFF)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _t('Frequência', 'Streak'),
+                                    style: const TextStyle(
+                                      fontFamily: AppTheme.fontSF,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                side: BorderSide(
+                                  color: isDark ? const Color(0x33FFFFFF) : const Color(0x1F000000),
+                                ),
+                              ),
+                              onPressed: () => _showCefrRoadmapModal(context),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(CupertinoIcons.map, size: 15),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _t('Marcos CEFR', 'Milestones'),
+                                    style: const TextStyle(
+                                      fontFamily: AppTheme.fontSF,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

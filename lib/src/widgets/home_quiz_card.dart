@@ -440,9 +440,8 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
         ),
         const SizedBox(height: 8),
 
-        // Dica contextual da palavra na frase
-        if ((q.wordTranslation != null && q.wordTranslation!.isNotEmpty) ||
-            (q.lineTranslation != null && q.lineTranslation!.isNotEmpty)) ...[
+        // Dica de tradução da palavra no contexto da frase (apenas 1 palavra traduzida)
+        if (q.wordTranslation != null && q.wordTranslation!.isNotEmpty) ...[
           if (!_showLyricHint)
             Align(
               alignment: Alignment.centerLeft,
@@ -454,7 +453,7 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
                 ),
                 icon: const Icon(CupertinoIcons.lightbulb, size: 14, color: Color(0xFFFF9500)),
                 label: Text(
-                  _t('Ver dica no contexto da frase', 'Show hint in phrase context'),
+                  _t('Ver dica de tradução', 'Show translation hint'),
                   style: const TextStyle(
                     fontFamily: AppTheme.fontSF,
                     fontSize: 12,
@@ -466,78 +465,24 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
               ),
             )
           else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF9500).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFFF9500).withValues(alpha: 0.25),
-                  width: 0.8,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(CupertinoIcons.lightbulb_fill, size: 14, color: Color(0xFFFF9500)),
-                      const SizedBox(width: 6),
-                      Text(
-                        _t('Dica no contexto do verso:', 'Hint in line context:'),
-                        style: const TextStyle(
-                          fontFamily: AppTheme.fontSF,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFFF9500),
-                        ),
-                      ),
-                    ],
+                  const Icon(CupertinoIcons.lightbulb_fill, size: 14, color: Color(0xFFFF9500)),
+                  const SizedBox(width: 5),
+                  Text(
+                    _t(
+                      'Dica: significa "${q.wordTranslation}"',
+                      'Hint: means "${q.wordTranslation}"',
+                    ),
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFFF9500),
+                    ),
                   ),
-                  if (q.wordTranslation != null && q.wordTranslation!.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontSF,
-                          fontSize: 13,
-                          color: colors.onSurface,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: _t('Nesta frase, a palavra significa: ', 'In this phrase, the word means: '),
-                            style: TextStyle(
-                              color: colors.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
-                          ),
-                          TextSpan(
-                            text: '"${q.wordTranslation}"',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFFF9500),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (q.lineTranslation != null && q.lineTranslation!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      _t(
-                        'Verso em português: "${q.lineTranslationWithBlank ?? q.lineTranslation}"',
-                        'Line translation: "${q.lineTranslationWithBlank ?? q.lineTranslation}"',
-                      ),
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontSF,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        color: colors.onSurfaceVariant.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -681,18 +626,6 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
                     color: colors.onSurfaceVariant,
                   ),
                 ),
-                if (q.lineTranslation != null && q.lineTranslation!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    _t('Tradução do verso: "${q.lineTranslation}"', 'Line translation: "${q.lineTranslation}"'),
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: colors.onSurfaceVariant.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

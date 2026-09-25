@@ -48,15 +48,21 @@ class _RemoteMusicPageState extends State<RemoteMusicPage> {
   );
 
   Future<void> _open(TrackModel track, {bool follow = false}) async {
-    final previous = AppRoutes.currentRoute.value;
+    final previous = AppRoutes.isTabRoute(AppRoutes.currentRoute.value)
+        ? AppRoutes.currentRoute.value
+        : AppRoutes.search;
     AppRoutes.currentRoute.value = AppRoutes.player;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: AppRoutes.player),
-        builder: (_) => PlayerPage(track: track, followCurrent: follow),
-      ),
-    );
-    AppRoutes.currentRoute.value = previous;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: AppRoutes.player),
+          builder: (_) => PlayerPage(track: track, followCurrent: follow),
+        ),
+      );
+    } finally {
+      AppRoutes.currentRoute.value = previous;
+      AppRoutes.lastContentRoute = previous;
+    }
   }
 
   Future<void> _searchOrOpenSpotify() async {

@@ -143,7 +143,13 @@ class _HomePageState extends State<HomePage> with RouteAware {
     final cefr = CefrLevel.fromWordCount(language.value);
 
     return InkWell(
-      onTap: () => AppRoutes.navigateTo(AppRoutes.games),
+      onTap: () {
+        WeeklyConsistencyBadge.showConsistencyModal(
+          context,
+          words: _words,
+          initialLanguage: language.key,
+        );
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 220,
@@ -495,14 +501,20 @@ class _HomePageState extends State<HomePage> with RouteAware {
       }
     }
     if (!context.mounted) return;
-    final previous = AppRoutes.currentRoute.value;
+    final previous = AppRoutes.isTabRoute(AppRoutes.currentRoute.value)
+        ? AppRoutes.currentRoute.value
+        : AppRoutes.home;
     AppRoutes.currentRoute.value = AppRoutes.player;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: AppRoutes.player),
-        builder: (_) => PlayerPage(track: track, lyricsOnly: lyricsOnly),
-      ),
-    );
-    AppRoutes.currentRoute.value = previous;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: AppRoutes.player),
+          builder: (_) => PlayerPage(track: track, lyricsOnly: lyricsOnly),
+        ),
+      );
+    } finally {
+      AppRoutes.currentRoute.value = previous;
+      AppRoutes.lastContentRoute = previous;
+    }
   }
 }

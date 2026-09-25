@@ -133,7 +133,7 @@ class _PlayerPageState extends State<PlayerPage>
     }
     if (!mounted) return;
     if (AppRoutes.currentRoute.value == AppRoutes.player) {
-      AppRoutes.currentRoute.value = AppRoutes.home;
+      AppRoutes.restoreLastTabRoute();
     }
     Navigator.of(context).pop();
   }
@@ -925,7 +925,7 @@ class _PlayerPageState extends State<PlayerPage>
     _lyricsScrollController.dispose();
     _fadeCtrl.dispose();
     if (AppRoutes.currentRoute.value == AppRoutes.player) {
-      AppRoutes.currentRoute.value = AppRoutes.home;
+      AppRoutes.restoreLastTabRoute();
     }
     super.dispose();
   }

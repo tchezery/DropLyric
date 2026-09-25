@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/theme.dart';
+import '../core/models/cefr_level.dart';
 import '../core/models/known_word_model.dart';
+import '../core/services/app_strings.dart';
+import '../core/services/language_service.dart';
+import 'language_flag.dart';
 
 class DayActivity {
   final DateTime date;
@@ -23,15 +27,17 @@ class DayActivity {
   });
 }
 
-/// Widget exibido no topo da tela de início (ao lado do título DropLyric),
+/// Widget exibido no topo da tela de início e na tela de Games,
 /// mostrando os 7 dias da semana atual no estilo de contribuição do GitHub
 /// e o contador de semanas consecutivas (ofensiva semanal).
 class WeeklyConsistencyBadge extends StatelessWidget {
   final List<KnownWordModel> words;
+  final String? languageFilter;
 
   const WeeklyConsistencyBadge({
     super.key,
     required this.words,
+    this.languageFilter,
   });
 
   static DateTime _startOfWeek(DateTime dt) {
@@ -68,7 +74,10 @@ class WeeklyConsistencyBadge extends StatelessWidget {
     return streak;
   }
 
-  List<DayActivity> _getWeekDays(BuildContext context) {
+  static List<DayActivity> getWeekDaysForWords(
+    BuildContext context,
+    List<KnownWordModel> wordsList,
+  ) {
     final isPt = Localizations.localeOf(context).languageCode == 'pt';
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -102,7 +111,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
           date.day == today.day;
       final isFutureDay = date.isAfter(today);
 
-      final count = words.where((w) {
+      final count = wordsList.where((w) {
         return w.createdAt.year == date.year &&
             w.createdAt.month == date.month &&
             w.createdAt.day == date.day;
@@ -142,43 +151,305 @@ class WeeklyConsistencyBadge extends StatelessWidget {
     }
   }
 
-  Color _squareColor(DayActivity day, bool isDark) =>
-      getSquareColor(day.count, isDark);
-
-  void _showDetailsModal(
-    BuildContext context,
-    int streak,
-    List<DayActivity> days,
-    int totalWordsThisWeek,
-  ) {
+  static void showConsistencyModal(
+    BuildContext context, {
+    required List<KnownWordModel> words,
+    String? initialLanguage,
+  }) {
     HapticFeedback.lightImpact();
-    final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPt = Localizations.localeOf(context).languageCode == 'pt';
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        top: false,
+      builder: (context) => _WeeklyConsistencyModal(
+        words: words,
+        initialLanguage: initialLanguage,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPt = Localizations.localeOf(context).languageCode == 'pt';
+
+    final effectiveWords = languageFilter != null
+        ? words.where((w) => w.language == languageFilter).toList()
+        : words;
+
+    final days = getWeekDaysForWords(context, effectiveWords);
+    final streak = calculateStreak(effectiveWords);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => showConsistencyModal(
+          context,
+          words: words,
+          initialLanguage: languageFilter,
+        ),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            color: isDark ? const Color(0x1FFFFFFF) : const Color(0x0A000000),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
               width: 0.8,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.08),
-                blurRadius: 28,
-                offset: const Offset(0, -6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 7 GitHub-style consistency squares
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: days.map((day) {
+                  final color = getSquareColor(day.count, isDark);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1.8),
+                    child: Container(
+                      width: 9.5,
+                      height: 9.5,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(2.5),
+                        border: day.isToday
+                            ? Border.all(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : Colors.black87,
+                                width: 1.2,
+                              )
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Vertical divider
+              Container(
+                width: 1,
+                height: 14,
+                color: isDark
+                    ? const Color(0x26FFFFFF)
+                    : const Color(0x14000000),
+              ),
+
+              const SizedBox(width: 7),
+
+              // Streak Number & label (sem foguinho)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$streak',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: streak > 0
+                          ? const Color(0xFF007AFF)
+                          : colors.onSurfaceVariant,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  Text(
+                    isPt ? ' sem' : 'w',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Modal com detalhes da sequência semanal, progresso no idioma selecionado e atalho para histórico anual
+class _WeeklyConsistencyModal extends StatefulWidget {
+  final List<KnownWordModel> words;
+  final String? initialLanguage;
+
+  const _WeeklyConsistencyModal({
+    required this.words,
+    this.initialLanguage,
+  });
+
+  @override
+  State<_WeeklyConsistencyModal> createState() => _WeeklyConsistencyModalState();
+}
+
+class _WeeklyConsistencyModalState extends State<_WeeklyConsistencyModal> {
+  late String? _selectedLanguage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLanguage = widget.initialLanguage;
+  }
+
+  void _showAnnualHistoryModal(BuildContext context) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pop();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AnnualContributionSheet(
+        words: widget.words,
+        initialLanguage: _selectedLanguage,
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required BuildContext context,
+    required bool isSelected,
+    required String label,
+    IconData? icon,
+    String? flagCode,
+    required VoidCallback onTap,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF007AFF)
+              : (isDark ? const Color(0x1FFFFFFF) : const Color(0x0A000000)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF007AFF)
+                : (isDark ? const Color(0x26FFFFFF) : const Color(0x14000000)),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? Colors.white : colors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+            ] else if (flagCode != null) ...[
+              LanguageFlag(countryCode: flagCode, width: 16),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppTheme.fontSF,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : colors.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final langCode = Localizations.localeOf(context).languageCode;
+    final isPt = langCode == 'pt';
+
+    // Lista de idiomas existentes no repertório do usuário
+    final availableLanguages = <String>{};
+    for (final w in widget.words) {
+      if (w.language.isNotEmpty) {
+        availableLanguages.add(w.language);
+      }
+    }
+    if (_selectedLanguage != null && _selectedLanguage!.isNotEmpty) {
+      availableLanguages.add(_selectedLanguage!);
+    }
+    final sortedLanguages = availableLanguages.toList()..sort();
+
+    // Filtra palavras pelo idioma ativo no modal
+    final filteredWords = _selectedLanguage != null
+        ? widget.words.where((w) => w.language == _selectedLanguage).toList()
+        : widget.words;
+
+    final streak = WeeklyConsistencyBadge.calculateStreak(filteredWords);
+    final days = WeeklyConsistencyBadge.getWeekDaysForWords(context, filteredWords);
+    final totalWordsThisWeek = days.fold<int>(0, (sum, d) => sum + d.count);
+
+    // Dados de progresso CEFR se um idioma específico estiver selecionado
+    CefrLevel? currentCefr;
+    CefrLevel? nextCefr;
+    double progressPercent = 1.0;
+    int remainingForNext = 0;
+    int langWordCount = 0;
+
+    if (_selectedLanguage != null) {
+      langWordCount = filteredWords.length;
+      currentCefr = CefrLevel.fromWordCount(langWordCount);
+      nextCefr = CefrLevel.nextLevel(currentCefr);
+
+      if (nextCefr != null) {
+        final currentBase = currentCefr.minWords;
+        final targetGoal = nextCefr.minWords;
+        final span = targetGoal - currentBase;
+        final progressInStage = (langWordCount - currentBase).clamp(0, span);
+        progressPercent = span > 0 ? (progressInStage / span) : 1.0;
+        remainingForNext = (targetGoal - langWordCount).clamp(0, targetGoal);
+      }
+    }
+
+    final selectedLangName = _selectedLanguage != null
+        ? localizedLanguageName(context, _selectedLanguage!)
+        : null;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(
+            color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.08),
+              blurRadius: 28,
+              offset: const Offset(0, -6),
+            ),
+          ],
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -186,12 +457,53 @@ class WeeklyConsistencyBadge extends StatelessWidget {
               Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
+                margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white24 : Colors.black12,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+
+              // Seletor de Idioma em chips horizontais (Todos os Idiomas / Idiomas Individuais)
+              if (sortedLanguages.isNotEmpty) ...[
+                SizedBox(
+                  height: 34,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      _buildFilterChip(
+                        context: context,
+                        isSelected: _selectedLanguage == null,
+                        label: isPt ? 'Todos os Idiomas' : 'All Languages',
+                        icon: CupertinoIcons.globe,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedLanguage = null);
+                        },
+                      ),
+                      for (final code in sortedLanguages) ...[
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          context: context,
+                          isSelected: _selectedLanguage == code,
+                          label: localizedLanguageName(context, code),
+                          flagCode: supportedLanguages
+                                  .cast<LanguagePreference?>()
+                                  .firstWhere((l) => l?.code == code, orElse: () => null)
+                                  ?.flagCode ??
+                              code,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedLanguage = code);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
 
               // Streak circle badge & number (sem foguinho)
               Container(
@@ -215,14 +527,23 @@ class WeeklyConsistencyBadge extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
+              // Título dinâmico por idioma ou global
               Text(
                 streak > 0
-                    ? isPt
-                        ? '$streak ${streak == 1 ? "semana" : "semanas"} consecutivas!'
-                        : '$streak consecutive ${streak == 1 ? "week" : "weeks"}!'
-                    : isPt
-                        ? 'Comece sua sequência semanal!'
-                        : 'Start your weekly streak!',
+                    ? (_selectedLanguage != null
+                        ? (isPt
+                            ? '$streak ${streak == 1 ? "semana consecutiva" : "semanas consecutivas"} em $selectedLangName!'
+                            : '$streak consecutive ${streak == 1 ? "week" : "weeks"} in $selectedLangName!')
+                        : (isPt
+                            ? '$streak ${streak == 1 ? "semana" : "semanas"} consecutivas!'
+                            : '$streak consecutive ${streak == 1 ? "week" : "weeks"}!'))
+                    : (_selectedLanguage != null
+                        ? (isPt
+                            ? 'Comece sua sequência em $selectedLangName!'
+                            : 'Start your streak in $selectedLangName!')
+                        : (isPt
+                            ? 'Comece sua sequência semanal!'
+                            : 'Start your weekly streak!')),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: AppTheme.fontSF,
@@ -234,9 +555,13 @@ class WeeklyConsistencyBadge extends StatelessWidget {
               const SizedBox(height: 6),
 
               Text(
-                isPt
-                    ? 'Você marcou $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "palavra" : "palavras"} nesta semana.'
-                    : 'You learned $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "word" : "words"} this week.',
+                _selectedLanguage != null
+                    ? (isPt
+                        ? 'Você marcou $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "palavra" : "palavras"} em $selectedLangName nesta semana.'
+                        : 'You learned $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "word" : "words"} in $selectedLangName this week.')
+                    : (isPt
+                        ? 'Você marcou $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "palavra" : "palavras"} nesta semana.'
+                        : 'You learned $totalWordsThisWeek ${totalWordsThisWeek == 1 ? "word" : "words"} this week.'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppTheme.fontSF,
@@ -244,7 +569,139 @@ class WeeklyConsistencyBadge extends StatelessWidget {
                   color: colors.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
+
+              // CARD DE PROGRESSO ESPECÍFICO DO IDIOMA SELECIONADO
+              if (_selectedLanguage != null && currentCefr != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0x1AFFFFFF)
+                        : const Color(0x0A000000),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0x26FFFFFF)
+                          : const Color(0x14000000),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          LanguageFlag(
+                            countryCode: supportedLanguages
+                                    .cast<LanguagePreference?>()
+                                    .firstWhere((l) => l?.code == _selectedLanguage, orElse: () => null)
+                                    ?.flagCode ??
+                                _selectedLanguage!,
+                            width: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  selectedLangName ?? _selectedLanguage!.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  '$langWordCount ${isPt ? (langWordCount == 1 ? "palavra dominada" : "palavras dominadas") : (langWordCount == 1 ? "word mastered" : "words mastered")}',
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    fontSize: 12,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: currentCefr.badgeColor.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: currentCefr.badgeColor.withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.rosette,
+                                  size: 13,
+                                  color: currentCefr.badgeColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  currentCefr.type == CefrLevelType.starter
+                                      ? currentCefr.localizedTitle(langCode)
+                                      : '${currentCefr.code} • ${currentCefr.localizedTitle(langCode)}',
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: currentCefr.badgeColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progressPercent,
+                          minHeight: 8,
+                          backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                          color: currentCefr.badgeColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            nextCefr != null
+                                ? (isPt
+                                    ? 'Meta para ${nextCefr.code}: faltam $remainingForNext palavras'
+                                    : 'Goal for ${nextCefr.code}: $remainingForNext words left')
+                                : (isPt ? 'Nível máximo alcançado!' : 'Max mastery reached!'),
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontSF,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            '${(progressPercent * 100).toInt()}%',
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontSF,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: currentCefr.badgeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
 
               // Week day breakdown cards
               Container(
@@ -262,7 +719,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
                 ),
                 child: Column(
                   children: days.map((d) {
-                    final color = _squareColor(d, isDark);
+                    final color = WeeklyConsistencyBadge.getSquareColor(d.count, isDark);
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -337,7 +794,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
                       height: 10,
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
                       decoration: BoxDecoration(
-                        color: getSquareColor(cnt, isDark),
+                        color: WeeklyConsistencyBadge.getSquareColor(cnt, isDark),
                         borderRadius: BorderRadius.circular(2.5),
                         border: cnt == 0
                             ? Border.all(
@@ -378,10 +835,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
                           : const Color(0x1F000000),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _showAnnualHistoryModal(context);
-                  },
+                  onPressed: () => _showAnnualHistoryModal(context),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -403,7 +857,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Button OK
+              // Button Fechar / Continuar
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -433,127 +887,17 @@ class WeeklyConsistencyBadge extends StatelessWidget {
       ),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPt = Localizations.localeOf(context).languageCode == 'pt';
-
-    final days = _getWeekDays(context);
-    final streak = calculateStreak(words);
-    final totalWordsThisWeek = days.fold<int>(0, (sum, d) => sum + d.count);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showDetailsModal(context, streak, days, totalWordsThisWeek),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0x1FFFFFFF) : const Color(0x0A000000),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
-              width: 0.8,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 7 GitHub-style consistency squares
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: days.map((day) {
-                  final color = _squareColor(day, isDark);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.8),
-                    child: Container(
-                      width: 9.5,
-                      height: 9.5,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(2.5),
-                        border: day.isToday
-                            ? Border.all(
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.9)
-                                    : Colors.black87,
-                                width: 1.2,
-                              )
-                            : null,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(width: 8),
-
-              // Vertical divider
-              Container(
-                width: 1,
-                height: 14,
-                color: isDark
-                    ? const Color(0x26FFFFFF)
-                    : const Color(0x14000000),
-              ),
-
-              const SizedBox(width: 7),
-
-              // Streak Number & label (sem foguinho)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$streak',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: streak > 0
-                          ? const Color(0xFF007AFF)
-                          : colors.onSurfaceVariant,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  Text(
-                    isPt ? ' sem' : 'w',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontSF,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurfaceVariant.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAnnualHistoryModal(BuildContext context) {
-    HapticFeedback.lightImpact();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => AnnualContributionSheet(words: words),
-    );
-  }
 }
 
-/// Modal com o gráfico anual de contribuição de 52 semanas, idêntico ao GitHub
+/// Modal com o gráfico anual de contribuição de 52 semanas, idêntico ao GitHub, com filtro por idioma
 class AnnualContributionSheet extends StatefulWidget {
   final List<KnownWordModel> words;
+  final String? initialLanguage;
 
   const AnnualContributionSheet({
     super.key,
     required this.words,
+    this.initialLanguage,
   });
 
   @override
@@ -562,12 +906,14 @@ class AnnualContributionSheet extends StatefulWidget {
 
 class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
   final ScrollController _scrollController = ScrollController();
+  late String? _selectedLanguageFilter;
   DateTime? _selectedDate;
   int? _selectedCount;
 
   @override
   void initState() {
     super.initState();
+    _selectedLanguageFilter = widget.initialLanguage;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -600,14 +946,31 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isPt = Localizations.localeOf(context).languageCode == 'pt';
 
+    // Idiomas disponíveis para filtrar no gráfico anual
+    final availableLanguages = <String>{};
+    for (final w in widget.words) {
+      if (w.language.isNotEmpty) {
+        availableLanguages.add(w.language);
+      }
+    }
+    if (_selectedLanguageFilter != null && _selectedLanguageFilter!.isNotEmpty) {
+      availableLanguages.add(_selectedLanguageFilter!);
+    }
+    final sortedLanguages = availableLanguages.toList()..sort();
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final currentMonday = today.subtract(Duration(days: today.weekday - 1));
     final startMonday = currentMonday.subtract(const Duration(days: 51 * 7));
 
+    // Filtra palavras pelo idioma selecionado
+    final filteredWords = _selectedLanguageFilter != null
+        ? widget.words.where((w) => w.language == _selectedLanguageFilter).toList()
+        : widget.words;
+
     // Mapeamento de contagem por dia
     final Map<DateTime, int> dayCounts = {};
-    for (final w in widget.words) {
+    for (final w in filteredWords) {
       final d = DateTime(w.createdAt.year, w.createdAt.month, w.createdAt.day);
       dayCounts[d] = (dayCounts[d] ?? 0) + 1;
     }
@@ -628,6 +991,10 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
     final shortMonths = isPt ? shortMonthsPt : shortMonthsEn;
 
     final weekDaysLabels = isPt ? ['', 'Seg', '', 'Qua', '', 'Sex', ''] : ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+
+    final selectedLangName = _selectedLanguageFilter != null
+        ? localizedLanguageName(context, _selectedLanguageFilter!)
+        : null;
 
     return SafeArea(
       top: false,
@@ -687,9 +1054,13 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isPt
-                            ? '$totalYearWords palavras praticadas nas últimas 52 semanas'
-                            : '$totalYearWords words practiced in the last 52 weeks',
+                        _selectedLanguageFilter != null
+                            ? (isPt
+                                ? '$totalYearWords palavras praticadas em $selectedLangName nas últimas 52 semanas'
+                                : '$totalYearWords words practiced in $selectedLangName in the last 52 weeks')
+                            : (isPt
+                                ? '$totalYearWords palavras praticadas nas últimas 52 semanas'
+                                : '$totalYearWords words practiced in the last 52 weeks'),
                         style: TextStyle(
                           fontFamily: AppTheme.fontSF,
                           fontSize: 13,
@@ -707,7 +1078,117 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Filtro por idioma em chips
+            if (sortedLanguages.isNotEmpty) ...[
+              SizedBox(
+                height: 32,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _selectedLanguageFilter = null;
+                          _selectedDate = null;
+                          _selectedCount = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _selectedLanguageFilter == null
+                              ? const Color(0xFF007AFF)
+                              : (isDark ? const Color(0x1FFFFFFF) : const Color(0x0A000000)),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _selectedLanguageFilter == null
+                                ? const Color(0xFF007AFF)
+                                : (isDark ? const Color(0x26FFFFFF) : const Color(0x14000000)),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              CupertinoIcons.globe,
+                              size: 13,
+                              color: _selectedLanguageFilter == null ? Colors.white : colors.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              isPt ? 'Todos os Idiomas' : 'All Languages',
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontSF,
+                                fontSize: 11,
+                                fontWeight: _selectedLanguageFilter == null ? FontWeight.w700 : FontWeight.w500,
+                                color: _selectedLanguageFilter == null ? Colors.white : colors.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    for (final code in sortedLanguages) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _selectedLanguageFilter = code;
+                            _selectedDate = null;
+                            _selectedCount = null;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _selectedLanguageFilter == code
+                                ? const Color(0xFF007AFF)
+                                : (isDark ? const Color(0x1FFFFFFF) : const Color(0x0A000000)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _selectedLanguageFilter == code
+                                  ? const Color(0xFF007AFF)
+                                  : (isDark ? const Color(0x26FFFFFF) : const Color(0x14000000)),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              LanguageFlag(
+                                countryCode: supportedLanguages
+                                        .cast<LanguagePreference?>()
+                                        .firstWhere((l) => l?.code == code, orElse: () => null)
+                                        ?.flagCode ??
+                                    code,
+                                width: 14,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                localizedLanguageName(context, code),
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontSF,
+                                  fontSize: 11,
+                                  fontWeight: _selectedLanguageFilter == code ? FontWeight.w700 : FontWeight.w500,
+                                  color: _selectedLanguageFilter == code ? Colors.white : colors.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
 
             // Card da Matriz de Contribuição GitHub
             Container(
@@ -867,7 +1348,7 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
                       Expanded(
                         child: Text(
                           _selectedDate != null
-                              ? '${_formatDate(_selectedDate!, isPt)}: ${_selectedCount == 0 ? (isPt ? "Nenhuma palavra aprendida" : "No words learned") : "$_selectedCount ${isPt ? (_selectedCount == 1 ? "palavra aprendida" : "palavras aprendidas") : (_selectedCount == 1 ? "word learned" : "words learned")}"}'
+                              ? '${_formatDate(_selectedDate!, isPt)}: ${_selectedCount == 0 ? (isPt ? "Nenhuma palavra aprendida" : "No words learned") : "$_selectedCount ${isPt ? (_selectedCount == 1 ? "palavra aprendida" : "palavras aprendidas") : (_selectedCount == 1 ? "word learned" : "words learned")}"}${_selectedLanguageFilter != null ? " ($selectedLangName)" : ""}'
                               : isPt
                                   ? 'Toque em qualquer quadradinho para ver detalhes do dia'
                                   : 'Tap any square to inspect details for that day',

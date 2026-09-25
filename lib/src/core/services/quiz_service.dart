@@ -472,7 +472,15 @@ class QuizService {
     String sourceLang = 'auto',
     String? targetLang,
   }) async {
-    final tl = targetLang ?? await LanguageService().getTargetLanguage();
+    // IMPORTANTE:
+    // O hint deve ser uma TRADUÇÃO da palavra (padrão: Português "pt").
+    // Se a música for em inglês, o idioma de destino deve ser "pt" para que
+    // a dica traga o significado traduzido e NUNCA a própria palavra em inglês.
+    String tl = targetLang ?? await LanguageService().getTranslationLanguage();
+    if (tl.toLowerCase() == 'en') {
+      tl = await LanguageService().getNativeLanguage();
+      if (tl.toLowerCase() == 'en') tl = 'pt';
+    }
 
     try {
       final regex = RegExp(
@@ -506,55 +514,39 @@ class QuizService {
               .replaceAll(']', '')
               .trim();
 
-          // Linha traduzida com lacuna substituindo a palavra contextual traduzida
-          String? lineWithBlank;
-          if (contextualWord != null && contextualWord.isNotEmpty) {
-            final transRegex = RegExp(
-              r'\b' + RegExp.escape(contextualWord) + r'\b',
-              caseSensitive: false,
-            );
-            if (transRegex.hasMatch(cleanTranslatedLine)) {
-              lineWithBlank =
-                  cleanTranslatedLine.replaceFirst(transRegex, '_______');
-            } else {
-              lineWithBlank = translatedFull.replaceFirst(
-                  RegExp(r'\[.*?\]'), '_______');
-            }
-          } else {
-            lineWithBlank = cleanTranslatedLine;
-          }
-
-          if (contextualWord != null && contextualWord.isNotEmpty) {
+          // NUNCA retornar a própria palavra em inglês como resposta no hint
+          if (contextualWord != null &&
+              contextualWord.isNotEmpty &&
+              QuizService.normalize(contextualWord) != QuizService.normalize(targetWord)) {
             return (
               wordTranslation: contextualWord.toLowerCase(),
               lineTranslation: cleanTranslatedLine,
-              lineTranslationWithBlank: lineWithBlank,
+              lineTranslationWithBlank: null,
             );
           }
-
-          return (
-            wordTranslation: null,
-            lineTranslation: cleanTranslatedLine,
-            lineTranslationWithBlank: cleanTranslatedLine,
-          );
         }
       }
     } catch (_) {}
 
-    // Fallback caso falhe a chamada contextual: tradução simples da palavra isolada
+    // Fallback: tradução simples da palavra isolada (garantindo que não seja a mesma palavra)
     try {
       final transData = await fetchTranslationData(targetWord, targetLang: tl);
-      return (
-        wordTranslation: transData?.primaryTranslation,
-        lineTranslation: null,
-        lineTranslationWithBlank: null,
-      );
-    } catch (_) {
-      return (
-        wordTranslation: null,
-        lineTranslation: null,
-        lineTranslationWithBlank: null,
-      );
-    }
+      final word = transData?.primaryTranslation;
+      if (word != null &&
+          word.isNotEmpty &&
+          QuizService.normalize(word) != QuizService.normalize(targetWord)) {
+        return (
+          wordTranslation: word.toLowerCase(),
+          lineTranslation: null,
+          lineTranslationWithBlank: null,
+        );
+      }
+    } catch (_) {}
+
+    return (
+      wordTranslation: null,
+      lineTranslation: null,
+      lineTranslationWithBlank: null,
+    );
   }
 }

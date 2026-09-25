@@ -79,19 +79,25 @@ class _YouTubeSearchPanelState extends State<YouTubeSearchPanel> {
   }
 
   void _openPlayer(TrackModel track) async {
-    final previous = AppRoutes.currentRoute.value;
+    final previous = AppRoutes.isTabRoute(AppRoutes.currentRoute.value)
+        ? AppRoutes.currentRoute.value
+        : AppRoutes.search;
     AppRoutes.currentRoute.value = AppRoutes.player;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: AppRoutes.player),
-        builder: (_) => PlayerPage(
-          track: track,
-          playlist: _results.isNotEmpty ? _results : [track],
-          initialIndex: _results.indexWhere((t) => t.id == track.id),
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: AppRoutes.player),
+          builder: (_) => PlayerPage(
+            track: track,
+            playlist: _results.isNotEmpty ? _results : [track],
+            initialIndex: _results.indexWhere((t) => t.id == track.id),
+          ),
         ),
-      ),
-    );
-    AppRoutes.currentRoute.value = previous;
+      );
+    } finally {
+      AppRoutes.currentRoute.value = previous;
+      AppRoutes.lastContentRoute = previous;
+    }
   }
 
   String _fmtDuration(double? seconds) {

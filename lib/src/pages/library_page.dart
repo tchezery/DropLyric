@@ -511,14 +511,15 @@ class _LibraryPageState extends State<LibraryPage>
                 opacity: _collapseAnimation,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           tr(context, "Dictionary"),
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                           style: TextStyle(
                             fontFamily: AppTheme.fontSF,
                             fontSize: 34,
@@ -532,7 +533,7 @@ class _LibraryPageState extends State<LibraryPage>
                           Localizations.localeOf(context).languageCode == 'pt'
                               ? '$totalWords ${totalWords == 1 ? 'palavra salva' : 'palavras salvas'}'
                               : '$totalWords saved ${totalWords == 1 ? 'word' : 'words'}',
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                           style: TextStyle(
                             fontFamily: AppTheme.fontSF,
                             color: colors.onSurfaceVariant,
