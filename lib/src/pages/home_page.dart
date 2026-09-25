@@ -1,6 +1,7 @@
 import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
@@ -418,49 +419,66 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                 color: Theme.of(context).dividerColor,
                                 height: 16,
                               ),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: colors.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${i + 1}',
-                                      style: TextStyle(
-                                        fontFamily: AppTheme.fontSF,
-                                        color: colors.primary,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
+                            InkWell(
+                              onTap: () => _showArtistSongsModal(
+                                context,
+                                summary.artists[i].key,
+                                summary.artists[i].value,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: colors.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${i + 1}',
+                                          style: TextStyle(
+                                            fontFamily: AppTheme.fontSF,
+                                            color: colors.primary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    summary.artists[i].key,
-                                    style: TextStyle(
-                                      fontFamily: AppTheme.fontSF,
-                                      color: colors.onSurface,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        summary.artists[i].key,
+                                        style: TextStyle(
+                                          fontFamily: AppTheme.fontSF,
+                                          color: colors.onSurface,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      '${summary.artists[i].value} ${t('palavras', 'words')}',
+                                      style: TextStyle(
+                                        fontFamily: AppTheme.fontSF,
+                                        color: colors.onSurfaceVariant,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(
+                                      CupertinoIcons.chevron_right,
+                                      size: 14,
+                                      color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  '${summary.artists[i].value} ${t('palavras', 'words')}',
-                                  style: TextStyle(
-                                    fontFamily: AppTheme.fontSF,
-                                    color: colors.onSurfaceVariant,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ],
@@ -516,5 +534,314 @@ class _HomePageState extends State<HomePage> with RouteAware {
       AppRoutes.currentRoute.value = previous;
       AppRoutes.lastContentRoute = previous;
     }
+  }
+
+  void _showArtistSongsModal(
+    BuildContext context,
+    String artistName,
+    int totalWords,
+  ) {
+    HapticFeedback.lightImpact();
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPt = Localizations.localeOf(context).languageCode == 'pt';
+
+    // Indexa faixas salvas por título para correspondência caso o artista na palavra esteja vazio
+    final byTitle = <String, Set<String>>{};
+    for (final track in _saved.tracks) {
+      if (track.artist.trim().isEmpty) continue;
+      byTitle
+          .putIfAbsent(track.title.trim().toLowerCase(), () => {})
+          .add(track.artist.trim());
+    }
+
+    // Filtra todas as palavras que pertencem a este artista
+    final artistWords = _words.where((w) {
+      var a = w.artistName?.trim();
+      if (a == null || a.isEmpty) {
+        final matches = byTitle[w.trackName?.trim().toLowerCase()];
+        a = matches?.length == 1 ? matches!.single : null;
+      }
+      return a != null && a.toLowerCase() == artistName.toLowerCase();
+    }).toList();
+
+    // Agrupa as palavras pelas músicas de referência
+    final wordsByTrack = <String, List<KnownWordModel>>{};
+    for (final w in artistWords) {
+      final title = (w.trackName != null && w.trackName!.trim().isNotEmpty)
+          ? w.trackName!.trim()
+          : (isPt ? 'Música não identificada' : 'Unidentified track');
+      wordsByTrack.putIfAbsent(title, () => []).add(w);
+    }
+
+    final sortedTracks = wordsByTrack.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.08),
+                blurRadius: 28,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Header: Nome do Artista e total de palavras
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        CupertinoIcons.music_mic,
+                        color: colors.primary,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          artistName,
+                          style: const TextStyle(
+                            fontFamily: AppTheme.fontSF,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isPt
+                              ? '$totalWords ${totalWords == 1 ? "palavra aprendida" : "palavras aprendidas"} em ${sortedTracks.length} ${sortedTracks.length == 1 ? "música" : "músicas"}'
+                              : '$totalWords ${totalWords == 1 ? "word learned" : "words learned"} across ${sortedTracks.length} ${sortedTracks.length == 1 ? "song" : "songs"}',
+                          style: TextStyle(
+                            fontFamily: AppTheme.fontSF,
+                            fontSize: 13,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(CupertinoIcons.xmark_circle_fill, size: 24),
+                    color: colors.onSurfaceVariant.withValues(alpha: 0.6),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Lista de Músicas do Artista
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: sortedTracks.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final item = sortedTracks[index];
+                    final songTitle = item.key;
+                    final songWords = item.value;
+
+                    // Busca se há TrackModel correspondente salvo na biblioteca
+                    TrackModel? matchedTrack;
+                    for (final t in _saved.tracks) {
+                      if (t.title.trim().toLowerCase() == songTitle.toLowerCase()) {
+                        matchedTrack = t;
+                        break;
+                      }
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0x1AFFFFFF) : const Color(0x0A000000),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              // Ícone de música ou capa
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white12 : Colors.black12,
+                                  borderRadius: BorderRadius.circular(10),
+                                  image: matchedTrack?.albumArtUrl != null
+                                      ? DecorationImage(
+                                          image: NetworkImage(matchedTrack!.albumArtUrl!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child: matchedTrack?.albumArtUrl == null
+                                    ? Icon(
+                                        CupertinoIcons.music_note,
+                                        size: 18,
+                                        color: colors.onSurfaceVariant,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      songTitle,
+                                      style: TextStyle(
+                                        fontFamily: AppTheme.fontSF,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: colors.onSurface,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isPt
+                                          ? '${songWords.length} ${songWords.length == 1 ? "palavra" : "palavras"}'
+                                          : '${songWords.length} ${songWords.length == 1 ? "word" : "words"}',
+                                      style: TextStyle(
+                                        fontFamily: AppTheme.fontSF,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: colors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (matchedTrack != null) ...[
+                                IconButton(
+                                  icon: const Icon(
+                                    CupertinoIcons.play_circle_fill,
+                                    color: Color(0xFF007AFF),
+                                    size: 28,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _openPlayer(context, matchedTrack!);
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Chips com as palavras aprendidas nesta música
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: songWords.map((w) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  w.word,
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.onSurface,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Botão Fechar
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    isPt ? 'Fechar' : 'Close',
+                    style: const TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
