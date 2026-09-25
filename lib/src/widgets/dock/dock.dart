@@ -37,75 +37,136 @@ class Dock extends StatelessWidget {
     if (!isVisible) return const SizedBox.shrink();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Align(
       alignment: Alignment.bottomCenter,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xE61C1C1E)
-                      : const Color(0xE6FFFFFF),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0x33FFFFFF)
-                        : const Color(0x1F000000),
-                    width: 0.8,
+      child: SizedBox(
+        width: double.infinity,
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // Efeito de continuidade: blur suave com fade gradual atrás da dock
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 85 + bottomPadding,
+              child: IgnorePointer(
+                child: ShaderMask(
+                  shaderCallback: (bounds) {
+                    return const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Color(0x33FFFFFF),
+                        Colors.white,
+                      ],
+                      stops: [0.0, 0.35, 1.0],
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.dstIn,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              surfaceColor.withValues(alpha: 0.0),
+                              surfaceColor.withValues(alpha: isDark ? 0.35 : 0.45),
+                              surfaceColor.withValues(alpha: isDark ? 0.75 : 0.85),
+                            ],
+                            stops: const [0.0, 0.4, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ...List.generate(
-                      nowPlayingItem == null ? items.length : items.length ~/ 2,
-                      (index) {
-                        final item = items[index];
-                        return _DockItem(
-                          item: item,
-                          isSelected: selectedIndex == index,
-                          onTap: () => onItemSelected(index),
-                        );
-                      },
-                    ),
-                    if (nowPlayingItem != null)
-                      _NowPlayingItem(
-                        item: nowPlayingItem!,
-                        onTap: onNowPlaying,
-                      ),
-                    if (nowPlayingItem != null)
-                      ...List.generate(
-                        items.length - items.length ~/ 2,
-                        (offset) {
-                          final index = offset + items.length ~/ 2;
-                          final item = items[index];
-                          return _DockItem(
-                            item: item,
-                            isSelected: selectedIndex == index,
-                            onTap: () => onItemSelected(index),
-                          );
-                        },
-                      ),
-                  ],
                 ),
               ),
             ),
-          ),
+
+            // Dock flutuante com visual translúcido refinado e drop shadow externa
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xD91C1C1E)
+                              : const Color(0xE6FFFFFF),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0x33FFFFFF)
+                                : const Color(0x1F000000),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ...List.generate(
+                              nowPlayingItem == null ? items.length : items.length ~/ 2,
+                              (index) {
+                                final item = items[index];
+                                return _DockItem(
+                                  item: item,
+                                  isSelected: selectedIndex == index,
+                                  onTap: () => onItemSelected(index),
+                                );
+                              },
+                            ),
+                            if (nowPlayingItem != null)
+                              _NowPlayingItem(
+                                item: nowPlayingItem!,
+                                onTap: onNowPlaying,
+                              ),
+                            if (nowPlayingItem != null)
+                              ...List.generate(
+                                items.length - items.length ~/ 2,
+                                (offset) {
+                                  final index = offset + items.length ~/ 2;
+                                  final item = items[index];
+                                  return _DockItem(
+                                    item: item,
+                                    isSelected: selectedIndex == index,
+                                    onTap: () => onItemSelected(index),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
