@@ -48,27 +48,31 @@ class WeeklyConsistencyBadge extends StatelessWidget {
   static int calculateStreak(List<KnownWordModel> words, [DateTime? refDate]) {
     if (words.isEmpty) return 0;
     final now = refDate ?? DateTime.now();
-    final currentMonday = _startOfWeek(now);
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
 
-    final activeWeeks = <int>{};
+    // Mapeia os dias únicos em que houve palavras praticadas/marcadas
+    final activeDays = <DateTime>{};
     for (final w in words) {
-      final monday = _startOfWeek(w.createdAt);
-      activeWeeks.add(monday.millisecondsSinceEpoch);
+      activeDays.add(DateTime(w.createdAt.year, w.createdAt.month, w.createdAt.day));
     }
 
-    if (activeWeeks.isEmpty) return 0;
+    if (activeDays.isEmpty) return 0;
 
-    final hasCurrentWeek =
-        activeWeeks.contains(currentMonday.millisecondsSinceEpoch);
+    final hasToday = activeDays.contains(today);
+    final hasYesterday = activeDays.contains(yesterday);
+
+    // Se não praticou nem hoje nem ontem, a sequência de dias consecutivos é 0
+    if (!hasToday && !hasYesterday) {
+      return 0;
+    }
 
     int streak = 0;
-    DateTime checkMonday = hasCurrentWeek
-        ? currentMonday
-        : currentMonday.subtract(const Duration(days: 7));
+    DateTime checkDay = hasToday ? today : yesterday;
 
-    while (activeWeeks.contains(checkMonday.millisecondsSinceEpoch)) {
+    while (activeDays.contains(checkDay)) {
       streak++;
-      checkMonday = checkMonday.subtract(const Duration(days: 7));
+      checkDay = checkDay.subtract(const Duration(days: 1));
     }
 
     return streak;
@@ -260,7 +264,7 @@ class WeeklyConsistencyBadge extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    isPt ? ' sem' : 'w',
+                    isPt ? ' d' : 'd',
                     style: TextStyle(
                       fontFamily: AppTheme.fontSF,
                       fontSize: 10,
@@ -527,23 +531,31 @@ class _WeeklyConsistencyModalState extends State<_WeeklyConsistencyModal> {
               ),
               const SizedBox(height: 12),
 
-              // Título dinâmico por idioma ou global
+              // Título dinâmico por idioma ou global (dias consecutivos)
               Text(
-                streak > 0
+                streak == 0
                     ? (_selectedLanguage != null
-                        ? (isPt
-                            ? '$streak ${streak == 1 ? "semana consecutiva" : "semanas consecutivas"} em $selectedLangName!'
-                            : '$streak consecutive ${streak == 1 ? "week" : "weeks"} in $selectedLangName!')
-                        : (isPt
-                            ? '$streak ${streak == 1 ? "semana" : "semanas"} consecutivas!'
-                            : '$streak consecutive ${streak == 1 ? "week" : "weeks"}!'))
-                    : (_selectedLanguage != null
                         ? (isPt
                             ? 'Comece sua sequência em $selectedLangName!'
                             : 'Start your streak in $selectedLangName!')
                         : (isPt
-                            ? 'Comece sua sequência semanal!'
-                            : 'Start your weekly streak!')),
+                            ? 'Comece sua sequência diária!'
+                            : 'Start your daily streak!'))
+                    : streak == 1
+                        ? (_selectedLanguage != null
+                            ? (isPt
+                                ? '1 dia praticado em $selectedLangName!'
+                                : '1 day streak in $selectedLangName!')
+                            : (isPt
+                                ? '1 dia de ofensiva!'
+                                : '1 day streak!'))
+                        : (_selectedLanguage != null
+                            ? (isPt
+                                ? '$streak dias consecutivos em $selectedLangName!'
+                                : '$streak consecutive days in $selectedLangName!')
+                            : (isPt
+                                ? '$streak dias consecutivos!'
+                                : '$streak consecutive days!')),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: AppTheme.fontSF,
