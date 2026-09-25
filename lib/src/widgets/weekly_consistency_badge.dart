@@ -991,12 +991,17 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
         .where((e) => !e.key.isBefore(startMonday) && !e.key.isAfter(today))
         .fold<int>(0, (sum, e) => sum + e.value);
 
-    int maxDayWords = 0;
-    for (final e in dayCounts.entries) {
-      if (!e.key.isBefore(startMonday) && !e.key.isAfter(today)) {
-        if (e.value > maxDayWords) maxDayWords = e.value;
-      }
-    }
+    final activeDaysCount = dayCounts.entries
+        .where((e) => !e.key.isBefore(startMonday) && !e.key.isAfter(today) && e.value > 0)
+        .length;
+
+    final double avgWordsPerDay = activeDaysCount > 0
+        ? (totalYearWords / activeDaysCount)
+        : 0.0;
+
+    final avgWordsStr = avgWordsPerDay == avgWordsPerDay.roundToDouble()
+        ? avgWordsPerDay.toInt().toString()
+        : avgWordsPerDay.toStringAsFixed(1);
 
     const shortMonthsPt = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const shortMonthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1423,7 +1428,7 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isPt ? 'Pico em 1 dia' : 'Best single day',
+                          isPt ? 'Média por dia ativo' : 'Avg per active day',
                           style: TextStyle(
                             fontFamily: AppTheme.fontSF,
                             fontSize: 11,
@@ -1432,7 +1437,7 @@ class _AnnualContributionSheetState extends State<AnnualContributionSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$maxDayWords ${isPt ? "palavras" : "words"}',
+                          '$avgWordsStr ${isPt ? "palavras / dia" : "words / day"}',
                           style: const TextStyle(
                             fontFamily: AppTheme.fontSF,
                             fontSize: 15,
