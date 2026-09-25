@@ -2,6 +2,7 @@ import '../core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../../app/theme.dart';
 import '../core/models/known_word_model.dart';
@@ -286,10 +287,15 @@ class LibraryPage extends StatefulWidget {
   State<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends State<LibraryPage> {
+class _LibraryPageState extends State<LibraryPage>
+    with SingleTickerProviderStateMixin {
   final _repository = KnownWordsRepository();
   final _languageService = LanguageService();
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+
+  late final AnimationController _collapseController;
+  late final Animation<double> _collapseAnimation;
 
   List<KnownWordModel> _knownWords = [];
   bool _loading = true;
@@ -301,12 +307,23 @@ class _LibraryPageState extends State<LibraryPage> {
   @override
   void initState() {
     super.initState();
+    _collapseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+      value: 1.0,
+    );
+    _collapseAnimation = CurvedAnimation(
+      parent: _collapseController,
+      curve: Curves.easeInOutCubic,
+    );
     _load();
     KnownWordsRepository.changes.addListener(_load);
   }
 
   @override
   void dispose() {
+    _collapseController.dispose();
+    _scrollController.dispose();
     KnownWordsRepository.changes.removeListener(_load);
     _searchController.dispose();
     super.dispose();
@@ -486,17 +503,22 @@ class _LibraryPageState extends State<LibraryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Large Title Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-              child: Row(
-                children: [
-                  Expanded(
+            // Large Title Header (recolhe suavemente ao rolar para baixo)
+            SizeTransition(
+              sizeFactor: _collapseAnimation,
+              alignment: Alignment.topCenter,
+              child: FadeTransition(
+                opacity: _collapseAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                  child: Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           tr(context, "Dictionary"),
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: AppTheme.fontSF,
                             fontSize: 34,
@@ -510,6 +532,7 @@ class _LibraryPageState extends State<LibraryPage> {
                           Localizations.localeOf(context).languageCode == 'pt'
                               ? '$totalWords ${totalWords == 1 ? 'palavra salva' : 'palavras salvas'}'
                               : '$totalWords saved ${totalWords == 1 ? 'word' : 'words'}',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: AppTheme.fontSF,
                             color: colors.onSurfaceVariant,
@@ -520,18 +543,13 @@ class _LibraryPageState extends State<LibraryPage> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: _load,
-                    tooltip: tr(context, "Refresh words"),
-                    icon: const Icon(CupertinoIcons.arrow_clockwise, size: 20),
-                  ),
-                ],
+                ),
               ),
             ),
 
-            // Search Bar
+            // Search Bar (permanece sempre visível no topo quando recolhido)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
               child: TextField(
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
@@ -556,113 +574,148 @@ class _LibraryPageState extends State<LibraryPage> {
               ),
             ),
 
-            // Language Filter Pill
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButton<String>(
-                      value: [
-                        'ALL',
-                        ...languageCodes,
-                      ].contains(_selectedLanguage)
-                          ? _selectedLanguage
-                          : 'ALL',
-                      isDense: true,
-                      isExpanded: false,
-                      underline: const SizedBox.shrink(),
-                      borderRadius: BorderRadius.circular(16),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'ALL',
-                          child: Text(
-                            tr(context, 'All Languages'),
-                            style: const TextStyle(
-                              fontFamily: AppTheme.fontSF,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+            // Filtros de Idioma e A-Z (recolhem suavemente ao rolar para baixo)
+            SizeTransition(
+              sizeFactor: _collapseAnimation,
+              alignment: Alignment.topCenter,
+              child: FadeTransition(
+                opacity: _collapseAnimation,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Language Filter Pill
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: colors.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: DropdownButton<String>(
+                              value: [
+                                'ALL',
+                                ...languageCodes,
+                              ].contains(_selectedLanguage)
+                                  ? _selectedLanguage
+                                  : 'ALL',
+                              isDense: true,
+                              isExpanded: false,
+                              underline: const SizedBox.shrink(),
+                              borderRadius: BorderRadius.circular(16),
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'ALL',
+                                  child: Text(
+                                    tr(context, 'All Languages'),
+                                    style: const TextStyle(
+                                      fontFamily: AppTheme.fontSF,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                ...languageCodes.map(
+                                  (code) => DropdownMenuItem(
+                                    value: code,
+                                    child: Text(
+                                      localizedLanguageName(context, code),
+                                      style: const TextStyle(
+                                        fontFamily: AppTheme.fontSF,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setState(() {
+                                  _selectedLanguage = value;
+                                  _selectedLetter = 'ALL';
+                                });
+                              },
                             ),
                           ),
-                        ),
-                        ...languageCodes.map(
-                          (code) => DropdownMenuItem(
-                            value: code,
-                            child: Text(
-                              localizedLanguageName(context, code),
-                              style: const TextStyle(
-                                fontFamily: AppTheme.fontSF,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _selectedLanguage = value;
-                          _selectedLetter = 'ALL';
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // A-Z selector with Apple rounded pill chips
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: alphabetList.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, index) {
-                  final letter = alphabetList[index];
-                  final count = letterCounts[letter] ?? 0;
-                  final isSelected = _selectedLetter == letter;
-
-                  return Material(
-                    color: isSelected ? colors.primary : colors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(19),
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedLetter = letter),
-                      borderRadius: BorderRadius.circular(19),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        alignment: Alignment.center,
-                        child: Text(
-                          letter == 'ALL'
-                              ? '${tr(context, 'ALL')} ($count)'
-                              : '$letter ($count)',
-                          style: TextStyle(
-                            fontFamily: AppTheme.fontSF,
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected
-                                ? colors.onPrimary
-                                : (count > 0 ? colors.onSurface : colors.onSurfaceVariant),
-                          ),
-                        ),
+                        ],
                       ),
                     ),
-                  );
-                },
+
+                    // A-Z selector with Apple rounded pill chips
+                    SizedBox(
+                      height: 38,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: alphabetList.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 6),
+                        itemBuilder: (context, index) {
+                          final letter = alphabetList[index];
+                          final count = letterCounts[letter] ?? 0;
+                          final isSelected = _selectedLetter == letter;
+
+                          return Material(
+                            color: isSelected ? colors.primary : colors.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(19),
+                            child: InkWell(
+                              onTap: () => setState(() => _selectedLetter = letter),
+                              borderRadius: BorderRadius.circular(19),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  letter == 'ALL'
+                                      ? '${tr(context, 'ALL')} ($count)'
+                                      : '$letter ($count)',
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.fontSF,
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected
+                                        ? colors.onPrimary
+                                        : (count > 0 ? colors.onSurface : colors.onSurfaceVariant),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 12),
 
             // Word List
             Expanded(
-              child: _loading
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is UserScrollNotification) {
+                    if (notification.direction == ScrollDirection.reverse) {
+                      if (_collapseController.value > 0.0) {
+                        _collapseController.reverse();
+                      }
+                    } else if (notification.direction == ScrollDirection.forward) {
+                      if (_collapseController.value < 1.0) {
+                        _collapseController.forward();
+                      }
+                    }
+                  } else if (notification is ScrollUpdateNotification) {
+                    if (notification.metrics.pixels <= 15 &&
+                        _collapseController.value < 1.0 &&
+                        !_collapseController.isAnimating) {
+                      _collapseController.forward();
+                    }
+                  }
+                  return false;
+                },
+                child: _loading
                   ? const Center(child: CupertinoActivityIndicator())
                   : _error != null
                   ? Center(
@@ -705,6 +758,7 @@ class _LibraryPageState extends State<LibraryPage> {
                       ),
                     )
                   : ListView.separated(
+                      controller: _scrollController,
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
                       itemCount: filteredItems.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -725,6 +779,7 @@ class _LibraryPageState extends State<LibraryPage> {
                         );
                       },
                     ),
+              ),
             ),
           ],
         ),

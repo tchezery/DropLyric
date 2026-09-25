@@ -1,12 +1,14 @@
 import '../core/services/app_strings.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/theme.dart';
 import '../core/repositories/known_words_repository.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/language_service.dart';
+import '../core/services/quiz_service.dart';
 import '../core/services/sync_service.dart';
 import '../widgets/spotify_connect_button.dart';
 import '../widgets/language_flag.dart';
@@ -25,6 +27,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final KnownWordsRepository _wordsRepo = KnownWordsRepository();
 
   String _appLanguage = 'en';
+  QuizFrequency _quizFrequency = QuizFrequency.regular;
   ({int total, Map<String, int> perLanguage})? _stats;
   String t(String pt, String en) =>
       Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
@@ -66,10 +69,12 @@ class _ProfilePageState extends State<ProfilePage> {
     _isLoadingStats = true;
     try {
       final appLanguage = await _languageService.getAppLanguage();
+      final quizFreq = await QuizService.instance.getFrequency();
       final stats = await _wordsRepo.getVocabularyStats();
       if (mounted) {
         setState(() {
           _appLanguage = appLanguage;
+          _quizFrequency = quizFreq;
           _stats = stats;
         });
       }
@@ -105,6 +110,82 @@ class _ProfilePageState extends State<ProfilePage> {
     if (selected == null) return;
     await AppLanguage.instance.set(selected);
     if (mounted) setState(() => _appLanguage = selected);
+  }
+
+  String _quizFrequencyLabel(QuizFrequency freq) {
+    switch (freq) {
+      case QuizFrequency.always:
+        return t('Sempre', 'Always');
+      case QuizFrequency.regular:
+        return t('Regularmente', 'Regularly');
+      case QuizFrequency.rare:
+        return t('Pouco', 'Rarely');
+    }
+  }
+
+  Future<void> _chooseQuizFrequency() async {
+    final selected = await showCupertinoModalPopup<QuizFrequency>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(t('Frequência do Quick Quiz', 'Quick Quiz frequency')),
+        message: Text(
+          t(
+            'Escolha com que frequência você deseja praticar após as músicas ou na tela de início.',
+            'Choose how often you want vocabulary quizzes to appear after songs or on the home screen.',
+          ),
+        ),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, QuizFrequency.always),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(t('Sempre (100%)', 'Always (100%)')),
+                if (_quizFrequency == QuizFrequency.always) ...[
+                  const SizedBox(width: 8),
+                  const Icon(CupertinoIcons.checkmark, size: 18),
+                ],
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, QuizFrequency.regular),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(t('Regularmente (~70%)', 'Regularly (~70%)')),
+                if (_quizFrequency == QuizFrequency.regular) ...[
+                  const SizedBox(width: 8),
+                  const Icon(CupertinoIcons.checkmark, size: 18),
+                ],
+              ],
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context, QuizFrequency.rare),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(t('Pouco (~30%)', 'Rarely (~30%)')),
+                if (_quizFrequency == QuizFrequency.rare) ...[
+                  const SizedBox(width: 8),
+                  const Icon(CupertinoIcons.checkmark, size: 18),
+                ],
+              ],
+            ),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: Text(tr(context, "Cancel")),
+        ),
+      ),
+    );
+    if (selected == null) return;
+    await QuizService.instance.setFrequency(selected);
+    HapticFeedback.lightImpact();
+    if (mounted) setState(() => _quizFrequency = selected);
   }
 
   Future<void> _chooseTranslationLanguage() async {
@@ -348,7 +429,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 signingIn: _signingIn,
                 onSignIn: _signIn,
                 onSignOut: _signOut,
-                onDeleteAccount: _deleteAccount,
               ),
             ),
             const SizedBox(height: 16),
@@ -438,8 +518,8 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
 
-            // Spotify Sync Card
-            _heading('Spotify'),
+            // Sync Card
+            _heading(t('Sincronizar', 'Sync')),
             _groupedCard(
               context,
               const [
@@ -485,11 +565,28 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 Divider(color: Theme.of(context).dividerColor, height: 1),
                 _SettingsRow(
+                  icon: CupertinoIcons.sparkles,
+                  iconColor: const Color(0xFFFF9500),
+                  title: t('Frequência do Quick Quiz', 'Quick Quiz frequency'),
+                  value: _quizFrequencyLabel(_quizFrequency),
+                  onTap: _chooseQuizFrequency,
+                ),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
+                _SettingsRow(
                   icon: CupertinoIcons.trash,
                   iconColor: AppTheme.appleRed,
                   title: t('Limpar histórico', 'Clear history'),
                   onTap: _removeAllWordHistory,
                 ),
+                if (AuthService.instance.isSignedIn) ...[
+                  Divider(color: Theme.of(context).dividerColor, height: 1),
+                  _SettingsRow(
+                    icon: CupertinoIcons.person_crop_circle_badge_minus,
+                    iconColor: AppTheme.appleRed,
+                    title: t('Excluir conta', 'Delete account'),
+                    onTap: _deleteAccount,
+                  ),
+                ],
                 Divider(color: Theme.of(context).dividerColor, height: 1),
                 _SettingsRow(
                   icon: CupertinoIcons.info_circle,
@@ -651,14 +748,12 @@ class _AccountCard extends StatelessWidget {
     required this.signingIn,
     required this.onSignIn,
     required this.onSignOut,
-    required this.onDeleteAccount,
   });
 
   final AuthService auth;
   final bool signingIn;
   final VoidCallback onSignIn;
   final VoidCallback onSignOut;
-  final VoidCallback onDeleteAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -670,35 +765,12 @@ class _AccountCard extends StatelessWidget {
     final cardColor = colors.surface;
 
     if (auth.isSignedIn) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SignedInCard(
-            auth: auth,
-            cardColor: cardColor,
-            borderColor: borderColor,
-            isDark: isDark,
-            onSignOut: onSignOut,
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: CupertinoButton(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              onPressed: onDeleteAccount,
-              child: Text(
-                Localizations.localeOf(context).languageCode == 'pt'
-                    ? 'Excluir minha conta e dados'
-                    : 'Delete my account and data',
-                style: TextStyle(
-                  fontFamily: AppTheme.fontSF,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.appleRed.withValues(alpha: 0.8),
-                ),
-              ),
-            ),
-          ),
-        ],
+      return _SignedInCard(
+        auth: auth,
+        cardColor: cardColor,
+        borderColor: borderColor,
+        isDark: isDark,
+        onSignOut: onSignOut,
       );
     }
 

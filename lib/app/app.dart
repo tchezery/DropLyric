@@ -171,6 +171,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                                   : 'Search',
                             ),
                             DockItem(
+                              icon: CupertinoIcons.gamecontroller,
+                              activeIcon: CupertinoIcons.gamecontroller_fill,
+                              label: AppLanguage.instance.isPortuguese
+                                  ? 'Games'
+                                  : 'Games',
+                            ),
+                            DockItem(
                               icon: CupertinoIcons.book,
                               activeIcon: CupertinoIcons.book,
                               label: tr(context, "Dictionary"),
@@ -225,10 +232,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return 0;
       case AppRoutes.search:
         return 1;
-      case AppRoutes.library:
+      case AppRoutes.games:
         return 2;
-      case AppRoutes.profile:
+      case AppRoutes.library:
         return 3;
+      case AppRoutes.profile:
+        return 4;
       default:
         return 0;
     }
@@ -241,8 +250,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       case 1:
         return AppRoutes.search;
       case 2:
-        return AppRoutes.library;
+        return AppRoutes.games;
       case 3:
+        return AppRoutes.library;
+      case 4:
         return AppRoutes.profile;
       default:
         return AppRoutes.home;

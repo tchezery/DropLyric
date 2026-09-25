@@ -20,6 +20,7 @@ import '../core/services/audio_player_service.dart';
 import '../core/services/dictionary_service.dart';
 import '../core/services/language_service.dart';
 import '../core/services/lyrics_service.dart';
+import '../core/services/quiz_service.dart';
 import '../core/services/spotify_service.dart';
 import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
@@ -29,6 +30,7 @@ import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
 import '../widgets/lyrics/word_action_sheet.dart';
 import '../widgets/spotify_icon.dart';
+import '../widgets/vocabulary_quiz_sheet.dart';
 
 /// Modo de exibição das letras:
 /// - `synced`: a letra acompanha a música com rolagem automática e destaque na linha ativa.
@@ -95,6 +97,46 @@ class _PlayerPageState extends State<PlayerPage>
   bool _requestingTrack = false;
   String? _expectedUri;
   int _lyricsGeneration = 0;
+
+  // Palavras marcadas durante a sessão atual da música
+  final Set<String> _wordsMarkedInSession = <String>{};
+  bool _isShowingQuizModal = false;
+
+  Future<void> _showExitOrCompletionQuiz() async {
+    if (_wordsMarkedInSession.isEmpty || _isShowingQuizModal || !mounted) return;
+    final shouldTrigger = await QuizService.instance.shouldTriggerQuizAsync();
+    if (!shouldTrigger || !mounted) {
+      _wordsMarkedInSession.clear();
+      return;
+    }
+    _isShowingQuizModal = true;
+    final wordsToQuiz = _wordsMarkedInSession.toList();
+    _wordsMarkedInSession.clear();
+    try {
+      await VocabularyQuizSheet.show(
+        context,
+        words: wordsToQuiz,
+        trackTitle: _currentTrack.title,
+        artistName: _currentTrack.artist,
+        language: _targetLanguage,
+      );
+    } finally {
+      if (mounted) {
+        _isShowingQuizModal = false;
+      }
+    }
+  }
+
+  Future<void> _handleBackNavigation() async {
+    if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+      await _showExitOrCompletionQuiz();
+    }
+    if (!mounted) return;
+    if (AppRoutes.currentRoute.value == AppRoutes.player) {
+      AppRoutes.currentRoute.value = AppRoutes.home;
+    }
+    Navigator.of(context).pop();
+  }
 
   // Estado da letra
   LyricsResult? _lyricsResult;
@@ -298,6 +340,9 @@ class _PlayerPageState extends State<PlayerPage>
   void _onPlayerStateChanged() {
     final state = _audioService.playerState.value;
     if (state.processingState == ProcessingState.completed) {
+      if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+        _showExitOrCompletionQuiz();
+      }
       if (_audioService.loopMode.value == LoopMode.all) {
         _onNext();
       }
@@ -587,7 +632,13 @@ class _PlayerPageState extends State<PlayerPage>
     final artistName = _currentTrack.artist;
     final trackId = _currentTrack.id;
     setState(() {
-      desired ? _knownWords.add(normalized) : _knownWords.remove(normalized);
+      if (desired) {
+        _knownWords.add(normalized);
+        _wordsMarkedInSession.add(word);
+      } else {
+        _knownWords.remove(normalized);
+        _wordsMarkedInSession.remove(word);
+      }
       _updateStats();
     });
 
@@ -719,6 +770,9 @@ class _PlayerPageState extends State<PlayerPage>
 
   Future<void> _changeTrack(int newIndex) async {
     if (newIndex < 0 || newIndex >= _playlist.length) return;
+    if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+      await _showExitOrCompletionQuiz();
+    }
     setState(() {
       _currentIndex = newIndex;
       _currentTrack = _playlist[newIndex];
@@ -880,11 +934,17 @@ class _PlayerPageState extends State<PlayerPage>
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _isLightStyle
-          ? SystemUiOverlayStyle.dark
-          : SystemUiOverlayStyle.light,
-      child: Scaffold(
+    return PopScope(
+      canPop: _wordsMarkedInSession.isEmpty || _isShowingQuizModal,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackNavigation();
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: _isLightStyle
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light,
+        child: Scaffold(
         backgroundColor: _canvasColor,
         body: SafeArea(
           child: Column(
@@ -974,7 +1034,8 @@ class _PlayerPageState extends State<PlayerPage>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTopBar() {
@@ -1037,12 +1098,7 @@ class _PlayerPageState extends State<PlayerPage>
               child: IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: () {
-                  if (AppRoutes.currentRoute.value == AppRoutes.player) {
-                    AppRoutes.currentRoute.value = AppRoutes.home;
-                  }
-                  Navigator.of(context).pop();
-                },
+                onPressed: _handleBackNavigation,
                 icon: const Icon(CupertinoIcons.chevron_left, size: 26),
                 color: _primaryInk,
                 tooltip: tr(context, "Back"),

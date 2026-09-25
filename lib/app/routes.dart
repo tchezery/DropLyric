@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../src/pages/home_page.dart';
 import '../src/pages/library_page.dart';
 
+import '../src/pages/games_page.dart';
 import '../src/pages/profile_page.dart';
 import '../src/pages/search_page.dart';
 import '../src/pages/player_page.dart';
@@ -57,6 +58,7 @@ class AppRoutes {
 
   static const home = '/';
   static const search = '/search';
+  static const games = '/games';
   static const library = '/library';
   static const profile = '/profile';
   static const player = '/player';
@@ -116,6 +118,13 @@ class AppRoutes {
           settings: settings,
           pageBuilder: (context, animation, secondaryAnimation) =>
               const SpotifyAccessGate(child: SearchPage()),
+          transitionDuration: Duration.zero,
+        );
+      case games:
+        return PageRouteBuilder(
+          settings: settings,
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const GamesPage(),
           transitionDuration: Duration.zero,
         );
       case library:
