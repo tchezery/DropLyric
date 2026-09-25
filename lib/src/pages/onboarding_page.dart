@@ -49,7 +49,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final hasLanguage = _selectedLanguage != null;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Material(
       color: theme.scaffoldBackgroundColor,
@@ -62,40 +61,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDark ? 0.35 : 0.08,
-                          ),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Image.asset(
-                        'assets/logo.png',
-                        width: 76,
-                        height: 76,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: colors.primary.withValues(alpha: 0.15),
-                          child: Icon(
-                            CupertinoIcons.music_note_2,
-                            color: colors.primary,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   Text(
                     'DropLyric',
                     style: const TextStyle(

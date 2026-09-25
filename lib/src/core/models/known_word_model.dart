@@ -19,14 +19,24 @@ class KnownWordModel {
   });
 
   factory KnownWordModel.fromMap(Map<String, dynamic> map) {
+    final rawCreatedAt = map['created_at'];
+    final DateTime createdAt;
+    if (rawCreatedAt is int) {
+      createdAt = DateTime.fromMillisecondsSinceEpoch(rawCreatedAt);
+    } else if (rawCreatedAt is String) {
+      createdAt = DateTime.tryParse(rawCreatedAt) ?? DateTime.now();
+    } else {
+      createdAt = DateTime.now();
+    }
+
     return KnownWordModel(
       id: map['id'] as int?,
-      word: map['word'] as String,
-      normalizedWord: map['normalized_word'] as String,
-      language: map['language'] as String,
+      word: (map['word'] as String?) ?? '',
+      normalizedWord: (map['normalized_word'] as String?) ?? '',
+      language: (map['language'] as String?) ?? '',
       trackName: map['track_name'] as String?,
       artistName: map['artist_name'] as String?,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+      createdAt: createdAt,
     );
   }
 

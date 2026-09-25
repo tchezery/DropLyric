@@ -6,9 +6,8 @@ import 'package:just_audio/just_audio.dart';
 import '../models/track_model.dart';
 import 'spotify_service.dart';
 import 'spotify_session.dart';
-import 'youtube_service.dart';
 
-/// Serviço universal de reprodução de áudio (YouTube, Direct Streams e Spotify).
+/// Serviço universal de reprodução de áudio (Direct Streams e Spotify).
 class AudioPlayerService {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
@@ -24,8 +23,7 @@ class AudioPlayerService {
   bool get isSpotify => currentUrl.value?.startsWith('spotify:track:') == true;
   bool get isDirectAudio =>
       currentUrl.value != null &&
-      (currentUrl.value!.startsWith('youtube:') ||
-          currentUrl.value!.startsWith('http://') ||
+      (currentUrl.value!.startsWith('http://') ||
           currentUrl.value!.startsWith('https://'));
   bool get _isSpotify => isSpotify;
   bool get _isDirectAudio => isDirectAudio;
@@ -116,7 +114,7 @@ class AudioPlayerService {
   Future<void> play(String url, {TrackModel? track}) async {
     error.value = null;
 
-    // 1. YouTube Audio Stream
+    // 1. YouTube tracks are audiovisual and handled via YoutubePlayer (iframe) in UI
     if (url.startsWith('youtube:') || (track?.id.startsWith('youtube:') == true)) {
       final videoKey = url.startsWith('youtube:') ? url : track!.id;
       currentUrl.value = videoKey;
@@ -124,31 +122,7 @@ class AudioPlayerService {
       duration.value = track?.duration != null
           ? Duration(milliseconds: (track!.duration! * 1000).round())
           : Duration.zero;
-      playerState.value = PlayerState(false, ProcessingState.loading);
-
-      try {
-        final audioFile = await YouTubeService.instance.getOrDownloadAudioFile(videoKey);
-        if (audioFile == null || !audioFile.existsSync()) {
-          error.value = 'Could not load audio stream from YouTube.';
-          playerState.value = PlayerState(false, ProcessingState.idle);
-          return;
-        }
-
-        if (_disposed) return;
-        
-        final dur = await _audioPlayer.setFilePath(audioFile.path, tag: track);
-        if (dur != null) {
-          duration.value = dur;
-        }
-
-        if (_disposed) return;
-        await _audioPlayer.play();
-      } catch (e) {
-        if (!_disposed) {
-          error.value = 'Playback error: $e';
-          playerState.value = PlayerState(false, ProcessingState.idle);
-        }
-      }
+      playerState.value = PlayerState(false, ProcessingState.idle);
       return;
     }
 

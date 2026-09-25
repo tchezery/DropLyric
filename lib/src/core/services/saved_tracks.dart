@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track_model.dart';
+import 'sync_service.dart';
 
 /// History and favorites belong to this installation, not the Spotify library.
 class SavedTracks extends ChangeNotifier {
@@ -58,13 +59,51 @@ class SavedTracks extends ChangeNotifier {
       (t) => !recent.contains(t.id) && !_favorites.contains(t.id),
     );
     await _save();
+    SyncService.instance.pushTrack(track).ignore();
   }
 
   Future<void> toggleFavorite(TrackModel track) async {
     await ready;
-    if (!_favorites.remove(track.id)) _favorites.add(track.id);
+    final isNowFavorite = !_favorites.remove(track.id);
+    if (isNowFavorite) _favorites.add(track.id);
     if (!_tracks.any((t) => t.id == track.id)) _tracks.insert(0, track);
     await _save();
+    SyncService.instance
+        .pushFavorite(track.id, isFavorite: isNowFavorite)
+        .ignore();
+  }
+
+  /// Atualiza o estado de favorito vindo de sincronização em tempo real.
+  Future<void> setFavoriteRemote(String trackId, bool isFavorite) async {
+    await ready;
+    final changed =
+        isFavorite ? _favorites.add(trackId) : _favorites.remove(trackId);
+    if (changed) {
+      await _save();
+    }
+  }
+
+  /// Mescla dados vindos da nuvem de uma só vez sem disparar loops de notificação.
+  Future<void> mergeFromCloud(
+    List<TrackModel> newTracks,
+    Set<String> cloudFavorites,
+  ) async {
+    await ready;
+    var changed = false;
+    for (final favId in cloudFavorites) {
+      if (_favorites.add(favId)) {
+        changed = true;
+      }
+    }
+    for (final track in newTracks) {
+      if (!_tracks.any((t) => t.id == track.id)) {
+        _tracks.add(track);
+        changed = true;
+      }
+    }
+    if (changed) {
+      await _save();
+    }
   }
 
   Future<void> _save() {

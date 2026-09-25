@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 
 import '../src/widgets/dock/dock.dart';
 import '../src/core/services/spotify_session.dart';
+import '../src/core/services/auth_service.dart';
+import '../src/core/services/sync_service.dart';
 import '../src/core/services/language_service.dart';
 import '../src/pages/onboarding_page.dart';
 import 'routes.dart';
@@ -20,7 +22,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _onboardingLoading = true;
   bool _languageSelected = false;
   bool _onboardingFinished = false;
@@ -28,6 +30,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AppLanguage.instance.addListener(_refreshOnboarding);
     AppThemeMode.instance.addListener(_refreshOnboarding);
     SpotifySession.instance.addListener(_refreshOnboarding);
@@ -36,10 +39,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     AppLanguage.instance.removeListener(_refreshOnboarding);
     AppThemeMode.instance.removeListener(_refreshOnboarding);
     SpotifySession.instance.removeListener(_refreshOnboarding);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        AuthService.instance.isSignedIn) {
+      SyncService.instance.syncAll().ignore();
+    }
   }
 
   Future<void> _loadOnboarding() async {
@@ -159,6 +171,13 @@ class _MyAppState extends State<MyApp> {
                                   : 'Search',
                             ),
                             DockItem(
+                              icon: CupertinoIcons.gamecontroller,
+                              activeIcon: CupertinoIcons.gamecontroller_fill,
+                              label: AppLanguage.instance.isPortuguese
+                                  ? 'Games'
+                                  : 'Games',
+                            ),
+                            DockItem(
                               icon: CupertinoIcons.book,
                               activeIcon: CupertinoIcons.book,
                               label: tr(context, "Dictionary"),
@@ -213,10 +232,12 @@ class _MyAppState extends State<MyApp> {
         return 0;
       case AppRoutes.search:
         return 1;
-      case AppRoutes.library:
+      case AppRoutes.games:
         return 2;
-      case AppRoutes.profile:
+      case AppRoutes.library:
         return 3;
+      case AppRoutes.profile:
+        return 4;
       default:
         return 0;
     }
@@ -229,8 +250,10 @@ class _MyAppState extends State<MyApp> {
       case 1:
         return AppRoutes.search;
       case 2:
-        return AppRoutes.library;
+        return AppRoutes.games;
       case 3:
+        return AppRoutes.library;
+      case 4:
         return AppRoutes.profile;
       default:
         return AppRoutes.home;

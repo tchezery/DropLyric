@@ -4,16 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
+import '../core/models/cefr_level.dart';
 import '../core/models/known_word_model.dart';
 import '../core/models/learning_summary.dart';
 import '../core/models/track_model.dart';
 import '../core/repositories/known_words_repository.dart';
 import '../core/services/language_service.dart';
 import '../core/services/saved_tracks.dart';
+import '../core/services/quiz_service.dart';
 import '../core/services/spotify_session.dart';
-import '../widgets/spotify_connect_button.dart';
 import '../widgets/track_card.dart';
 import '../widgets/language_flag.dart';
+import '../widgets/home_quiz_card.dart';
+import '../widgets/weekly_consistency_badge.dart';
 import 'player_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -29,6 +32,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   List<KnownWordModel> _words = [];
   bool _loading = true;
   bool _failed = false;
+  bool _showQuizCard = true;
   PageRoute? _route;
   String t(String pt, String en) =>
       Localizations.localeOf(context).languageCode == 'pt' ? pt : en;
@@ -37,6 +41,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   void initState() {
     super.initState();
     _load();
+    KnownWordsRepository.changes.addListener(_load);
   }
 
   @override
@@ -55,17 +60,24 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_load);
     AppRoutes.routeObserver.unsubscribe(this);
     super.dispose();
   }
 
+  bool _isLoading = false;
+
   Future<void> _load() async {
+    if (_isLoading) return;
+    _isLoading = true;
     try {
       await _saved.ready;
       final words = await _repository.getKnownWordsList();
+      final shouldShowQuiz = await QuizService.instance.shouldTriggerQuizAsync();
       if (mounted) {
         setState(() {
           _words = words;
+          _showQuizCard = shouldShowQuiz;
           _loading = false;
           _failed = false;
         });
@@ -77,6 +89,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
           _failed = true;
         });
       }
+    } finally {
+      _isLoading = false;
     }
   }
 
@@ -126,72 +140,93 @@ class _HomePageState extends State<HomePage> with RouteAware {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final preference = LanguageService().findByCode(language.key);
+    final cefr = CefrLevel.fromWordCount(language.value);
 
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
-          width: 0.8,
+    return InkWell(
+      onTap: () => AppRoutes.navigateTo(AppRoutes.games),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0x26FFFFFF) : const Color(0x14000000),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              LanguageFlag(
-                countryCode: preference?.flagCode ?? language.key,
-                width: 26,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  localizedLanguageName(context, language.key),
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontSF,
-                    color: colors.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                LanguageFlag(
+                  countryCode: preference?.flagCode ?? language.key,
+                  width: 26,
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    localizedLanguageName(context, language.key),
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      color: colors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: cefr.badgeColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    cefr.code,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontSF,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: cefr.badgeColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              '${language.value}',
+              style: TextStyle(
+                fontFamily: AppTheme.fontSF,
+                color: colors.primary,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
               ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            '${language.value}',
-            style: TextStyle(
-              fontFamily: AppTheme.fontSF,
-              color: colors.primary,
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1,
             ),
-          ),
-          Text(
-            t('palavras conhecidas', 'known words'),
-            style: TextStyle(
-              fontFamily: AppTheme.fontSF,
-              color: colors.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+            Text(
+              t('palavras conhecidas', 'known words'),
+              style: TextStyle(
+                fontFamily: AppTheme.fontSF,
+                color: colors.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -232,10 +267,17 @@ class _HomePageState extends State<HomePage> with RouteAware {
                           ),
                         ),
                       ),
-                      const SpotifyConnectButton(compact: true),
+                      WeeklyConsistencyBadge(words: _words),
                     ],
                   ),
                 ),
+
+                // Minigame Desafio Rápido de Vocabulário
+                if (_showQuizCard && _words.isNotEmpty)
+                  HomeQuizCard(
+                    words: _words,
+                    onDismissed: () => setState(() => _showQuizCard = false),
+                  ),
 
                 // Recent tracks
                 _heading(t('Músicas recentes', 'Recent songs')),

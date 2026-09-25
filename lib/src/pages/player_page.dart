@@ -3,6 +3,7 @@ import 'dart:async';
 import '../core/services/app_strings.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -19,6 +20,7 @@ import '../core/services/audio_player_service.dart';
 import '../core/services/dictionary_service.dart';
 import '../core/services/language_service.dart';
 import '../core/services/lyrics_service.dart';
+import '../core/services/quiz_service.dart';
 import '../core/services/spotify_service.dart';
 import '../core/services/saved_tracks.dart';
 import '../core/services/spotify_session.dart';
@@ -28,6 +30,7 @@ import '../widgets/lyrics/language_selector_sheet.dart';
 import '../widgets/lyrics/vocabulary_progress_bar.dart';
 import '../widgets/lyrics/word_action_sheet.dart';
 import '../widgets/spotify_icon.dart';
+import '../widgets/vocabulary_quiz_sheet.dart';
 
 /// Modo de exibição das letras:
 /// - `synced`: a letra acompanha a música com rolagem automática e destaque na linha ativa.
@@ -95,6 +98,46 @@ class _PlayerPageState extends State<PlayerPage>
   String? _expectedUri;
   int _lyricsGeneration = 0;
 
+  // Palavras marcadas durante a sessão atual da música
+  final Set<String> _wordsMarkedInSession = <String>{};
+  bool _isShowingQuizModal = false;
+
+  Future<void> _showExitOrCompletionQuiz() async {
+    if (_wordsMarkedInSession.isEmpty || _isShowingQuizModal || !mounted) return;
+    final shouldTrigger = await QuizService.instance.shouldTriggerQuizAsync();
+    if (!shouldTrigger || !mounted) {
+      _wordsMarkedInSession.clear();
+      return;
+    }
+    _isShowingQuizModal = true;
+    final wordsToQuiz = _wordsMarkedInSession.toList();
+    _wordsMarkedInSession.clear();
+    try {
+      await VocabularyQuizSheet.show(
+        context,
+        words: wordsToQuiz,
+        trackTitle: _currentTrack.title,
+        artistName: _currentTrack.artist,
+        language: _targetLanguage,
+      );
+    } finally {
+      if (mounted) {
+        _isShowingQuizModal = false;
+      }
+    }
+  }
+
+  Future<void> _handleBackNavigation() async {
+    if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+      await _showExitOrCompletionQuiz();
+    }
+    if (!mounted) return;
+    if (AppRoutes.currentRoute.value == AppRoutes.player) {
+      AppRoutes.currentRoute.value = AppRoutes.home;
+    }
+    Navigator.of(context).pop();
+  }
+
   // Estado da letra
   LyricsResult? _lyricsResult;
   bool _lyricsLoading = true;
@@ -114,7 +157,6 @@ class _PlayerPageState extends State<PlayerPage>
   // YouTube Controller & Estado
   yt.YoutubePlayerController? _ytController;
   Timer? _ytProgressTimer;
-  bool _showVideo = true;
   bool get _isYouTubeTrack =>
       _currentTrack.id.startsWith('youtube:') ||
       (_currentTrack.previewAudioUrl?.startsWith('youtube:') == true);
@@ -147,7 +189,6 @@ class _PlayerPageState extends State<PlayerPage>
   }
 
   void _initYouTubeController(String videoId) {
-    _showVideo = true;
     _stopYouTubeProgressTimer();
     _ytController?.close();
     _audioService.playerState.value = PlayerState(
@@ -239,6 +280,7 @@ class _PlayerPageState extends State<PlayerPage>
     _isLightStyle = AppThemeMode.instance.isLight;
     AppThemeMode.instance.addListener(_onThemeChanged);
     TranslationLanguage.instance.addListener(_onTranslationLanguageChanged);
+    KnownWordsRepository.changes.addListener(_onKnownWordsRepositoryChanged);
     AppRoutes.currentRoute.value = AppRoutes.player;
     _currentTrack = widget.track;
     _targetLanguage = _currentTrack.language.isEmpty
@@ -298,6 +340,9 @@ class _PlayerPageState extends State<PlayerPage>
   void _onPlayerStateChanged() {
     final state = _audioService.playerState.value;
     if (state.processingState == ProcessingState.completed) {
+      if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+        _showExitOrCompletionQuiz();
+      }
       if (_audioService.loopMode.value == LoopMode.all) {
         _onNext();
       }
@@ -398,7 +443,7 @@ class _PlayerPageState extends State<PlayerPage>
   bool get _isFluentLanguage =>
       FluentLanguages.instance.isFluent(_targetLanguage);
 
-  Future<void> _loadKnownWords() async {
+  Future<void> _loadKnownWords({bool background = false}) async {
     final generation = ++_knownWordsGeneration;
     final language = _targetLanguage;
     final track = _currentTrack.id;
@@ -415,7 +460,7 @@ class _PlayerPageState extends State<PlayerPage>
       }
       return;
     }
-    if (mounted) setState(() => _knownWordsLoading = true);
+    if (mounted && !background) setState(() => _knownWordsLoading = true);
     try {
       await _wordWrites;
       final words = await _wordsRepo.getKnownWordsSet(language);
@@ -423,13 +468,15 @@ class _PlayerPageState extends State<PlayerPage>
           generation == _knownWordsGeneration &&
           language == _targetLanguage &&
           track == _currentTrack.id) {
-        setState(() => _knownWords = words);
-        _updateStats();
+        if (!background || !setEquals(_knownWords, words)) {
+          _knownWords = words;
+          _updateStats();
+        }
       }
     } catch (e) {
       debugPrint('Error loading known words: $e');
     } finally {
-      if (mounted && generation == _knownWordsGeneration) {
+      if (mounted && generation == _knownWordsGeneration && _knownWordsLoading) {
         setState(() => _knownWordsLoading = false);
       }
     }
@@ -585,7 +632,13 @@ class _PlayerPageState extends State<PlayerPage>
     final artistName = _currentTrack.artist;
     final trackId = _currentTrack.id;
     setState(() {
-      desired ? _knownWords.add(normalized) : _knownWords.remove(normalized);
+      if (desired) {
+        _knownWords.add(normalized);
+        _wordsMarkedInSession.add(word);
+      } else {
+        _knownWords.remove(normalized);
+        _wordsMarkedInSession.remove(word);
+      }
       _updateStats();
     });
 
@@ -717,6 +770,9 @@ class _PlayerPageState extends State<PlayerPage>
 
   Future<void> _changeTrack(int newIndex) async {
     if (newIndex < 0 || newIndex >= _playlist.length) return;
+    if (_wordsMarkedInSession.isNotEmpty && !_isShowingQuizModal) {
+      await _showExitOrCompletionQuiz();
+    }
     setState(() {
       _currentIndex = newIndex;
       _currentTrack = _playlist[newIndex];
@@ -847,8 +903,15 @@ class _PlayerPageState extends State<PlayerPage>
     }
   }
 
+  void _onKnownWordsRepositoryChanged() {
+    if (mounted) {
+      _loadKnownWords(background: true);
+    }
+  }
+
   @override
   void dispose() {
+    KnownWordsRepository.changes.removeListener(_onKnownWordsRepositoryChanged);
     AppThemeMode.instance.removeListener(_onThemeChanged);
     TranslationLanguage.instance.removeListener(_onTranslationLanguageChanged);
     _audioService.position.removeListener(_onPositionChanged);
@@ -871,11 +934,17 @@ class _PlayerPageState extends State<PlayerPage>
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _isLightStyle
-          ? SystemUiOverlayStyle.dark
-          : SystemUiOverlayStyle.light,
-      child: Scaffold(
+    return PopScope(
+      canPop: _wordsMarkedInSession.isEmpty || _isShowingQuizModal,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackNavigation();
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: _isLightStyle
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light,
+        child: Scaffold(
         backgroundColor: _canvasColor,
         body: SafeArea(
           child: Column(
@@ -883,68 +952,51 @@ class _PlayerPageState extends State<PlayerPage>
               _buildTopBar(),
               if (_isYouTubeTrack && _ytController != null)
                 Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    margin: _showVideo
-                        ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
-                        : EdgeInsets.zero,
-                    height: _showVideo ? 190 : 0.001,
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    height: 190,
                     child: AspectRatio(
                       aspectRatio: 16 / 9,
                       child: Container(
-                        decoration: _showVideo
-                            ? BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(
-                                      alpha: _isLightStyle ? 0.08 : 0.4,
-                                    ),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              )
-                            : const BoxDecoration(),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: _isLightStyle ? 0.08 : 0.4,
+                              ),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         clipBehavior: Clip.antiAliasWithSaveLayer,
-                        child: IgnorePointer(
-                          ignoring: !_showVideo,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(18),
-                                clipBehavior: Clip.antiAliasWithSaveLayer,
-                                child: Opacity(
-                                  opacity: _showVideo ? 1.0 : 0.01,
-                                  child: yt.YoutubePlayer(
-                                    controller: _ytController!,
-                                    aspectRatio: 16 / 9,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              clipBehavior: Clip.antiAliasWithSaveLayer,
+                              child: yt.YoutubePlayer(
+                                controller: _ytController!,
+                                aspectRatio: 16 / 9,
+                              ),
+                            ),
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: _isLightStyle
+                                        ? const Color(0x1F000000)
+                                        : const Color(0x33FFFFFF),
+                                    width: 1.5,
                                   ),
                                 ),
                               ),
-                              if (!_showVideo)
-                                Positioned.fill(
-                                  child: ColoredBox(color: _canvasColor),
-                                ),
-                              if (_showVideo)
-                                Positioned.fill(
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: _isLightStyle
-                                            ? const Color(0x1F000000)
-                                            : const Color(0x33FFFFFF),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -982,7 +1034,8 @@ class _PlayerPageState extends State<PlayerPage>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTopBar() {
@@ -990,187 +1043,181 @@ class _PlayerPageState extends State<PlayerPage>
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 10, 2),
-      child: Row(
-        children: [
-          // 1. Botão voltar
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            onPressed: () {
-              if (AppRoutes.currentRoute.value == AppRoutes.player) {
-                AppRoutes.currentRoute.value = AppRoutes.home;
-              }
-              Navigator.of(context).pop();
-            },
-            icon: const Icon(CupertinoIcons.chevron_left, size: 26),
-            color: _primaryInk,
-            tooltip: tr(context, "Back"),
-          ),
-
-          // 2. Informações da música (Expandido com título e artista sem sobreposição)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _currentTrack.title.isEmpty
-                        ? (_isYouTubeTrack ? 'YouTube' : 'Spotify')
-                        : _currentTrack.title,
-                    style: TextStyle(
-                      color: _primaryInk,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                      decoration: TextDecoration.none,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_currentTrack.artist.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      _currentTrack.artist,
-                      style: TextStyle(
-                        color: _secondaryInk,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-
-          // 3. Ações do topo direito
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isYouTubeTrack) ...[
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                  onPressed: () {
-                    final videoId =
-                        YouTubeService.extractVideoId(_currentTrack.id) ?? '';
-                    if (videoId.isNotEmpty) {
-                      launchUrl(
-                        Uri.parse('https://www.youtube.com/watch?v=$videoId'),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
-                  },
-                  icon: const Icon(
-                    CupertinoIcons.play_rectangle_fill,
-                    size: 19,
-                    color: Colors.redAccent,
-                  ),
-                  tooltip: tr(context, "Open in YouTube App"),
-                ),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                  onPressed: () => setState(() => _showVideo = !_showVideo),
-                  icon: Icon(
-                    _showVideo ? CupertinoIcons.film_fill : CupertinoIcons.film,
-                    size: 18,
-                    color: _showVideo ? Colors.redAccent : _primaryInk,
-                  ),
-                  tooltip: _showVideo
-                      ? tr(context, "Hide video")
-                      : tr(context, "Show video"),
-                ),
-              ] else ...[
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                  onPressed: () {
-                    String? url = _currentTrack.spotifyUrl;
-                    if (url == null || url.isEmpty) {
-                      if (_currentTrack.id.startsWith('spotify:track:')) {
-                        final id = _currentTrack.id.split(':').last;
-                        url = 'https://open.spotify.com/track/$id';
-                      } else if (_currentTrack.title.isNotEmpty) {
-                        url =
-                            'https://open.spotify.com/search/${Uri.encodeComponent("${_currentTrack.title} ${_currentTrack.artist}")}';
-                      }
-                    }
-                    if (url != null && url.isNotEmpty) {
-                      launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
-                  },
-                  icon: const SpotifyIcon(size: 18),
-                  tooltip: tr(context, "Open in Spotify App"),
-                ),
-              ],
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                onPressed: () =>
-                    AppThemeMode.instance.setLight(!_isLightStyle),
-                icon: Icon(
-                  _isLightStyle
-                      ? CupertinoIcons.moon
-                      : CupertinoIcons.sun_max,
-                  size: 17,
-                  color: _primaryInk,
-                ),
-                tooltip: _isLightStyle
-                    ? tr(context, "Dark mode")
-                    : tr(context, "Paper mode"),
-              ),
-              const SizedBox(width: 2),
-              GestureDetector(
-                onTap: () => LanguageSelectorSheet.show(
-                  context,
-                  currentNativeLanguage: _nativeLanguage,
-                  currentTargetLanguage: _targetLanguage,
-                  languageService: _languageService,
-                  onConfirm: _onLanguagesUpdated,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _primaryInk.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
+      child: SizedBox(
+        height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 1. Informações da música (perfeitamente centralizadas com o vídeo abaixo)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 120),
+                child: Center(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        CupertinoIcons.globe,
-                        size: 12,
-                        color: _primaryInk,
-                      ),
-                      const SizedBox(width: 3),
                       Text(
-                        (lang?.code ?? _targetLanguage).toUpperCase(),
+                        _currentTrack.title.isEmpty
+                            ? (_isYouTubeTrack ? 'YouTube' : 'Spotify')
+                            : _currentTrack.title,
                         style: TextStyle(
                           color: _primaryInk,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                          decoration: TextDecoration.none,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
+                      if (_currentTrack.artist.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _currentTrack.artist,
+                          style: TextStyle(
+                            color: _secondaryInk,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+
+            // 2. Botão voltar alinhado à esquerda
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                onPressed: _handleBackNavigation,
+                icon: const Icon(CupertinoIcons.chevron_left, size: 26),
+                color: _primaryInk,
+                tooltip: tr(context, "Back"),
+              ),
+            ),
+
+            // 3. Ações alinhadas à direita
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isYouTubeTrack) ...[
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                      onPressed: () {
+                        final videoId =
+                            YouTubeService.extractVideoId(_currentTrack.id) ?? '';
+                        if (videoId.isNotEmpty) {
+                          launchUrl(
+                            Uri.parse('https://www.youtube.com/watch?v=$videoId'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      icon: const Icon(
+                        CupertinoIcons.play_rectangle_fill,
+                        size: 19,
+                        color: Colors.redAccent,
+                      ),
+                      tooltip: tr(context, "Open in YouTube App"),
+                    ),
+                  ] else ...[
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                      onPressed: () {
+                        String? url = _currentTrack.spotifyUrl;
+                        if (url == null || url.isEmpty) {
+                          if (_currentTrack.id.startsWith('spotify:track:')) {
+                            final id = _currentTrack.id.split(':').last;
+                            url = 'https://open.spotify.com/track/$id';
+                          } else if (_currentTrack.title.isNotEmpty) {
+                            url =
+                                'https://open.spotify.com/search/${Uri.encodeComponent("${_currentTrack.title} ${_currentTrack.artist}")}';
+                          }
+                        }
+                        if (url != null && url.isNotEmpty) {
+                          launchUrl(
+                            Uri.parse(url),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      icon: const SpotifyIcon(size: 18),
+                      tooltip: tr(context, "Open in Spotify App"),
+                    ),
+                  ],
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                    onPressed: () =>
+                        AppThemeMode.instance.setLight(!_isLightStyle),
+                    icon: Icon(
+                      _isLightStyle
+                          ? CupertinoIcons.moon
+                          : CupertinoIcons.sun_max,
+                      size: 17,
+                      color: _primaryInk,
+                    ),
+                    tooltip: _isLightStyle
+                        ? tr(context, "Dark mode")
+                        : tr(context, "Paper mode"),
+                  ),
+                  const SizedBox(width: 2),
+                  GestureDetector(
+                    onTap: () => LanguageSelectorSheet.show(
+                      context,
+                      currentNativeLanguage: _nativeLanguage,
+                      currentTargetLanguage: _targetLanguage,
+                      languageService: _languageService,
+                      onConfirm: _onLanguagesUpdated,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _primaryInk.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            CupertinoIcons.globe,
+                            size: 12,
+                            color: _primaryInk,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            (lang?.code ?? _targetLanguage).toUpperCase(),
+                            style: TextStyle(
+                              color: _primaryInk,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

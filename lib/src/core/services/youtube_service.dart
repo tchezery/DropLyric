@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/track_model.dart';
@@ -10,7 +8,6 @@ import '../models/track_model.dart';
 class YouTubeService {
   static final YouTubeService instance = YouTubeService._();
   final YoutubeExplode _yt = YoutubeExplode();
-  final Map<String, _CachedStream> _streamCache = {};
 
   YouTubeService._();
 
@@ -139,161 +136,7 @@ class YouTubeService {
     }
   }
 
-  Future<String?> resolveAudioStreamUrl(String videoIdOrUrl) async {
-    final videoIdStr = extractVideoId(videoIdOrUrl) ?? videoIdOrUrl;
-    if (videoIdStr.isEmpty) return null;
-
-    final cached = _streamCache[videoIdStr];
-    if (cached != null && !cached.isExpired) {
-      return cached.url;
-    }
-
-    try {
-      final videoId = VideoId(videoIdStr);
-      final manifest = await _yt.videos.streamsClient.getManifest(videoId);
-      final audioStreams = manifest.audioOnly;
-      
-      StreamInfo? selectedStream;
-
-      if (audioStreams.isNotEmpty) {
-        final mp4Audio = audioStreams.where(
-          (s) =>
-              s.container.name.toLowerCase() == 'mp4' ||
-              s.codec.mimeType.contains('mp4') ||
-              s.codec.mimeType.contains('m4a') ||
-              s.audioCodec.toLowerCase().contains('mp4a') ||
-              s.audioCodec.toLowerCase().contains('aac'),
-        );
-        if (mp4Audio.isNotEmpty) {
-          selectedStream = mp4Audio.withHighestBitrate();
-        }
-      }
-
-      // If no audio-only MP4/AAC stream was found, check for muxed MP4
-      if (selectedStream == null && manifest.muxed.isNotEmpty) {
-        final mp4Muxed = manifest.muxed.where(
-          (s) => s.container.name.toLowerCase() == 'mp4',
-        );
-        if (mp4Muxed.isNotEmpty) {
-          selectedStream = mp4Muxed.withHighestBitrate();
-        }
-      }
-
-      // If still null, fallback to highest bitrate audio stream
-      if (selectedStream == null && audioStreams.isNotEmpty) {
-        selectedStream = audioStreams.withHighestBitrate();
-      }
-
-      // Last resort fallback to any muxed stream
-      if (selectedStream == null && manifest.muxed.isNotEmpty) {
-        selectedStream = manifest.muxed.withHighestBitrate();
-      }
-
-      if (selectedStream == null) return null;
-
-      final url = selectedStream.url.toString();
-
-      _streamCache[videoIdStr] = _CachedStream(
-        url: url,
-        expiresAt: DateTime.now().add(const Duration(minutes: 45)),
-      );
-
-      return url;
-    } catch (e) {
-      debugPrint('YouTubeService resolveAudioStreamUrl error for $videoIdStr: $e');
-      return null;
-    }
-  }
-
-  Future<File?> getOrDownloadAudioFile(String videoIdOrUrl) async {
-    final videoIdStr = extractVideoId(videoIdOrUrl) ?? videoIdOrUrl;
-    if (videoIdStr.isEmpty) return null;
-
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final cacheDir = Directory('${tempDir.path}/droplyric_audio');
-      if (!cacheDir.existsSync()) {
-        await cacheDir.create(recursive: true);
-      }
-      final targetFile = File('${cacheDir.path}/$videoIdStr.m4a');
-      if (targetFile.existsSync() && targetFile.lengthSync() > 100000) {
-        return targetFile;
-      }
-
-      final videoId = VideoId(videoIdStr);
-      final manifest = await _yt.videos.streamsClient.getManifest(videoId);
-      final audioStreams = manifest.audioOnly;
-
-      StreamInfo? selectedStream;
-
-      if (audioStreams.isNotEmpty) {
-        final mp4Audio = audioStreams.where(
-          (s) =>
-              s.container.name.toLowerCase() == 'mp4' ||
-              s.codec.mimeType.contains('mp4') ||
-              s.codec.mimeType.contains('m4a') ||
-              s.audioCodec.toLowerCase().contains('mp4a') ||
-              s.audioCodec.toLowerCase().contains('aac'),
-        );
-        if (mp4Audio.isNotEmpty) {
-          selectedStream = mp4Audio.withHighestBitrate();
-        }
-      }
-
-      if (selectedStream == null && manifest.muxed.isNotEmpty) {
-        final mp4Muxed = manifest.muxed.where(
-          (s) => s.container.name.toLowerCase() == 'mp4',
-        );
-        if (mp4Muxed.isNotEmpty) {
-          selectedStream = mp4Muxed.withHighestBitrate();
-        }
-      }
-
-      if (selectedStream == null && audioStreams.isNotEmpty) {
-        selectedStream = audioStreams.withHighestBitrate();
-      }
-
-      if (selectedStream == null && manifest.muxed.isNotEmpty) {
-        selectedStream = manifest.muxed.withHighestBitrate();
-      }
-
-      if (selectedStream == null) return null;
-
-      final partFile = File('${cacheDir.path}/$videoIdStr.part');
-      if (partFile.existsSync()) {
-        await partFile.delete();
-      }
-
-      final output = partFile.openWrite();
-      final stream = _yt.videos.streamsClient.get(selectedStream);
-      await stream.pipe(output);
-      await output.flush();
-      await output.close();
-
-      if (await partFile.length() > 50000) {
-        if (targetFile.existsSync()) {
-          await targetFile.delete();
-        }
-        await partFile.rename(targetFile.path);
-        return targetFile;
-      }
-      return null;
-    } catch (e) {
-      debugPrint('YouTubeService getOrDownloadAudioFile error for $videoIdStr: $e');
-      return null;
-    }
-  }
-
   void dispose() {
     _yt.close();
   }
-}
-
-class _CachedStream {
-  final String url;
-  final DateTime expiresAt;
-
-  _CachedStream({required this.url, required this.expiresAt});
-
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

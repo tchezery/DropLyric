@@ -30,5 +30,26 @@
 	<string>NSApplication</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>O DropLyric acompanha a música e controla a reprodução no Spotify para mostrar a letra sincronizada.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>droplyric</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google-signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.876883426728-bkd34ebe66nsu7ma6s6bphb5qgdmhl60</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
