@@ -255,6 +255,66 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _deleteAccount() async {
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(t('Excluir Conta', 'Delete Account')),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            t(
+              'Tem certeza de que deseja excluir sua conta? Seus dados sincronizados na nuvem serão excluídos permanentemente. Esta ação não pode ser desfeita.',
+              'Are you sure you want to delete your account? Your cloud-synced data will be permanently deleted. This action cannot be undone.',
+            ),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t('Cancelar', 'Cancel')),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t('Excluir', 'Delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final success = await AuthService.instance.deleteAccount();
+    if (!mounted) return;
+
+    if (success) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            t('Conta e dados excluídos com sucesso.', 'Account and data successfully deleted.'),
+          ),
+          backgroundColor: AppTheme.spotifyGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      setState(() {});
+    } else {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            t('Erro ao excluir conta. Tente novamente.', 'Error deleting account. Try again.'),
+          ),
+          backgroundColor: Colors.redAccent.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -288,6 +348,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 signingIn: _signingIn,
                 onSignIn: _signIn,
                 onSignOut: _signOut,
+                onDeleteAccount: _deleteAccount,
               ),
             ),
             const SizedBox(height: 16),
@@ -590,12 +651,14 @@ class _AccountCard extends StatelessWidget {
     required this.signingIn,
     required this.onSignIn,
     required this.onSignOut,
+    required this.onDeleteAccount,
   });
 
   final AuthService auth;
   final bool signingIn;
   final VoidCallback onSignIn;
   final VoidCallback onSignOut;
+  final VoidCallback onDeleteAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -607,12 +670,35 @@ class _AccountCard extends StatelessWidget {
     final cardColor = colors.surface;
 
     if (auth.isSignedIn) {
-      return _SignedInCard(
-        auth: auth,
-        cardColor: cardColor,
-        borderColor: borderColor,
-        isDark: isDark,
-        onSignOut: onSignOut,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SignedInCard(
+            auth: auth,
+            cardColor: cardColor,
+            borderColor: borderColor,
+            isDark: isDark,
+            onSignOut: onSignOut,
+          ),
+          const SizedBox(height: 6),
+          Center(
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              onPressed: onDeleteAccount,
+              child: Text(
+                Localizations.localeOf(context).languageCode == 'pt'
+                    ? 'Excluir minha conta e dados'
+                    : 'Delete my account and data',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontSF,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.appleRed.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 

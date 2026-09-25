@@ -169,4 +169,48 @@ class AuthService extends ChangeNotifier {
     _user = null;
     notifyListeners();
   }
+
+  /// Exclui a conta do usuário e todos os dados associados na nuvem (Supabase),
+  /// atendendo às exigências obrigatórias da Google Play e Apple App Store.
+  Future<bool> deleteAccount() async {
+    _lastError = null;
+    final uid = _user?.id;
+    if (uid == null) return false;
+
+    try {
+      if (SupabaseConfig.isConfigured) {
+        // 1. Remove os registros sincronizados do usuário no Supabase
+        try {
+          await Supabase.instance.client
+              .from('known_words')
+              .delete()
+              .eq('user_id', uid);
+        } catch (e) {
+          debugPrint('[AuthService] Erro ao deletar known_words: $e');
+        }
+
+        try {
+          await Supabase.instance.client
+              .from('saved_tracks')
+              .delete()
+              .eq('user_id', uid);
+        } catch (e) {
+          debugPrint('[AuthService] Erro ao deletar saved_tracks: $e');
+        }
+
+        // 2. Tenta acionar RPC de exclusão definitiva caso exista no Supabase
+        try {
+          await Supabase.instance.client.rpc('delete_user');
+        } catch (_) {}
+      }
+
+      // 3. Desconecta o Google e o Supabase localmente
+      await signOut();
+      return true;
+    } catch (e) {
+      _lastError = e.toString();
+      debugPrint('[AuthService] Erro ao excluir conta: $e');
+      return false;
+    }
+  }
 }

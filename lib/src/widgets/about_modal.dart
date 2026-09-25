@@ -343,42 +343,6 @@ class _AboutAppModalState extends State<AboutAppModal> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Licenses option
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                Navigator.pop(context);
-                showLicensePage(
-                  context: context,
-                  applicationName: 'DropLyric',
-                  applicationVersion: '1.0.0',
-                  applicationIcon: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      'assets/logo.png',
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        CupertinoIcons.music_note_2,
-                        size: 40,
-                        color: AppTheme.spotifyGreen,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: Text(
-                _t('Nota: Espero que esteja gostando!', 'Note: I hope you are enjoying!'),
-                style: TextStyle(
-                  fontFamily: AppTheme.fontSF,
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant.withValues(alpha: 0.8),
-                ),
-              ),
-            ),
           ],
         ),
       ),
