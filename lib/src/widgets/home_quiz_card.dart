@@ -686,39 +686,45 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
 
         const SizedBox(height: 16),
 
-        // 2x2 grid of options
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: q.options.map((option) {
-            final isSelected = _selectedOption == option;
-            final isOptionCorrect = q.checkAnswer(option);
+        // Grid de opções responsivo (distribui em 2 colunas no mobile ou 1 coluna se tela muito estreita)
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const spacing = 10.0;
+            final availableWidth = constraints.maxWidth;
+            final isTwoColumn = availableWidth >= 220;
+            final itemWidth = isTwoColumn
+                ? ((availableWidth - spacing) / 2).floorToDouble()
+                : availableWidth;
 
-            Color bg = isDark
-                ? const Color(0x1AFFFFFF)
-                : const Color(0x0A000000);
-            Color border = isDark
-                ? const Color(0x26FFFFFF)
-                : const Color(0x14000000);
-            Color textColor = colors.onSurface;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: q.options.map((option) {
+                final isSelected = _selectedOption == option;
+                final isOptionCorrect = q.checkAnswer(option);
 
-            if (_selectedOption != null) {
-              if (isOptionCorrect) {
-                bg = AppTheme.spotifyGreen.withValues(alpha: 0.18);
-                border = AppTheme.spotifyGreen;
-                textColor = AppTheme.spotifyGreen;
-              } else if (isSelected && !isOptionCorrect) {
-                bg = Colors.redAccent.withValues(alpha: 0.15);
-                border = Colors.redAccent;
-                textColor = Colors.redAccent;
-              }
-            }
+                Color bg = isDark
+                    ? const Color(0x1AFFFFFF)
+                    : const Color(0x0A000000);
+                Color border = isDark
+                    ? const Color(0x26FFFFFF)
+                    : const Color(0x14000000);
+                Color textColor = colors.onSurface;
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final itemWidth = (MediaQuery.of(context).size.width - 40 - 40 - 10) / 2;
+                if (_selectedOption != null) {
+                  if (isOptionCorrect) {
+                    bg = AppTheme.spotifyGreen.withValues(alpha: 0.18);
+                    border = AppTheme.spotifyGreen;
+                    textColor = AppTheme.spotifyGreen;
+                  } else if (isSelected && !isOptionCorrect) {
+                    bg = Colors.redAccent.withValues(alpha: 0.15);
+                    border = Colors.redAccent;
+                    textColor = Colors.redAccent;
+                  }
+                }
+
                 return SizedBox(
-                  width: itemWidth.clamp(120.0, 240.0),
+                  width: itemWidth,
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -746,12 +752,14 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
                                 style: TextStyle(
                                   fontFamily: AppTheme.fontSF,
                                   fontSize: 14,
-                                  fontWeight: isSelected || (_selectedOption != null && isOptionCorrect)
+                                  fontWeight: isSelected ||
+                                          (_selectedOption != null &&
+                                              isOptionCorrect)
                                       ? FontWeight.w700
                                       : FontWeight.w500,
                                   color: textColor,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -773,9 +781,9 @@ class _HomeQuizCardState extends State<HomeQuizCard> {
                     ),
                   ),
                 );
-              },
+              }).toList(),
             );
-          }).toList(),
+          },
         ),
 
         // Feedback pós-resposta
